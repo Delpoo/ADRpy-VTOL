@@ -8,7 +8,7 @@ from .imputation_loop import imprimir_detalles_imputacion  # si la función est�
 
 
 
-def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min, rango_max, nivel_confianza_min):
+def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, rango_max=1.15, nivel_confianza_min=0.7):
     
     """
     Ajusta el rango de similitud e imputa valores faltantes en los parámetros de df_filtrado.
@@ -17,6 +17,7 @@ def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min, rango_m
     :param df_procesado: DataFrame procesado con todos los datos.
     :return: Nuevo DataFrame con los valores imputados.
     """
+    print(f"Rango mínimo: {rango_min}, Rango máximo: {rango_max}, Confianza mínima: {nivel_confianza_min}")
 
     # Crear una copia para mantener intacto el DataFrame original
     df_resultado_por_similitud = df_filtrado.copy()          

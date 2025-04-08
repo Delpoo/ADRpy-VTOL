@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from .html_utils import convertir_a_html
+from .correlation_analysis import calcular_correlaciones_y_generar_heatmap_con_resumen
 
 
 
@@ -32,7 +33,10 @@ def Imputacion_por_correlacion(
         """
         # Cargar datos simulados
         df = df_correlacion.copy()
-    
+
+        if tabla_completa is None or tabla_completa.empty:
+            raise ValueError("La tabla de correlaciones completa no fue proporcionada o está vacía.")
+
        # Mostrar df en formato HTML
         print("\n=== DataFrame inicial ===")
         convertir_a_html(df, titulo="DataFrame antes de realizar imputacion por correlacion (df_procesado.copy())", mostrar=True)
