@@ -2,13 +2,13 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import r2_score
 from .html_utils import convertir_a_html
-from .imputation_loop import imprimir_detalles_imputacion  # si la función está ahí, si no corregimos
+from .imputation_utils import imprimir_detalles_imputacion
 
 
 
 
 
-def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, rango_max=1.15, nivel_confianza_min=0.7):
+def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, rango_max=1.15, nivel_confianza_min_similitud=0.7):
     
     """
     Ajusta el rango de similitud e imputa valores faltantes en los parámetros de df_filtrado.
@@ -17,7 +17,7 @@ def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, ra
     :param df_procesado: DataFrame procesado con todos los datos.
     :return: Nuevo DataFrame con los valores imputados.
     """
-    print(f"Rango mínimo: {rango_min}, Rango máximo: {rango_max}, Confianza mínima: {nivel_confianza_min}")
+    print(f"Rango mínimo: {rango_min}, Rango máximo: {rango_max}, Confianza mínima: {nivel_confianza_min_similitud}")
 
     # Crear una copia para mantener intacto el DataFrame original
     df_resultado_por_similitud = df_filtrado.copy()          
@@ -209,7 +209,7 @@ def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, ra
                     )
 
                     # Verificar si se realizó una imputación válida
-                    if valor_imputado is not None and confianza is not None and confianza >= nivel_confianza_min:
+                    if valor_imputado is not None and confianza is not None and confianza >= nivel_confianza_min_similitud:
                         # Incrementar el contador SOLO aquí
                         numero_valor_imputado += 1
                         # Asignar el valor imputado al DataFrame
@@ -222,8 +222,8 @@ def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, ra
                             "Nivel de Confianza": confianza
                         })
 
-                    elif confianza is not None and confianza < nivel_confianza_min:
-                        print(f"Imputación descartada por baja confianza: {confianza:.3f} < {nivel_confianza_min}.")
+                    elif confianza is not None and confianza < nivel_confianza_min_similitud:
+                        print(f"Imputación descartada por baja confianza: {confianza:.3f} < {nivel_confianza_min_similitud}.")
                     else:
                         print(f"No se pudo imputar: {parametro} para {aeronave}.")
 
@@ -234,7 +234,7 @@ def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, ra
         if reporte_imputaciones:
             df_reporte = pd.DataFrame(reporte_imputaciones)
             #print("Contenido de reporte_imputaciones:", reporte_imputaciones)
-            df_reporte = df_reporte[df_reporte["Nivel de Confianza"] >= nivel_confianza_min]
+            df_reporte = df_reporte[df_reporte["Nivel de Confianza"] >= nivel_confianza_min_similitud]
             convertir_a_html(df_reporte, titulo="Reporte Final de Imputaciones", mostrar=True)
         else:
             print("No se realizaron imputaciones con el nivel de confianza aceptable.")
@@ -263,34 +263,3 @@ def imputacion_similitud_con_rango(df_filtrado, df_procesado, rango_min=0.85, ra
     # Retornar DataFrame imputado y lista de diccionarios
     return df_resultado_final, reporte_imputaciones
 
-def imprimir_detalles_imputacion(numero_valor_imputado, parametro, aeronave, mtow_actual, rango_min, rango_max, candidatas_validas, detalles_ajustes, valores_ajustados, valor_imputado, confianza, calculos_confianza):
-    """
-    Imprime un resumen claro y organizado del proceso de imputación en consola.
-    """
-    negrita = "\033[1m"
-    reset = "\033[0m"
-
-    print(f"\n{negrita}======================== DETALLE DE CÁLCULO DE IMPUTACIÓN #{numero_valor_imputado} ========================{reset}")
-    print(f"{negrita}Parámetro:{reset} {parametro}")
-    print(f"{negrita}Aeronave a imputar:{reset} {aeronave}")
-    print(f"{negrita}MTOW actual:{reset} {mtow_actual} kg")
-    print(f"{negrita}Rango Similitud:{reset} {rango_min*100:.0f}% - {rango_max*100:.0f}%")
-    print(f"{negrita}Candidatas dentro del rango:{reset} {', '.join(candidatas_validas.index)}")
-
-    print("\nAeronaves Válidas para el Cálculo:")
-    print("-----------------------------------------------------------------------------------------------")
-    print("Aeronave    | MTOW Candidata | Rel. MTOW (Candidata/Actual) | Ajuste Individual | Valor Original | Valor Ajustado")
-    print("------------|----------------|------------------------------|-------------------|----------------|---------------")
-    for detalle in detalles_ajustes:
-        print(f"{detalle['Aeronave']:12}| {detalle['MTOW Candidata']:14}| {detalle['Relación MTOW']:<30.3f}| {detalle['Ajuste Individual']:<19.4f}| {detalle['Valor Original']:<16.2f}| {detalle['Valor Ajustado']:<13.2f}")
-    print("-----------------------------------------------------------------------------------------------")
-
-    print("\nCálculo del Valor Final:")
-    print(f"{negrita}- Se tomó la mediana de los valores ajustados {valores_ajustados} = {valor_imputado:.2f}{reset}")
-    print(f"{negrita}- Nivel de Confianza calculado:{reset} {confianza:.2f}")
-    print(f"{negrita}- Valor Imputado Final:{reset} {valor_imputado:.2f}")
-
-    print("\nDetalle del Cálculo de Confianza:")
-    for key, value in calculos_confianza.items():
-        print(f"{negrita}- {key}:{reset} {value:.2f}")
-    print(f"{negrita}============================================================================================{reset}\n")

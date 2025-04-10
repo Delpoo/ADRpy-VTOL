@@ -4,14 +4,22 @@ from .correlation_imputation import Imputacion_por_correlacion
 from .html_utils import convertir_a_html
 from .data_processing import generar_resumen_faltantes
 
-
 def bucle_imputacion_similitud_correlacion(
     df_procesado,
+    df_filtrado,
     parametros_preseleccionados,
     tabla_completa,
+    parametros_seleccionados,
+    umbral_correlacion=0.7,
+    rango_min=0.85,
+    rango_max=1.15,
+    nivel_confianza_min_similitud=0.7,
+    max_iteraciones=10,
     reduccion_confianza=0.05,
-    max_iteraciones=7,
+    nivel_confianza_min_correlacion=None,
+    debug_mode=False
 ):
+
     """
     Realiza un bucle alternando imputaciones por similitud y correlación, consolidando los resultados.
     Ahora se evita actualizar los DataFrames inmediatamente, y se eligen las imputaciones finales
@@ -45,72 +53,38 @@ def bucle_imputacion_similitud_correlacion(
 
     # Configuración inicial para imputaciones por similitud
     print("\n=== Configuración Inicial ===")
-    try:
-        rango_min = (
-            float(
-                input("Ingrese el rango mínimo de MTOW (1-200, predeterminado 85): ")
-                or 85
-            )
-            / 100
-        )
-        rango_max = (
-            float(
-                input("Ingrese el rango máximo de MTOW (1-200, predeterminado 115): ")
-                or 115
-            )
-            / 100
-        )
-        nivel_confianza_min = float(
-            input("Ingrese el nivel mínimo de confianza (0-1, predeterminado 0.5): ")
-            or 0.5
-        )
+    
+    from Modulos.user_interaction import (
+        solicitar_rango_min,
+        solicitar_rango_max,
+        solicitar_confianza_min_similitud,
+    )
 
-        if not (0.01 <= rango_min <= 2.00 and 0.01 <= rango_max <= 2.00):
-            raise ValueError("Los rangos deben estar entre 1% y 200%.")
-        if rango_min >= rango_max:
-            raise ValueError(
-                "El rango mínimo no puede ser mayor o igual al rango máximo."
-            )
-        if not (0 <= nivel_confianza_min <= 1):
-            raise ValueError("El nivel de confianza debe estar entre 0 y 1.")
-    except ValueError as e:
-        print(
-            f"Error: {e}. Usando valores predeterminados (85% mínimo, 115% máximo, 0.5 confianza mínima)."
-        )
-        rango_min, rango_max, nivel_confianza_min = 0.85, 1.15, 0.5
+    rango_min = rango_min if debug_mode else solicitar_rango_min()
+    rango_max = rango_max if debug_mode else solicitar_rango_max()
+    nivel_confianza_min_similitud = nivel_confianza_min_similitud if debug_mode else solicitar_confianza_min_similitud()
+
 
     print(
-        f"\nValores configurados: Rango MTOW [{rango_min*100:.0f}% - {rango_max*100:.0f}%], Confianza Mínima: {nivel_confianza_min:.2f}"
+        f"\nValores configurados: Rango MTOW [{rango_min*100:.0f}% - {rango_max*100:.0f}%], Confianza Mínima: {nivel_confianza_min_similitud:.2f}"
     )
 
     # Configuración inicial para imputaciones por correlación
-    try:
-        umbral_correlacion = float(
-            input("Ingrese el umbral mínimo de correlación (0-1, predeterminado 0.7): ")
-            or 0.7
-        )
-        nivel_confianza_min_correlacion = float(
-            input(
-                "Ingrese el nivel mínimo de confianza para correlación (0-1, predeterminado 0.5): "
-            )
-            or 0.5
-        )
+    from Modulos.user_interaction import (
+        solicitar_umbral_correlacion,
+        solicitar_confianza_min_correlacion,
+    )
 
-        if not (0 <= umbral_correlacion <= 1):
-            raise ValueError("El umbral de correlación debe estar entre 0 y 1.")
-        if not (0 <= nivel_confianza_min_correlacion <= 1):
-            raise ValueError("El nivel de confianza debe estar entre 0 y 1.")
-    except ValueError as e:
-        print(
-            f"Error: {e}. Usando valores predeterminados (umbral = 0.7, confianza mínima = 0.5)."
-        )
-        umbral_correlacion, nivel_confianza_min_correlacion = 0.7, 0.5
+    umbral_correlacion = (
+        umbral_correlacion if debug_mode and umbral_correlacion is not None else solicitar_umbral_correlacion()
+    )
+    nivel_confianza_min_correlacion = (
+        nivel_confianza_min_correlacion if debug_mode and nivel_confianza_min_correlacion is not None
+        else solicitar_confianza_min_correlacion()
+    )
 
     # Definir valores predeterminados para correlación
     min_datos_validos = 5  # Cantidad mínima de datos requeridos por parámetro
-    umbral_correlacion = 0.7
-    nivel_confianza_min_correlacion = 0.5
-    reduccion_confianza = 0.05
     max_lineas_consola = 40000000
 
     for iteracion in range(1, max_iteraciones + 1):
@@ -137,7 +111,7 @@ def bucle_imputacion_similitud_correlacion(
             df_procesado=df_procesado_base,
             rango_min=rango_min,
             rango_max=rango_max,
-            nivel_confianza_min=nivel_confianza_min,
+            nivel_confianza_min_similitud=nivel_confianza_min_similitud,
         )
 
         if reporte_similitud and len(reporte_similitud) > 0:
@@ -165,11 +139,11 @@ def bucle_imputacion_similitud_correlacion(
             df_correlacion,
             parametros_preseleccionados,
             tabla_completa,
+            parametros_seleccionados,
             min_datos_validos=min_datos_validos,
             max_lineas_consola=max_lineas_consola,
             umbral_correlacion=umbral_correlacion,
-            nivel_confianza_min_correlacion=nivel_confianza_min_correlacion,
-            reduccion_confianza=reduccion_confianza,
+            nivel_confianza_min_correlacion=nivel_confianza_min_correlacion,            
         )
 
         if reporte_correlacion and len(reporte_correlacion) > 0:

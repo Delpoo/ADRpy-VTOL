@@ -6,7 +6,7 @@ from openpyxl.comments import Comment
 
 
 
-def exportar_excel_con_imputaciones(archivo_origen, df_procesado, resumen_imputaciones, archivo_destino="archivo_imputaciones.xlsx"):
+def exportar_excel_con_imputaciones(archivo_origen, df_procesado, resumen_imputaciones, archivo_destino= r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx"):
     """
     Exporta el DataFrame procesado a un archivo Excel manteniendo el formato original.
     Agrega colores y comentarios a las celdas imputadas por similitud y correlación.

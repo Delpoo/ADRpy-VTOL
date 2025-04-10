@@ -1,3 +1,38 @@
+# 🛠 Watch: 
+# df_procesado
+# df_filtrado
+# parametros_seleccionados
+# df_resultado_final
+# resumen_imputaciones
+# df_procesado.shape
+# df_filtrado.isnull().sum()
+
+
+import argparse
+
+# ===================== #
+#     ARGUMENT PARSER  #
+# ===================== #
+parser = argparse.ArgumentParser(description="Ejecución del script ADRpy con parámetros opcionales")
+parser.add_argument("--ruta_archivo", type=str, help="Ruta del archivo Excel original", default=None)
+parser.add_argument("--archivo_destino", type=str, help="Ruta para guardar el archivo Excel exportado", default=None)
+parser.add_argument("--debug_mode", action="store_true")
+parser.add_argument("--umbral_heat_map", type=float, help="Umbral mínimo de correlación significativa", default=None)
+parser.add_argument("--nivel_confianza_min_similitud", type=float, help="Nivel de confianza mínimo para imputaciones", default=None)
+parser.add_argument("--rango_min", type=float, help="Rango mínimo de MTOW para imputación por similitud", default=None)
+parser.add_argument("--rango_max", type=float, help="Rango máximo de MTOW para imputación por similitud", default=None)
+parser.add_argument("--parametros", type=str, help="Parámetros seleccionados como lista de índices (ej. '4,5,6')", default=None)
+parser.add_argument("--columna", type=str, help="Nombre de la columna para analizar celdas faltantes", default=None)
+parser.add_argument("--umbral_correlacion", type=float, help="Umbral mínimo de correlación significativa", default=None)
+parser.add_argument("--nivel_confianza_min_correlacion", type=float, help="Nivel de confianza mínimo correlacion para imputaciones", default=None)
+
+
+args = parser.parse_args()
+
+
+# Ahora args.ruta_archivo, args.archivo_destino, etc. están disponibles
+
+
 # ===================== #
 #    IMPORTACIONES      #
 # ===================== #
@@ -24,26 +59,24 @@ from IPython.display import display, HTML
 #    IMPORTAR MÓDULOS   #
 # ===================== #
 
-from ADRpy.analisis.Modulos.config_and_loading import configurar_entorno, cargar_datos
-from ADRpy.analisis.Modulos.data_processing import procesar_datos_y_manejar_duplicados
-from ADRpy.analisis.Modulos.user_interaction import seleccionar_parametros_por_indices, solicitar_umbral
-from ADRpy.analisis.Modulos.correlation_analysis import calcular_correlaciones_y_generar_heatmap_con_resumen
-from ADRpy.analisis.Modulos.similarity_imputation import imputacion_similitud_con_rango, imprimir_detalles_imputacion
-from ADRpy.analisis.Modulos.correlation_imputation import Imputacion_por_correlacion
-from ADRpy.analisis.Modulos.imputation_loop import bucle_imputacion_similitud_correlacion
-from ADRpy.analisis.Modulos.excel_export import exportar_excel_con_imputaciones
-from ADRpy.analisis.Modulos.html_utils import convertir_a_html
+from Modulos.config_and_loading import configurar_entorno, cargar_datos
+from Modulos.data_processing import procesar_datos_y_manejar_duplicados
+from Modulos.user_interaction import seleccionar_parametros_por_indices, solicitar_umbral
+from Modulos.correlation_analysis import calcular_correlaciones_y_generar_heatmap_con_resumen
+from Modulos.similarity_imputation import imputacion_similitud_con_rango, imprimir_detalles_imputacion
+from Modulos.correlation_imputation import Imputacion_por_correlacion
+from Modulos.imputation_loop import bucle_imputacion_similitud_correlacion
+from Modulos.excel_export import exportar_excel_con_imputaciones
+from Modulos.html_utils import convertir_a_html
+from Modulos.data_processing import mostrar_celdas_faltantes_con_seleccion, generar_resumen_faltantes
 
-
-# Solicitar la ruta del archivo al usuario
-archivo_origen = input("Ingrese la ruta del archivo Excel original: ")
 
 # Paso 1: Configurar entorno
 configurar_entorno(max_rows=20, max_columns=10)
 
 # Paso 2: Cargar datos
 try:
-    df_inicial, ruta_archivo = cargar_datos(archivo_origen)  # Aquí se valida la entrada
+    df_inicial, ruta_archivo = cargar_datos(ruta_archivo=args.ruta_archivo)
     print(f"Datos cargados correctamente desde: {ruta_archivo}")
 except ValueError as e:
     print(f"Error al cargar datos: {e}")
@@ -80,7 +113,7 @@ if df_inicial.columns.tolist() == df_procesado.columns.tolist():
 else:
     print("\n❌ Los encabezados fueron modificados durante el procesamiento.")
 
-# Paso 5: Mostr en HTML
+# Paso 5: Mostrar en HTML
 print("\n=== Mostrando datos procesados en formato HTML ===")
 convertir_a_html(df_procesado, titulo="Datos Procesados", mostrar=True)
 
@@ -115,7 +148,7 @@ parametros_preseleccionados = [p for p in parametros_preseleccionados if p in pa
 #print("Parámetros preseleccionados válidos:")
 #print(parametros_preseleccionados)
 
-parametros_seleccionados = seleccionar_parametros_por_indices(parametros_disponibles, parametros_preseleccionados)
+parametros_seleccionados = seleccionar_parametros_por_indices(parametros_disponibles, parametros_preseleccionados, args.parametros)
 # Imprimir parámetros seleccionados después de filtrar
 print("Parámetros seleccionados después de filtrar:")
 print(parametros_seleccionados)
@@ -134,7 +167,11 @@ convertir_a_html(df_filtrado, titulo="Datos Filtrados por Parámetros (df_filtra
 # Paso 7: Mostrar celdas faltantes con selección de columna
 
 # Analizar celdas faltantes en la columna seleccionada
-df_celdas_faltantes = mostrar_celdas_faltantes_con_seleccion(df_filtrado)
+df_celdas_faltantes = mostrar_celdas_faltantes_con_seleccion(
+    df_filtrado,
+    columna_seleccionada=args.columna,
+    debug_mode=args.debug_mode
+)
 
 # Verificar si hay celdas faltantes
 if df_celdas_faltantes.empty:
@@ -149,23 +186,48 @@ resumen_faltantes = generar_resumen_faltantes(df_filtrado, titulo="Resumen de Va
 
 # Paso 9: Calculando correlaciones y generando heatmap
 print("\n=== Calculando correlaciones y generando heatmap ===")
-tabla_completa = calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametros_seleccionados)
+# Paso 9: Calculando correlaciones y generando heatmap
+print("\n=== Calculando correlaciones y generando heatmap ===")
+tabla_completa = calcular_correlaciones_y_generar_heatmap_con_resumen(
+    df_procesado,
+    parametros_seleccionados,
+    umbral_heat_map=args.umbral_heat_map if args.debug_mode else None,
+    devolver_tabla=True
+)
     
 # Paso 10: Ajustar rango e imputar valores faltantes
 #print("\n=== Paso 8: Imputación con ajuste de rango ===")
 #imputacion_similitud_con_rango(df_filtrado, df_procesado)
  #Paso 11: Ajustar rango e imputar valores faltantes por correlación
-#Imputacion_por_correlacion(df_procesado, parametros_preseleccionados, tabla_completa, umbral_correlacion=0.7, min_datos_validos=5, max_lineas_consola=250)
+#Imputacion_por_correlacion(df_procesado, parametros_preseleccionados, tabla_completa, parametros_seleccionados, umbral_correlacion=0.7, min_datos_validos=5, max_lineas_consola=250)
 
 # Paso 10: Llamar a la función principal
-df_procesado_actualizado, resumen_imputaciones = bucle_imputacion_similitud_correlacion(df_procesado, parametros_preseleccionados, tabla_completa, reduccion_confianza=0.05, max_iteraciones=7)
+df_procesado_actualizado, resumen_imputaciones = bucle_imputacion_similitud_correlacion(
+    df_procesado=df_procesado,
+    df_filtrado=df_filtrado,
+    parametros_preseleccionados=parametros_preseleccionados,
+    tabla_completa=tabla_completa,
+    parametros_seleccionados=parametros_seleccionados,
+    rango_min=args.rango_min if args.debug_mode else None,
+    rango_max=args.rango_max if args.debug_mode else None,
+    nivel_confianza_min_similitud=args.nivel_confianza_min_similitud if args.debug_mode else None,
+    umbral_correlacion=args.umbral_correlacion if args.debug_mode else None,
+    nivel_confianza_min_correlacion=args.nivel_confianza_min_similitud if args.debug_mode else None,
+    debug_mode=args.debug_mode
+)
+
+
 
 # Paso 11: Exportar resultados a Excel
-archivo_destino = input("Ingrese la ruta donde desea guardar el archivo con las imputaciones (incluya .xlsx): ")
+archivo_destino = args.archivo_destino
+if not archivo_destino:
+    archivo_destino = input("Ingrese la ruta donde desea guardar el archivo con las imputaciones (incluya .xlsx): ")
+
 exportar_excel_con_imputaciones(
     archivo_origen=ruta_archivo,
     df_procesado=df_procesado_actualizado,
     resumen_imputaciones=resumen_imputaciones
 )
 print("\n=== Flujo completado. Verifique el archivo generado. ===")
+print("✅ Script finalizado.")
 

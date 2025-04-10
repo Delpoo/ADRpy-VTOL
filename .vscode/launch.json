@@ -32,6 +32,29 @@
             "request": "launch",            "program": "${workspaceFolder}/custom_script.py",
             "args": ["--custom-arg", "value"],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "🚀 Debug ADRpy automatizado",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/ADRpy/analisis/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--ruta_archivo", "${workspaceFolder}/ADRpy/analisis/Data/Datos_aeronaves.xlsx",
+                "--archivo_destino", "${workspaceFolder}/ADRpy/analisis/Results/archivo_salida.xlsx",
+                "--debug_mode",
+                "--umbral_heat_map", "0.7",
+                "--nivel_confianza_min_similitud", "0.5",
+                "--rango_min", "0.85",
+                "--rango_max", "1.15",
+                "--parametros", "4, 5, 7, 8, 9, 12, 13, 14, 15, 16, 18, 19, 20, 25",
+                "--columna", "Stalker XE",
+                "--umbral_correlacion", "0.5",
+                "--nivel_confianza_min_correlacion", "0.5"
+            ]
+            
         }
+        
     ]
 }

@@ -114,110 +114,47 @@ def procesar_datos_y_manejar_duplicados(df, respuesta_global=None):
         raise ValueError(f"Error durante el procesamiento y manejo de duplicados: {e}")
 
 
-def mostrar_celdas_faltantes_con_seleccion(df):
+def mostrar_celdas_faltantes_con_seleccion(df, columna_seleccionada=None, debug_mode=False):
     """
-    Permite al usuario seleccionar una columna para analizar y muestra las celdas faltantes.
-    Si el usuario no selecciona ninguna columna, utiliza una columna predeterminada.
-    Maneja columnas con más de 26 posiciones generando etiquetas en formato Excel.
-    :param df: DataFrame procesado.
-    :return: DataFrame con los detalles de las celdas faltantes (si las hay).
+    Muestra las celdas faltantes de una columna específica elegida por el usuario o automáticamente.
+
+    :param df: DataFrame a analizar.
+    :param columna_seleccionada: Nombre de la columna a analizar. Si None, se pedirá al usuario o se usará el modo automático.
+    :param debug_mode: Si True, selecciona automáticamente la primera columna con datos faltantes si no se pasa ninguna.
+    :return: DataFrame con las celdas faltantes de la columna seleccionada.
     """
+    columnas_con_nulos = df.columns[df.isnull().any()].tolist()
 
-    def seleccionar_columna(df, columna_numero=None):
-        """
-        Permite al usuario seleccionar una columna específica para validar.
-        Si no se selecciona ninguna, retorna la primera columna como predeterminada.
-        :param df: DataFrame a analizar
-        :param columna_numero: (opcional) número de columna a seleccionar automáticamente (modo debug)
-        """
-        columnas_dict = {i + 1: col for i, col in enumerate(df.columns)}
+    if not columnas_con_nulos:
+        print("✅ No hay columnas con valores faltantes.")
+        return pd.DataFrame()
 
-        if columna_numero is not None:
-            if columna_numero not in columnas_dict:
-                raise ValueError("Número de columna predefinido fuera de rango.")
-            return columnas_dict[columna_numero]
+    if debug_mode and not columna_seleccionada:
+        columna_seleccionada = columnas_con_nulos[0]
+        print(f"[DEBUG] Seleccionando automáticamente la primera columna con nulos: '{columna_seleccionada}'")
 
-        opciones_texto = "\n".join(
-            [f"{num}: {col}" for num, col in columnas_dict.items()]
-        )
+    elif not columna_seleccionada:
+        print("\n=== Columnas con datos faltantes ===")
+        for i, col in enumerate(columnas_con_nulos, start=1):
+            print(f"{i}. {col}")
 
-        try:
-            seleccion_usuario = simpledialog.askstring(
-                "Selección de columna",
-                f"Selecciona el número correspondiente a la columna que deseas validar:\n\n{opciones_texto}",
-            )
+        seleccion = input("Selecciona el número de la columna a analizar (presiona Enter para seleccionar la primera): ").strip()
 
-            if not seleccion_usuario:
-                print(
-                    "No se seleccionó ninguna columna. Usando la primera columna como predeterminada."
-                )
-                return df.columns[0]
+        if not seleccion.isdigit():
+            print("🔁 Entrada inválida o vacía. Seleccionando la primera columna por defecto.")
+            columna_seleccionada = columnas_con_nulos[0]
+        else:
+            seleccion = int(seleccion) - 1
+            if 0 <= seleccion < len(columnas_con_nulos):
+                columna_seleccionada = columnas_con_nulos[seleccion]
+            else:
+                print("🔁 Número fuera de rango. Seleccionando la primera columna por defecto.")
+                columna_seleccionada = columnas_con_nulos[0]
 
-            seleccion_usuario = int(seleccion_usuario)
+    print(f"\n=== Analizando celdas faltantes en la columna: '{columna_seleccionada}' ===")
+    celdas_faltantes = df[df[columna_seleccionada].isnull()][[columna_seleccionada]]
 
-            if seleccion_usuario not in columnas_dict:
-                raise ValueError("Número ingresado fuera del rango válido.")
-
-            return columnas_dict[seleccion_usuario]
-
-        except ValueError as e:
-            print(f"Error: {e}. Finalizando la ejecución.")
-            exit()
-
-    def indice_a_columna_excel(indice):
-        """
-        Convierte un índice numérico de columna en una etiqueta al estilo Excel (A, B, ..., Z, AA, AB, ...).
-        :param indice: Índice numérico de la columna (0 para A, 1 para B, ..., 25 para Z, 26 para AA, etc.).
-        :return: Etiqueta de columna en formato Excel.
-        """
-        etiqueta = ""
-        while indice >= 0:
-            etiqueta = chr(indice % 26 + ord("A")) + etiqueta
-            indice = indice // 26 - 1
-        return etiqueta
-
-    try:
-        # Selección de columna
-        columna_prueba = seleccionar_columna(df)
-
-        # Identificar celdas faltantes en la columna seleccionada
-        print(
-            f"\n=== Analizando celdas faltantes en la columna: '{columna_prueba}' ==="
-        )
-        missing_indices = df[df[columna_prueba].isna()].index.tolist()
-
-        if not missing_indices:
-            print(
-                f"No se encontraron valores faltantes en la columna '{columna_prueba}'."
-            )
-            return pd.DataFrame()  # Devuelve un DataFrame vacío si no hay faltantes
-
-        # Crear un DataFrame para almacenar los resultados
-        resultados = []
-
-        for idx in missing_indices:
-            fila_excel = (
-                df.index.get_loc(idx) + 2
-            )  # +2 para ajustarse al formato Excel (encabezado en fila 1)
-            columna_excel = indice_a_columna_excel(df.columns.get_loc(columna_prueba))
-            celda_excel = f"{columna_excel}{fila_excel}"
-            resultados.append(
-                {
-                    "Índice": idx,
-                    "Celda": celda_excel,
-                    "Columna": columna_prueba,
-                    "Valor Actual": "NaN",
-                }
-            )
-
-        # Convertir resultados a DataFrame
-        df_resultados = pd.DataFrame(resultados)
-
-        return df_resultados
-
-    except Exception as e:
-        print(f"Error al analizar celdas faltantes: {e}")
-        raise
+    return celdas_faltantes
 
 
 def generar_resumen_faltantes(

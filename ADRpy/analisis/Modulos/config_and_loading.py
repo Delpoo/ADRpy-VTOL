@@ -1,7 +1,7 @@
 import pandas as pd
 import tkinter as tk
 from tkinter import simpledialog, messagebox
-from openpyxl import load_workbook
+import sys
 
 
 def configurar_entorno(max_rows=20, max_columns=10):
@@ -12,20 +12,26 @@ def configurar_entorno(max_rows=20, max_columns=10):
     """
     pd.set_option("display.max_rows", max_rows)
     pd.set_option("display.max_columns", max_columns)
-
+            
 
 def cargar_datos(ruta_archivo=None):
     """
     Carga los datos desde un archivo Excel y realiza validaciones.
     Devuelve el DataFrame cargado y la ruta utilizada.
     """
-    # Solicitar al usuario la ruta del archivo si no se proporciona
-    if ruta_archivo is None:
-        ruta_archivo = input(
-            r"Ingrese la ruta del archivo Excel original (o presione Enter para usar 'C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\data\Datos_aeronaves.xlsx'): "
-        ).strip()
-        if not ruta_archivo:
-            ruta_archivo = r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\data\Datos_aeronaves.xlsx"  # Asignar valor predeterminado
+# Detectar si se está ejecutando en modo debug
+    modo_debug = "--debug_mode" in sys.argv
+
+    if not ruta_archivo:
+        if modo_debug:
+            ruta_archivo = r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Data\Datos_aeronaves.xlsx"
+            print(f"DEBUG MODE ACTIVADO: usando ruta predeterminada: {ruta_archivo}")
+        else:
+            ruta_archivo = input(
+                r"Ingrese la ruta del archivo Excel original (o presione Enter para usar la predeterminada): "
+            ).strip() or r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Data\Datos_aeronaves.xlsx"
+
+    print(f"DEBUG: ruta_archivo antes de validar: '{ruta_archivo}'")
 
     # Validar el formato del archivo
     if not ruta_archivo.endswith((".xlsx", ".xlsm")):

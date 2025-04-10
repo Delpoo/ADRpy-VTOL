@@ -11,11 +11,11 @@ def Imputacion_por_correlacion(
     df_correlacion,
     parametros_preseleccionados,
     tabla_completa,
+    parametros_seleccionados,
     min_datos_validos=5,
     max_lineas_consola=250,
     umbral_correlacion=0.7,
     nivel_confianza_min_correlacion=0.5,
-    reduccion_confianza=0.05
 ):
     # Lógica de la función
         """
@@ -55,7 +55,13 @@ def Imputacion_por_correlacion(
 
         # === PASO 1: CÁLCULO DE CORRELACIONES ===
         print("\n=== PASO 1: CÁLCULO DE CORRELACIONES ENTRE PARÁMETROS ===")
-        tabla_completa = calcular_correlaciones_y_generar_heatmap_con_resumen(df, parametros_seleccionados, valor_por_defecto=0.7)    
+        tabla_completa = tabla_completa = calcular_correlaciones_y_generar_heatmap_con_resumen(
+    df,
+    parametros_seleccionados,
+    umbral_heat_map=umbral_correlacion,
+    devolver_tabla=True
+)
+
         correlaciones = tabla_completa.copy()
         indices_validos = df.index
     
@@ -75,7 +81,7 @@ def Imputacion_por_correlacion(
         # Mostrar correlaciones aceptables en HTML
         convertir_a_html(
             datos_procesados=correlaciones_aceptables,
-            titulo="Tabla de correlaciones con filtro de umbral",
+            titulo="Tabla de correlaciones con filtro de umbral de correlación",
             mostrar=True
         )
         #print("Parámetros disponibles en el índice del DataFrame:")
@@ -199,7 +205,7 @@ def Imputacion_por_correlacion(
         else:
             print("La columna 'Nivel de Confianza' no está presente en df_reporte.")
             # Maneja el caso sin filtro, por ejemplo:
-            return df_procesado, []
+            return df, []
 
     
         # Resumen de imputaciones

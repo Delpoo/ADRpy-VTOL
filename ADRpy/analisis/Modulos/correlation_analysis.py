@@ -6,13 +6,8 @@ from .html_utils import convertir_a_html
 from .user_interaction import solicitar_umbral
 
 
-def calcular_correlaciones_y_generar_heatmap_con_resumen(
-    df_procesado,
-    parametros_seleccionados,
-    umbral=None,
-    valor_por_defecto=0.7,
-    devolver_tabla=False,
-):
+def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametros_seleccionados, umbral_heat_map=None, devolver_tabla=False):
+    valor_por_defecto = 0.7
     """
     Calcula las correlaciones completas y filtradas entre variables seleccionadas,
     genera tablas en HTML con un resumen agregado, y crea un heatmap.
@@ -45,10 +40,11 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(
         convertir_a_html(resumen, titulo="Resumen de la Tabla", mostrar=True)
 
     try:
-        # === Paso 1: Obtener umbral desde el argumento o pedirlo al usuario ===
-        if umbral is None:
-            umbral = solicitar_umbral(valor_por_defecto)
-        print(f"\nUmbral seleccionado para correlaciones significativas: {umbral}")
+        # === Paso 1: Obtener umbral_heat_map desde el argumento o pedirlo al usuario ===
+        if umbral_heat_map is None:
+            umbral_heat_map = solicitar_umbral(valor_por_defecto)
+
+        print(f"\nUmbral seleccionado para correlaciones significativas: {umbral_heat_map}")
 
         # === Validación de parámetros seleccionados ===
         parametros_no_encontrados = [
@@ -67,11 +63,11 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(
             "Tabla de Correlaciones con todos los parametros(tabla_completa)",
         )
 
-        # Filtrar correlaciones por el umbral
+        # Filtrar correlaciones por el umbral_heat_map
         tabla_completa_significativa = tabla_completa[
-            (tabla_completa.abs() >= umbral) & (tabla_completa != 1)
+            (tabla_completa.abs() >= umbral_heat_map) & (tabla_completa != 1)
         ]
-        # agregar_resumen_a_tabla(tabla_completa_significativa.round(3), f"Tabla de Correlaciones Significativas (Umbral >= {umbral})")
+        # agregar_resumen_a_tabla(tabla_completa_significativa.round(3), f"Tabla de Correlaciones Significativas (Umbral >= {umbral_heat_map})")
 
         # === Filtrar datos seleccionados ===
         print("\n=== Filtrando datos seleccionados ===")
@@ -86,13 +82,13 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(
             "Tabla de Correlaciones Filtradas por aeronaves seleccionadas (Para Heatmap)",
         )
 
-        # Filtrar correlaciones por el umbral para la tabla filtrada
+        # Filtrar correlaciones por el umbral_heat_map para la tabla filtrada
         tabla_filtrada_significativa = tabla_filtrada[
-            (tabla_filtrada.abs() >= umbral) & (tabla_filtrada != 1)
+            (tabla_filtrada.abs() >= umbral_heat_map) & (tabla_filtrada != 1)
         ]
         agregar_resumen_a_tabla(
             tabla_filtrada_significativa.round(3),
-            f"Tabla de parametros seleccionados, filtrada por Correlaciones Significativas (Umbral >= {umbral})",
+            f"Tabla de parametros seleccionados, filtrada por Correlaciones Significativas (Umbral >= {umbral_heat_map})",
         )
 
         # Preparar datos para el heatmap
@@ -116,7 +112,7 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(
             vmax=1,
         )
         plt.title(
-            f"Heatmap de Correlaciones de Variables Seleccionadas (Umbral >= {umbral})"
+            f"Heatmap de Correlaciones de Variables Seleccionadas (Umbral >= {umbral_heat_map})"
         )
         plt.show()
 
@@ -127,4 +123,9 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(
             f"Error: {e}. Asegúrate de que las variables seleccionadas existen en los datos."
         )
 
-    return tabla_completa
+    if devolver_tabla:
+        return tabla_completa
+    else:
+        return None
+
+
