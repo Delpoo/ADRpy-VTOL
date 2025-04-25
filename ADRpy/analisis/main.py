@@ -7,6 +7,12 @@
 # df_procesado.shape
 # df_filtrado.isnull().sum()
 
+# TODO: Esto es algo que tengo que hacer más adelante
+# FIXME: Esto está fallando o tiene errores
+# ! Esto es importante
+# ? Esto es una duda o algo que quiero revisar
+# * Esto es algo que quiero hacer
+# Normal comment: Este es un comentario normal
 
 import argparse
 
@@ -69,8 +75,8 @@ from Modulos.imputation_loop import bucle_imputacion_similitud_correlacion
 from Modulos.excel_export import exportar_excel_con_imputaciones
 from Modulos.html_utils import convertir_a_html
 from Modulos.data_processing import mostrar_celdas_faltantes_con_seleccion, generar_resumen_faltantes
-
-
+from Modulos.imputacion_similitud_flexible  import configurar_similitud 
+from Modulos.imputacion_similitud_flexible import imputar_por_similitud
 # Paso 1: Configurar entorno
 configurar_entorno(max_rows=20, max_columns=10)
 
@@ -186,8 +192,6 @@ resumen_faltantes = generar_resumen_faltantes(df_filtrado, titulo="Resumen de Va
 
 # Paso 9: Calculando correlaciones y generando heatmap
 print("\n=== Calculando correlaciones y generando heatmap ===")
-# Paso 9: Calculando correlaciones y generando heatmap
-print("\n=== Calculando correlaciones y generando heatmap ===")
 tabla_completa = calcular_correlaciones_y_generar_heatmap_con_resumen(
     df_procesado,
     parametros_seleccionados,
@@ -200,12 +204,23 @@ tabla_completa = calcular_correlaciones_y_generar_heatmap_con_resumen(
 #imputacion_similitud_con_rango(df_filtrado, df_procesado)
  #Paso 11: Ajustar rango e imputar valores faltantes por correlación
 #Imputacion_por_correlacion(df_procesado, parametros_preseleccionados, tabla_completa, parametros_seleccionados, umbral_correlacion=0.7, min_datos_validos=5, max_lineas_consola=250)
+# Separar atributos y parámetros como antes:
+
+# Cargar configuración de similitud
+bloques_rasgos, filas_familia, capas_familia = configurar_similitud()
+
+df_atributos   = df_procesado.loc[filas_familia]
+df_parametros  = df_procesado.drop(index=filas_familia)
 
 # Paso 10: Llamar a la función principal
 df_procesado_actualizado, resumen_imputaciones = bucle_imputacion_similitud_correlacion(
+    df_parametros=df_parametros,
+    df_atributos=df_atributos,
+     parametros_preseleccionados=parametros_preseleccionados,
+    bloques_rasgos=bloques_rasgos,
+    capas_familia=capas_familia,
     df_procesado=df_procesado,
     df_filtrado=df_filtrado,
-    parametros_preseleccionados=parametros_preseleccionados,
     tabla_completa=tabla_completa,
     parametros_seleccionados=parametros_seleccionados,
     rango_min=args.rango_min if args.debug_mode else None,
@@ -216,7 +231,7 @@ df_procesado_actualizado, resumen_imputaciones = bucle_imputacion_similitud_corr
     debug_mode=args.debug_mode
 )
 
-
+print("Hola")
 
 # Paso 11: Exportar resultados a Excel
 archivo_destino = args.archivo_destino
@@ -226,7 +241,8 @@ if not archivo_destino:
 exportar_excel_con_imputaciones(
     archivo_origen=ruta_archivo,
     df_procesado=df_procesado_actualizado,
-    resumen_imputaciones=resumen_imputaciones
+    resumen_imputaciones=resumen_imputaciones,
+    archivo_destino=archivo_destino
 )
 print("\n=== Flujo completado. Verifique el archivo generado. ===")
 print("✅ Script finalizado.")

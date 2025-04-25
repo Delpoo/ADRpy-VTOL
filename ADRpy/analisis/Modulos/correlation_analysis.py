@@ -72,11 +72,11 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametro
         # === Filtrar datos seleccionados ===
         print("\n=== Filtrando datos seleccionados ===")
 
-        datos_filtrados = df_procesado.loc[parametros_seleccionados].transpose()
+        df_filtrado_transpuesto = df_procesado.loc[parametros_seleccionados].transpose()
 
         # Tabla filtrada
         print("\n=== Cálculo de correlaciones filtradas ===")
-        tabla_filtrada = datos_filtrados.corr()
+        tabla_filtrada = df_filtrado_transpuesto.corr()
         agregar_resumen_a_tabla(
             tabla_filtrada.round(3),
             "Tabla de Correlaciones Filtradas por aeronaves seleccionadas (Para Heatmap)",
@@ -93,7 +93,7 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametro
 
         # Preparar datos para el heatmap
         print("\n=== Preparando datos para el heatmap ===")
-        heatmap_data = datos_filtrados.dropna(
+        heatmap_data = df_filtrado_transpuesto.dropna(
             thresh=2
         )  # Excluir variables con menos de 2 valores válidos
         heatmap_correlaciones = heatmap_data.corr()

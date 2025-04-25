@@ -1,13 +1,17 @@
 import pandas as pd
-from .similarity_imputation import imputacion_similitud_con_rango
+from Modulos.imputacion_similitud_flexible import *
 from .correlation_imputation import Imputacion_por_correlacion
 from .html_utils import convertir_a_html
 from .data_processing import generar_resumen_faltantes
 
 def bucle_imputacion_similitud_correlacion(
+    df_parametros,
+    df_atributos,
+    parametros_preseleccionados,
+    bloques_rasgos,
+    capas_familia,
     df_procesado,
     df_filtrado,
-    parametros_preseleccionados,
     tabla_completa,
     parametros_seleccionados,
     umbral_correlacion=0.7,
@@ -99,21 +103,37 @@ def bucle_imputacion_similitud_correlacion(
         )
 
         # Crear copias independientes para cada método
-        df_similitud = df_filtrado_base.copy()
+        df_similitud = df_procesado_base.copy()
         df_correlacion = df_procesado_base.copy()
 
         # Imputación por similitud (no actualiza todavía)
         print("\n" + "-" * 80)
         print(f"\033[1m*** IMPUTACIÓN POR SIMILITUD - ITERACIÓN {iteracion} ***\033[0m")
         print("-" * 80)
-        df_resultado_final, reporte_similitud = imputacion_similitud_con_rango(
-            df_filtrado=df_similitud,
-            df_procesado=df_procesado_base,
-            rango_min=rango_min,
-            rango_max=rango_max,
-            nivel_confianza_min_similitud=nivel_confianza_min_similitud,
-        )
+        df_similitud_resultado = df_similitud.copy()
+        reporte_similitud = []
 
+        for parametro in parametros_preseleccionados:
+            for aeronave in df_similitud_resultado.columns:
+                if pd.isna(df_similitud_resultado.loc[parametro, aeronave]):
+                    resultado = imputar_por_similitud(
+                        df_parametros=df_parametros,
+                        df_atributos=df_atributos,
+                        aeronave_obj=aeronave,
+                        parametro_objetivo=parametro,
+                        bloques_rasgos=bloques_rasgos,
+                        capas_familia=capas_familia
+                    )
+
+                    if resultado is not None:
+                        df_similitud_resultado.loc[parametro, aeronave] = resultado["valor"]
+                        reporte_similitud.append({
+                            "Aeronave": aeronave,
+                            "Parámetro": parametro,
+                            "Valor Imputado": resultado["valor"],
+                            "Nivel de Confianza": resultado["confianza"]
+                        })
+        
         if reporte_similitud and len(reporte_similitud) > 0:
             print("\033[1m>>> RESULTADOS DE IMPUTACIÓN POR SIMILITUD\033[0m")
             # Se guardan las imputaciones de similitud, pero NO se actualiza el DataFrame aún.
