@@ -2,7 +2,7 @@ import pandas as pd
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 import sys
-
+import unicodedata
 
 def configurar_entorno(max_rows=20, max_columns=10):
     """
@@ -76,3 +76,30 @@ def cargar_datos(ruta_archivo=None):
         raise ValueError("Error: Archivo no encontrado.")
     except Exception as e:
         raise ValueError(f"Error al cargar el archivo: {e}")
+
+
+
+
+def normalizar_encabezados(df):
+    """
+    Normaliza los encabezados del DataFrame:
+    - Elimina espacios al inicio y al final.
+    - Convierte a minúsculas.
+    - Elimina caracteres especiales o no ASCII.
+    :param df: DataFrame a normalizar.
+    :return: DataFrame con encabezados normalizados.
+    """
+    def normalizar(texto):
+        if isinstance(texto, str):
+            # Eliminar caracteres no ASCII y convertir a minúsculas
+            texto = ''.join(
+                c for c in unicodedata.normalize('NFD', texto)
+                if unicodedata.category(c) != 'Mn'
+            )
+            return texto.strip().lower()  # Eliminar espacios y convertir a minúsculas
+        return texto
+
+    # Normalizar columnas e índices
+    df.columns = [normalizar(col) for col in df.columns]
+    df.index = [normalizar(idx) for idx in df.index]
+    return df

@@ -65,7 +65,7 @@ from IPython.display import display, HTML
 #    IMPORTAR MÓDULOS   #
 # ===================== #
 
-from Modulos.config_and_loading import configurar_entorno, cargar_datos
+from Modulos.config_and_loading import configurar_entorno, cargar_datos, normalizar_encabezados
 from Modulos.data_processing import procesar_datos_y_manejar_duplicados
 from Modulos.user_interaction import seleccionar_parametros_por_indices, solicitar_umbral
 from Modulos.correlation_analysis import calcular_correlaciones_y_generar_heatmap_con_resumen
@@ -87,6 +87,10 @@ try:
 except ValueError as e:
     print(f"Error al cargar datos: {e}")
     exit(1)  # Detiene el programa si hay un error
+
+# Normalizar encabezados del DataFrame
+#print("\n=== Normalizando encabezados del DataFrame ===")
+#df_inicial = normalizar_encabezados(df_inicial)
 
 # Validar que los datos se hayan cargado correctamente
 print("\n=== Validando datos cargados ===")
@@ -142,6 +146,7 @@ parametros_preseleccionados = [
     "Autonomía de la aeronave",
     "Velocidad máxima (KIAS)",
     "Velocidad de pérdida (KCAS)",
+    "Velocidad de pérdida limpia (KCAS)",
     "envergadura",
     "Cuerda",
     "payload",
@@ -216,7 +221,7 @@ df_parametros  = df_procesado.drop(index=filas_familia)
 df_procesado_actualizado, resumen_imputaciones = bucle_imputacion_similitud_correlacion(
     df_parametros=df_parametros,
     df_atributos=df_atributos,
-     parametros_preseleccionados=parametros_preseleccionados,
+    parametros_preseleccionados=parametros_preseleccionados,
     bloques_rasgos=bloques_rasgos,
     capas_familia=capas_familia,
     df_procesado=df_procesado,
@@ -237,7 +242,9 @@ print("Hola")
 archivo_destino = args.archivo_destino
 if not archivo_destino:
     archivo_destino = input("Ingrese la ruta donde desea guardar el archivo con las imputaciones (incluya .xlsx): ")
-
+if not archivo_destino:
+    archivo_destino = r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx"
+    
 exportar_excel_con_imputaciones(
     archivo_origen=ruta_archivo,
     df_procesado=df_procesado_actualizado,

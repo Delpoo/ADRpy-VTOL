@@ -57,8 +57,11 @@ def exportar_excel_con_imputaciones(archivo_origen, df_procesado, resumen_imputa
                     elif registro["Método"] == "Correlación":
                         celda.fill = color_correlacion
 
-                    # Agregar comentario con el nivel de confianza
-                    comentario = f"Nivel de confianza: {registro['Nivel de Confianza']:.2f}"
+                    # Agregar comentario con el nivel de confianza y la iteración
+                    comentario = (
+                        f"Nivel de confianza: {registro['Nivel de Confianza']*100:.2f}%\n"
+                        f"Iteración: {registro['Iteración']}"
+                    )
                     celda.comment = Comment(comentario, "Sistema")
 
         # Guardar el archivo con las imputaciones
@@ -66,6 +69,6 @@ def exportar_excel_con_imputaciones(archivo_origen, df_procesado, resumen_imputa
         print(f"Exportación completada. El archivo se guardó como '{archivo_destino}'.")
 
     except FileNotFoundError:
-        print(f"Error: El archivo '{archivo_origen}' no fue encontrado.")
+        print(f"Error: El archivo '{archivo_origen}' o {archivo_destino} no fue encontrado.")
     except Exception as e:
         print(f"Error al procesar el archivo: {e}")

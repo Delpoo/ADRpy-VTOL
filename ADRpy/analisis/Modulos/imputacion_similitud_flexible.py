@@ -1,115 +1,53 @@
-"""
-imputacion_similitud_flexible.py
---------------------------------
-Implementa la lógica de K‑NN con 3 ejes obligatorios (físico, geométrico, prestacional)
-y filtrado progresivo de familia (F0‑F3).  Diseñado para integrarse sin romper
-los nombres ni los flujos que ya existen en tu proyecto ADRpy.
-
-Uso rápido:
-    python imputacion_similitud_flexible.py --ruta_excel Datos_aeronaves.xlsx \
-        --aeronave "Stalker XE" \
-        --parametro "Velocidad a la que se realiza el crucero (KTAS)"
-"""
-
-import argparse
 import pandas as pd
 import numpy as np
-from pathlib import Path
 
-# ------------------------------------------------------------------ #
-#  CONFIGURACIÓN DE BLOQUES Y CAPAS DE FAMILIA
-# ------------------------------------------------------------------ #
-
-def configurar_similitud():
-    """
-    Devuelve las configuraciones necesarias para ejecutar la imputación por similitud flexible:
-    - bloques de rasgos
-    - filas de familia
-    - capas de filtrado jerárquico de familia
-    """
-
-    bloques_rasgos = {
-        "fisico": [
-            "Peso máximo al despegue (MTOW)",
-            "Peso vacío",
-        ],
-        "geom": [
-            "Área del ala",
-            "envergadura",
-            "Longitud del fuselaje",
-            "Relación de aspecto del ala",
-        ],
-        "prest": [
-            "Potencia específica (P/W)",
-            "Autonomía de la aeronave",
-            "Alcance de la aeronave",
-            "Velocidad a la que se realiza el crucero (KTAS)",
-            "Velocidad máxima (KIAS)",
-        ],
-    }
-
-    filas_familia = [
-        "Misión",
-        "Despegue",
-        "Propulsión vertical",
-        "Propulsión horizontal",
-        "Cantidad de motores propulsión vertical",
-        "Cantidad de motores propulsión horizontal",
-    ]
-
-    capas_familia = [
-        {
-            "Misión": "equals",
-            "Despegue": "equals",
-            "Propulsión vertical": "equals",
-            "Propulsión horizontal": "equals",
-            "Cantidad de motores propulsión vertical": "equals",
-            "Cantidad de motores propulsión horizontal": "equals",
-        },
-        {
-            "Misión": "equals",
-            "Despegue": "equals",
-            "Propulsión vertical": "equals",
-            "Propulsión horizontal": "equals",
-        },
-        {
-            "Misión": "equals",
-            "Despegue": "equals",
-        },
-        {
-            "Misión": "equals",
-        },
-    ]
-
-    return bloques_rasgos, filas_familia, capas_familia
-
-# ------------------------------------------------------------------ #
-#  HELPERS
-# ------------------------------------------------------------------ #
+# ------------------------ HELPERS ------------------------
 
 def imprimir(msg, bold=False):
     prefix = "\033[1m" if bold else ""
-    suffix = "\033[0m"  if bold else ""
+    suffix = "\033[0m" if bold else ""
     print(f"{prefix}{msg}{suffix}")
 
-import pandas as pd
+# ------------------------ CONFIGURACIÓN ------------------------
 
-def zscore(arr: pd.Series) -> pd.Series:
+def configurar_similitud():
     """
-    Si la desviación estándar es cero, devolvemos un
-    vector de ceros (todos idénticos a la media).
-    En caso contrario, el Z‐score habitual.
+    Devuelve:
+    - bloques_rasgos: diccionario de ejes y parámetros
+    - filas_familia: atributos para clasificación familiar
+    - capas_familia: filtros progresivos de familia F0, F1, F2
     """
-    std = arr.std(ddof=0)
-    if std == 0 or pd.isna(std):
-        # arr.index preserva el nombre de filas
-        return pd.Series(0.0, index=arr.index)
-    return (arr - arr.mean()) / std
+    bloques_rasgos = {
+        "fisico": ["Peso máximo al despegue (MTOW)", "Peso vacío"],
+        "geom": ["Área del ala", "envergadura", "Longitud del fuselaje", "Relación de aspecto del ala"],
+        "prest": [
+            "Potencia específica (P/W)", "Autonomía de la aeronave", 
+            "Alcance de la aeronave", "Velocidad a la que se realiza el crucero (KTAS)",
+            "Velocidad máxima (KIAS)",
+        ],
+    }
+    filas_familia = [
+        "Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal",
+        "Cantidad de motores propulsión vertical", "Cantidad de motores propulsión horizontal",
+    ]
+    capas_familia = [
+        {attr: "equals" for attr in filas_familia},
+        {attr: "equals" for attr in filas_familia[:4]},
+        {attr: "equals" for attr in filas_familia[:2]},
+    ]
+    return bloques_rasgos, filas_familia, capas_familia
 
+# ------------------------ FUNCIÓN PRINCIPAL ------------------------
 
-# ------------------------------------------------------------------ #
-#  FUNCIÓN PRINCIPAL
-# ------------------------------------------------------------------ #
+def penalizacion_por_k(k):
+    """
+    Calcula la penalización por cantidad de vecinos (k) usando una ecuación polinomial.
+    Para k > 10, la penalización se fija en 1.0 (confianza máxima).
+    """
+    if k > 10:
+        return 1.0
+    return max(0, min(1, 0.00002281 * k**5 - 0.00024 * k**4 - 0.0036 * k**3 + 0.046 * k**2 + 0.0095 * k + 0.024))
+
 def imputar_por_similitud(
     df_parametros: pd.DataFrame,
     df_atributos: pd.DataFrame,
@@ -118,134 +56,174 @@ def imputar_por_similitud(
     bloques_rasgos: dict,
     capas_familia: list
 ):
+    imprimir(f"\n=== Imputación por similitud: {aeronave_obj} - {parametro_objetivo} ===", True)
 
-    imprimir(f"\n=== Iniciando imputación por similitud de aeronave {aeronave_obj} y parametro {parametro_objetivo} ===", True)
-
-    # ------------------------ Paso 0. Validaciones ------------------
+    # Validaciones
     if parametro_objetivo not in df_parametros.index:
-        imprimir(f"Parámetro '{parametro_objetivo}' no encontrado.", True)
+        imprimir(f"⚠️ Parámetro '{parametro_objetivo}' no encontrado.", True)
         return None
-
     if aeronave_obj not in df_parametros.columns:
-        imprimir(f"Aeronave '{aeronave_obj}' no encontrada.", True)
+        imprimir(f"⚠️ Aeronave '{aeronave_obj}' no encontrada.", True)
         return None
 
-    # ------------------------ Paso 1. Vector de X -------------------
-    vector_objetivo = {}
-    for bloque, lista in bloques_rasgos.items():
-        for rasgo in lista:
-            if not pd.isna(df_parametros.at[rasgo, aeronave_obj]):
-                vector_objetivo[bloque] = rasgo
-                break
-        else:  # ningún rasgo disponible
-            imprimir(f"⚠️  Bloque {bloque.upper()} sin datos en '{aeronave_obj}'.", True)
-            return None
-
-    imprimir("Vector objetivo seleccionado (se buscan parámetros con valores no nulos en celdas para realizar la imputación):")
-    for bloque, rasgo in vector_objetivo.items():
-        imprimir(f"  {bloque}: {rasgo}")
-
-    # ------------------------ Paso 2. Iterar capas familia ----------
+    # Iteración por capas de familia
     for capa_idx, criterios in enumerate(capas_familia):
-        imprimir(f"\n=== Capa F{capa_idx} ===", True)
-
-        # Filtrado fila a fila
-        mascara_cols = np.array([True] * df_parametros.shape[1])
+        familia = f"F{capa_idx}"
+        imprimir(f"\n--- Capa {familia}: criterios {list(criterios.keys())} ---", True)
+        # Filtrar familia
+        mask = np.ones(df_parametros.shape[1], dtype=bool)
         for fila, modo in criterios.items():
-            val_obj = df_atributos.at[fila, aeronave_obj]
-            if modo == "equals":
-                mascara_cols &= df_atributos.loc[fila] == val_obj
-
-        df_familia = df_parametros.loc[:, mascara_cols]
-        imprimir("Realizando selección de aeronaves con valores en todos los parámetros físicos, geométricos y prestacionales:")
-        n_fam = df_familia.shape[1]
-        imprimir(f"Drones en familia: {n_fam}")
-
-        if n_fam == 0:
-            imprimir("❌  Sin drones en esta capa. Relajando…")
+            val = df_atributos.at[fila, aeronave_obj]
+            mask &= (df_atributos.loc[fila] == val).values
+        df_familia = df_parametros.loc[:, mask]
+        if df_familia.shape[1] == 0:
+            imprimir(f"❌ Sin drones en {familia}. Continuando...", True)
+            continue
+        #  —> Validar que haya vecinos con el parámetro objetivo
+        cols_validas = df_familia.columns[df_familia.loc[parametro_objetivo].notna()]
+        if len(cols_validas) == 0:
+            imprimir(f"❌ Ningún dron en {familia} tiene '{parametro_objetivo}'.", True)
             continue
 
-        # Filtrar los que poseen el parámetro objetivo
-        cols_with_param = df_familia.columns[
-            df_familia.loc[parametro_objetivo].notna()
-        ]
-        if cols_with_param.empty:
-            imprimir(f"❌  Ningún dron en F{capa_idx} tiene '{parametro_objetivo}'.")
+
+        # Parámetros MTOW y filtro ±20%
+        mtow_obj = df_familia.at["Peso máximo al despegue (MTOW)", aeronave_obj]
+        mtow_vec = df_familia.loc["Peso máximo al despegue (MTOW)", cols_validas].values
+        delta_mtow = np.abs(mtow_vec - mtow_obj) / mtow_obj * 100
+        mask_mtow = delta_mtow <= 20
+        cols_filtrados = cols_validas[mask_mtow]
+        if len(cols_filtrados) == 0:
+            imprimir(f"❌ Sin vecinos ±20% MTOW en {familia}.", True)
             continue
 
-        # Además deben poseer los tres ejes
-        filtros_ejes = [
-            df_familia.loc[vector_objetivo[bloque]].notna()
-            for bloque in ("fisico", "geom", "prest")
-        ]
-        mask_all_ejes = filtros_ejes[0] & filtros_ejes[1] & filtros_ejes[2]
-        cols_validas = cols_with_param[mask_all_ejes[cols_with_param]]
+        # Cálculo de MTOW_score
+        d = delta_mtow[mask_mtow]
+        g = -0.002*d**4 + 0.041*d**3 - 0.28135*d**2 + 0.23*d + 99.94
+        mtow_scores = g / 100.0
 
-        k = len(cols_validas)
-        imprimir(f"Vecinos válidos (k)......................: {k}")
+        # Nueva lógica para calcular los bonos geométricos y prestacionales
 
-        if k == 0:
-            imprimir("❌  No quedan drones con los 3 ejes. Relajando…")
+        def calcular_bono(tipo):
+            parametros = bloques_rasgos[tipo]  # Obtener los parámetros geométricos o prestacionales
+            bono_total = 0  # Inicializar el bono total
+
+            for parametro in parametros:
+                try:
+                    # Valores de la aeronave objetivo y los vecinos
+                    valor_objetivo = df_parametros.at[parametro, aeronave_obj]
+                    valores_vecinos = df_familia.loc[parametro, cols_filtrados].values
+
+                    # Si el valor de la aeronave objetivo es NaN, el bono es 0
+                    if pd.isna(valor_objetivo):
+                        imprimir(f"⚠️ Parámetro '{parametro}' no tiene valor en la aeronave objetivo. Bono = 0.")
+                        continue
+
+                    # Calcular las diferencias relativas para los vecinos válidos
+                    diferencias = np.abs(valores_vecinos - valor_objetivo) / valor_objetivo * 100
+
+                    for d, vecino in zip(diferencias, valores_vecinos):
+                        if pd.isna(d):
+                            imprimir(f"⚠️ Diferencia NaN para el parámetro '{parametro}'. Vecino: {vecino}. Bono = 0.")
+                            continue
+
+                        # Ajustar la diferencia relativa según el rango
+                        if d > 40:
+                            g = -100  # Máximo bono negativo
+                        elif d > 20:
+                            # Recalcular la diferencia relativa en el rango 20% a 40%
+                            d_ajustada = d - 20
+                            g = -0.002 * d_ajustada**4 + 0.041 * d_ajustada**3 - 0.28135 * d_ajustada**2 + 0.23 * d_ajustada + 99.94
+                            g = -g  # Cambiar el signo a negativo
+                        else:
+                            # Rango de 1% a 20%
+                            g = -0.002 * d**4 + 0.041 * d**3 - 0.28135 * d**2 + 0.23 * d + 99.94
+
+                        # Calcular el bono para este parámetro y vecino
+                        bono_parametro = (g / 100) * 0.05
+                        bono_total += bono_parametro
+
+                        # Imprimir detalles para depuración
+                        imprimir(f"  Parámetro: {parametro}, Vecino: {vecino}, Objetivo: {valor_objetivo}, d: {d:.2f}%, g: {g:.2f}, Bono: {bono_parametro:.5f}")
+                        
+                except KeyError:
+                    imprimir(f"⚠️ Parámetro '{parametro}' no encontrado en los datos. Ignorando.")
+                    continue
+
+            imprimir(f"  Bono total para '{tipo}': {bono_total:.5f}")
+            return bono_total
+
+        # Calcular los bonos geométricos y prestacionales
+        bonus_geom = calcular_bono("geom")
+        bonus_prest = calcular_bono("prest")
+        imprimir(f"  Bono geométrico: {bonus_geom:.3f}")
+        imprimir(f"  Bono prestacional: {bonus_prest:.3f}")
+
+        # Score de familia
+        family_scores = {0: 0.95, 1: 0.825, 2: 0.70}
+        fam_score = family_scores[capa_idx]
+        sim_i = fam_score * mtow_scores + bonus_geom + bonus_prest
+
+        # Mostrar similitudes
+        for nbr, s in zip(cols_filtrados, sim_i):
+            imprimir(f" vecino '{nbr}' → sim_i: {s:.3f}")
+
+        # Filtrar por umbral
+        umbral = 0.0
+        mask_sim = sim_i >= umbral
+        vecinos_val = cols_filtrados[mask_sim]
+        sim_vals = sim_i[mask_sim]
+        if len(vecinos_val) == 0 or sim_vals.sum() < 1e-6:
+            imprimir(f"❌ Sin vecinos ≥{umbral} en {familia}.", True)
             continue
 
-        imprimir(f"Vecinos válidos nombres: {list(cols_validas)}")
+        # Imputación y confianza
+        y = df_familia.loc[parametro_objetivo, vecinos_val].values
+        valor_imp = np.dot(sim_vals, y) / sim_vals.sum()
 
-        # ---------------- Paso 3. Distancias y media ponderada -------
-        # Matriz con los tres ejes
-        data_ejes = pd.DataFrame({
-            col: [
-                df_familia.at[vector_objetivo["fisico"], col],
-                df_familia.at[vector_objetivo["geom"], col],
-                df_familia.at[vector_objetivo["prest"], col],
-            ]
-            for col in list(cols_validas) + [aeronave_obj]
-        }, index=["fis", "geo", "pre"]).T
+        # Cálculo de métricas estadísticas
+        if len(y) > 1:
+            media_y = np.mean(y)
+            dispersion = np.std(y, ddof=0)
+            cv = dispersion / media_y if media_y != 0 else 0  # Coeficiente de variación
+        else:
+            media_y = y[0] if len(y) == 1 else 0  # Si hay un solo valor, usarlo; si no hay valores, asignar 0
+            cv = 1  # Penalización máxima para k=1
+            dispersion = 0
 
-        # Z‑score columna a columna
-        imprimir("Matriz de datos antes de z-score (data_ejes):")
-        imprimir(data_ejes)
-        data_z = data_ejes.apply(zscore)
-        imprimir("Matriz de datos después de z-score (data_z):")
-        imprimir(data_z)
+        # Penalización por cantidad de datos usados
+        penalizacion_k = penalizacion_por_k(len(vecinos_val))
+        # Penalización por la calidad de los datos
+        confianza_cv = max(0,1-(cv/0.5)) #cuando la desviacion estandar es igual al 50% de la media entonces confianza 0  # Dispersión de los valores
 
-        # Distancias
-        diffs = data_z.loc[cols_validas].values - data_z.loc[aeronave_obj].values
-        dist = np.linalg.norm(diffs, axis=1)
-        weights = 1 / (1 + dist)
+        # Confianza final combinada
+        beta = 0.7  # Peso para cantidad de datos usados
+        pesos = sim_vals / sim_vals.sum()  # Normalizar los pesos
+        promedio_sim_i = np.dot(pesos, sim_vals)
+        confianza_datos = beta * penalizacion_k + (1 - beta) * (confianza_cv) # Confianza basada en K y CV
+        confianza_final = promedio_sim_i*confianza_datos  # Confianza final = promedio de confianza de vecinos * confianza de datos
 
-        valores_vecinos = df_familia.loc[parametro_objetivo, cols_validas].values
-        valor_imputado = np.sum(weights * valores_vecinos) / np.sum(weights)
+        # Mostrar detalles del cálculo de confianza final
+        imprimir("\nDetalles del cálculo de confianza:")
 
-        # Confianza simple (CV + distancia media)
-        cv = valores_vecinos.std(ddof=0) / valores_vecinos.mean()
-        conf = max(0, 1 - cv - 0.1 * dist.mean())
+        imprimir(f"  Confianza que tan similares son los vecinos (familia x Mtow + Bonos): {[f'{s:.3f}' for s in sim_i]}")
+        imprimir(f"  Promedio ponderado de confianza de similitud de aeronaves: {promedio_sim_i:.3f}")
+        imprimir(f"  Media de valores (y): {media_y:.3f}")
+        imprimir(f"  Coeficiente de variación (CV): {confianza_cv:.3f}")
+        imprimir(f"  Dispersión: {dispersion:.3f}")
+        imprimir(f"  Penalización por cantidad de vecinos (k): {penalizacion_k:.3f}")        
+        imprimir(f"  Confianza en base a la calidad y cantidad de datos: {confianza_datos:.3f}")
+        imprimir(f"  Confianza final: {confianza_final*100:.3f}%")
 
-        imprimir("Detalle del cálculo del valor imputado (se calcula el valor ponderado basado en la distancia entre aeronaves):")
-        imprimir(f"  Pesos (weights): {weights}")
-        imprimir(f"  Valores vecinos: {valores_vecinos}")
 
-        productos = weights * valores_vecinos
-        suma_ponderada = np.sum(productos)
-        suma_pesos = np.sum(weights)
-
-        imprimir(f"  Producto elemento a elemento (weights * valores_vecinos): {productos}")
-        imprimir(f"  Suma ponderada (Σ weights * valores_vecinos): {suma_ponderada:.3f}")
-        imprimir(f"  Suma de pesos (Σ weights): {suma_pesos:.3f}")
-        imprimir(f"  División final: {suma_ponderada:.3f} / {suma_pesos:.3f} = {valor_imputado:.3f}")
-
-        imprimir(f"✅  Valor imputado: {valor_imputado:.3f}")
-        imprimir(f"    Confianza.....: {conf:.2f}")
-        imprimir(f"    Vecinos usados: {list(cols_validas)}")
+        # Retornar resultados
+        imprimir(f"✅ Valor imputado: {valor_imp:.3f} (conf {confianza_final:.3f}, datos {len(vecinos_val)}, familia {familia})")
 
         return {
-            "valor": valor_imputado,
-            "confianza": conf,
-            "vecinos": list(cols_validas)
+            "valor": valor_imp,
+            "confianza": confianza_final,
+            "num_vecinos": len(vecinos_val),
+            "familia": familia
         }
 
-    # Si ninguna capa funcionó
-    imprimir("⚠️  Sin vecinos en ninguna capa. Se delega a correlación.", True)
+    imprimir("⚠️ No se pudo imputar en ninguna capa. Delegar a correlación...", True)
     return None
-
-
-
