@@ -114,8 +114,8 @@ def bucle_imputacion_similitud_correlacion(
         reporte_similitud = []
 
         for parametro in parametros_preseleccionados:
-            for aeronave in df_similitud_resultado.columns:
-                if pd.isna(df_similitud_resultado.loc[parametro, aeronave]):
+            for aeronave in df_similitud_resultado.index:  # Acceder usando filas como aeronaves y columnas como parámetros
+                if pd.isna(df_similitud_resultado.at[aeronave, parametro]):
                     resultado = imputar_por_similitud(
                         df_parametros=df_parametros,
                         df_atributos=df_atributos,
@@ -126,14 +126,14 @@ def bucle_imputacion_similitud_correlacion(
                     )
 
                     if resultado is not None:
-                        df_similitud_resultado.loc[parametro, aeronave] = resultado["valor"]
+                        df_similitud_resultado.at[aeronave, parametro] = resultado["valor"]  # Corregir lógica para asignar valores
                         reporte_similitud.append({
                             "Aeronave": aeronave,
                             "Parámetro": parametro,
                             "Valor Imputado": resultado["valor"],
                             "Nivel de Confianza": resultado["confianza"]
                         })
-        
+
         if reporte_similitud and len(reporte_similitud) > 0:
             print("\033[1m>>> RESULTADOS DE IMPUTACIÓN POR SIMILITUD\033[0m")
             # Se guardan las imputaciones de similitud, pero NO se actualiza el DataFrame aún.
@@ -201,7 +201,7 @@ def bucle_imputacion_similitud_correlacion(
         for key, candidatos in imputaciones_candidatas.items():
             parametro, aeronave = key
             # Si ya hay un valor en df_procesado_base, no imputar.
-            if not pd.isna(df_procesado_base.loc[parametro, aeronave]):
+            if not pd.isna(df_procesado_base.at[aeronave, parametro]):  # Cambiar lógica para trabajar con filas como aeronaves y columnas como parámetros
                 continue
             # Escoger la de mayor confianza
             mejor = max(candidatos, key=lambda x: x["Nivel de Confianza"])
@@ -213,8 +213,8 @@ def bucle_imputacion_similitud_correlacion(
             aeronave = imp["Aeronave"]
             valor = imp["Valor Imputado"]
             metodo = imp["Método"]
-            df_procesado_base.loc[parametro, aeronave] = valor
-            df_filtrado_base.loc[parametro, aeronave] = valor
+            df_procesado_base.at[aeronave, parametro] = valor  # Corregir lógica para asignar valores
+            df_filtrado_base.at[aeronave, parametro] = valor  # Corregir lógica para asignar valores
             resumen_imputaciones.append(imp)
             print(
                 f"Imputación final aplicada: {parametro} - {aeronave} = {valor} ({metodo})"

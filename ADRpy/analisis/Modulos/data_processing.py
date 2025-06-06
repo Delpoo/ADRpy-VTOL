@@ -114,76 +114,76 @@ def procesar_datos_y_manejar_duplicados(df, respuesta_global=None):
         raise ValueError(f"Error durante el procesamiento y manejo de duplicados: {e}")
 
 
-def mostrar_celdas_faltantes_con_seleccion(df, columna_seleccionada=None, debug_mode=False):
+def mostrar_celdas_faltantes_con_seleccion(df, fila_seleccionada=None, debug_mode=False):
     """
-    Muestra las celdas faltantes de una columna específica elegida por el usuario o automáticamente.
+    Muestra las celdas faltantes de una fila específica elegida por el usuario o automáticamente.
 
     :param df: DataFrame a analizar.
-    :param columna_seleccionada: Nombre de la columna a analizar. Si None, se pedirá al usuario o se usará el modo automático.
-    :param debug_mode: Si True, selecciona automáticamente la primera columna con datos faltantes si no se pasa ninguna.
-    :return: DataFrame con las celdas faltantes de la columna seleccionada.
+    :param fila_seleccionada: Nombre de la fila a analizar. Si None, se pedirá al usuario o se usará el modo automático.
+    :param debug_mode: Si True, selecciona automáticamente la primera fila con datos faltantes si no se pasa ninguna.
+    :return: DataFrame con las celdas faltantes de la fila seleccionada.
     """
-    columnas_con_nulos = df.columns[df.isnull().any()].tolist()
+    aeronaves_con_nulos = df.index[df.isnull().any(axis=1)].tolist()
 
-    if not columnas_con_nulos:
-        print("✅ No hay columnas con valores faltantes.")
+    if not aeronaves_con_nulos:
+        print("✅ No hay filas con valores faltantes.")
         return pd.DataFrame()
 
-    if debug_mode and not columna_seleccionada:
-        columna_seleccionada = columnas_con_nulos[0]
-        print(f"[DEBUG] Seleccionando automáticamente la primera columna con nulos: '{columna_seleccionada}'")
+    if debug_mode and not fila_seleccionada:
+        fila_seleccionada = aeronaves_con_nulos[0]
+        print(f"[DEBUG] Seleccionando automáticamente la primera fila con nulos: '{fila_seleccionada}'")
 
-    elif not columna_seleccionada:
-        print("\n=== Columnas con datos faltantes ===")
-        for i, col in enumerate(columnas_con_nulos, start=1):
-            print(f"{i}. {col}")
+    elif not fila_seleccionada:
+        print("\n=== Filas con datos faltantes ===")
+        for i, fila in enumerate(aeronaves_con_nulos, start=1):
+            print(f"{i}. {fila}")
 
-        seleccion = input("Selecciona el número de la columna a analizar (presiona Enter para seleccionar la primera): ").strip()
+        seleccion = input("Selecciona el número de la fila a analizar (presiona Enter para seleccionar la primera): ").strip()
 
         if not seleccion.isdigit():
-            print("🔁 Entrada inválida o vacía. Seleccionando la primera columna por defecto.")
-            columna_seleccionada = columnas_con_nulos[0]
+            print("🔁 Entrada inválida o vacía. Seleccionando la primera fila por defecto.")
+            fila_seleccionada = aeronaves_con_nulos[0]
         else:
             seleccion = int(seleccion) - 1
-            if 0 <= seleccion < len(columnas_con_nulos):
-                columna_seleccionada = columnas_con_nulos[seleccion]
+            if 0 <= seleccion < len(aeronaves_con_nulos):
+                fila_seleccionada = aeronaves_con_nulos[seleccion]
             else:
-                print("🔁 Número fuera de rango. Seleccionando la primera columna por defecto.")
-                columna_seleccionada = columnas_con_nulos[0]
+                print("🔁 Número fuera de rango. Seleccionando la primera fila por defecto.")
+                fila_seleccionada = aeronaves_con_nulos[0]
 
-    print(f"\n=== Analizando celdas faltantes en la columna: '{columna_seleccionada}' ===")
-    celdas_faltantes = df[df[columna_seleccionada].isnull()][[columna_seleccionada]]
+    print(f"\n=== Analizando celdas faltantes en la fila: '{fila_seleccionada}' ===")
+    celdas_faltantes = df.loc[fila_seleccionada][df.loc[fila_seleccionada].isnull()]
 
     return celdas_faltantes
 
 
 def generar_resumen_faltantes(
-    df, titulo="Resumen de Valores Faltantes por Columna", ancho="50%", alto="300px"
+    df, titulo="Resumen de Valores Faltantes por Fila", ancho="50%", alto="300px"
 ):
     """
-    Genera un resumen de los valores faltantes por columna en un DataFrame.
-    También genera una tabla HTML con la sumatoria total de los valores faltantes de todas las columnas.
+    Genera un resumen de los valores faltantes por fila en un DataFrame.
+    También genera una tabla HTML con la sumatoria total de los valores faltantes de todas las filas.
 
     :param df: DataFrame a analizar.
     :param titulo: Título opcional para mostrar en la tabla HTML.
     :param ancho: Ancho del contenedor HTML.
     :param alto: Alto del contenedor HTML.
-    :return: Tuple con dos DataFrames: resumen de valores faltantes por columna y sumatoria total.
+    :return: Tuple con dos DataFrames: resumen de valores faltantes por fila y sumatoria total.
     """
-    # Calcular la cantidad de valores faltantes por columna
-    faltantes_por_columna = df.isnull().sum()
+    # Calcular la cantidad de valores faltantes por fila
+    faltantes_por_fila = df.isnull().sum(axis=1)
 
-    # Crear un DataFrame con el resumen por columna
-    resumen_faltantes = faltantes_por_columna.reset_index()
-    resumen_faltantes.columns = ["Columna", "Valores Faltantes"]
+    # Crear un DataFrame con el resumen por fila
+    resumen_faltantes = faltantes_por_fila.reset_index()
+    resumen_faltantes.columns = ["Fila", "Valores Faltantes"]
 
     # Calcular la sumatoria total de los valores faltantes
-    total_faltantes = faltantes_por_columna.sum()
+    total_faltantes = faltantes_por_fila.sum()
     resumen_total = pd.DataFrame(
         {"Resumen": ["Total de Valores Faltantes"], "Cantidad": [total_faltantes]}
     )
 
-    # Mostrar el resumen por columna como una tabla HTML
+    # Mostrar el resumen por fila como una tabla HTML
     convertir_a_html(
         resumen_faltantes, titulo=titulo, ancho=ancho, alto=alto, mostrar=True
     )

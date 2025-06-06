@@ -48,7 +48,7 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametro
 
         # === Validación de parámetros seleccionados ===
         parametros_no_encontrados = [
-            v for v in parametros_seleccionados if v not in df_procesado.index
+            v for v in parametros_seleccionados if v not in df_procesado.columns
         ]
         if parametros_no_encontrados:
             raise ValueError(
@@ -57,7 +57,7 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametro
 
         # === Tabla completa (sin filtrar) ===
         print("\n=== Cálculo de tabla completa ===")
-        tabla_completa = df_procesado.transpose().corr()
+        tabla_completa = df_procesado.corr()
         agregar_resumen_a_tabla(
             tabla_completa.round(3),
             "Tabla de Correlaciones con todos los parametros(tabla_completa)",
@@ -72,14 +72,14 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametro
         # === Filtrar datos seleccionados ===
         print("\n=== Filtrando datos seleccionados ===")
 
-        df_filtrado_transpuesto = df_procesado.loc[parametros_seleccionados].transpose()
+        df_filtrado = df_procesado[parametros_seleccionados]
 
         # Tabla filtrada
         print("\n=== Cálculo de correlaciones filtradas ===")
-        tabla_filtrada = df_filtrado_transpuesto.corr()
+        tabla_filtrada = df_filtrado.corr()
         agregar_resumen_a_tabla(
             tabla_filtrada.round(3),
-            "Tabla de Correlaciones Filtradas por aeronaves seleccionadas (Para Heatmap)",
+            "Tabla de Correlaciones Filtradas por parametros seleccionados (Para Heatmap)",
         )
 
         # Filtrar correlaciones por el umbral_heat_map para la tabla filtrada
@@ -93,7 +93,7 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametro
 
         # Preparar datos para el heatmap
         print("\n=== Preparando datos para el heatmap ===")
-        heatmap_data = df_filtrado_transpuesto.dropna(
+        heatmap_data = df_filtrado.dropna(
             thresh=2
         )  # Excluir variables con menos de 2 valores válidos
         heatmap_correlaciones = heatmap_data.corr()
@@ -118,10 +118,12 @@ def calcular_correlaciones_y_generar_heatmap_con_resumen(df_procesado, parametro
 
     except ValueError as e:
         print(f"Error: {e}. Por favor verifica los parámetros seleccionados.")
+        tabla_completa = None  # Asegurar que la variable esté definida
     except KeyError as e:
         print(
             f"Error: {e}. Asegúrate de que las variables seleccionadas existen en los datos."
         )
+        tabla_completa = None  # Asegurar que la variable esté definida
 
     if devolver_tabla:
         return tabla_completa

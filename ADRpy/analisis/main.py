@@ -130,7 +130,7 @@ convertir_a_html(df_procesado, titulo="Datos Procesados", mostrar=True)
 # Paso 6: Selección de parámetros
 
 # Parámetros disponibles en el índice del DataFrame
-parametros_disponibles = df_procesado.index.tolist()
+parametros_disponibles = df_procesado.columns.tolist()
 print("Parámetros disponibles en df_procesado antes de seleccionar:")
 print(parametros_disponibles)
 
@@ -166,7 +166,7 @@ print(parametros_seleccionados)
 
 # Filtrar el DataFrame por los parámetros seleccionados
 try:
-    df_filtrado = df_procesado.loc[parametros_seleccionados]
+    df_filtrado = df_procesado[parametros_seleccionados]
 except KeyError as e:
     print(f"Error al filtrar df_procesado: {e}")
     print(f"Parámetros seleccionados inválidos: {set(parametros_seleccionados) - set(df_procesado.index.tolist())}")
@@ -177,10 +177,10 @@ convertir_a_html(df_filtrado, titulo="Datos Filtrados por Parámetros (df_filtra
 
 # Paso 7: Mostrar celdas faltantes con selección de columna
 
-# Analizar celdas faltantes en la columna seleccionada
+# Analizar celdas faltantes en la fila seleccionada
 df_celdas_faltantes = mostrar_celdas_faltantes_con_seleccion(
     df_filtrado,
-    columna_seleccionada=args.columna,
+    fila_seleccionada=args.columna,
     debug_mode=args.debug_mode
 )
 
@@ -214,10 +214,14 @@ tabla_completa = calcular_correlaciones_y_generar_heatmap_con_resumen(
 # Cargar configuración de similitud
 bloques_rasgos, filas_familia, capas_familia = configurar_similitud()
 
-df_atributos   = df_procesado.loc[filas_familia]
-df_parametros  = df_procesado.drop(index=filas_familia)
+# Cambiar la lógica para seleccionar columnas en lugar de filas
+# df_atributos debe seleccionar las columnas correspondientes a filas_familia
+df_atributos = df_procesado[filas_familia]
+# df_parametros debe excluir las columnas seleccionadas en filas_familia
+df_parametros = df_procesado.drop(columns=filas_familia)
 
 # Paso 10: Llamar a la función principal
+# IMPORTANTE: revisa que en los scripts de imputación y exportación se acceda a los datos como df.loc[aeronave, parametro]
 df_procesado_actualizado, resumen_imputaciones = bucle_imputacion_similitud_correlacion(
     df_parametros=df_parametros,
     df_atributos=df_atributos,
@@ -235,8 +239,6 @@ df_procesado_actualizado, resumen_imputaciones = bucle_imputacion_similitud_corr
     nivel_confianza_min_correlacion=args.nivel_confianza_min_similitud if args.debug_mode else None,
     debug_mode=args.debug_mode
 )
-
-print("Hola")
 
 # Paso 11: Exportar resultados a Excel
 archivo_destino = args.archivo_destino

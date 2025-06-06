@@ -113,38 +113,38 @@ def Imputacion_por_correlacion(
 
     
         for parametro in parametros_preseleccionados:
-            if parametro not in correlaciones_aceptables.index:
+            if parametro not in correlaciones_aceptables.columns:  # Cambiar lógica para trabajar con columnas
                 print(f"\n=== {parametro}: Sin correlaciones significativas (|r| < 0.7) ===")
                 continue
-        
-            valores_faltantes = df.loc[parametro][df.loc[parametro].isna()].index.tolist()
+
+            valores_faltantes = df[parametro][df[parametro].isna()].index.tolist()  # Ajustar para trabajar con columnas
             if not valores_faltantes:
                 print(f"\n=== {parametro}: No hay valores faltantes para imputar. ===")
                 continue
-        
+
             print(f"\n=== Imputación para el parámetro: **{parametro}** ===")
             for aeronave in valores_faltantes:
                 if lineas_impresas >= MAX_LINEAS_CONSOLA:
                     print("\n--- Límite de impresión alcanzado. ---")
                     break
-        
+
                 print(f"\n--- Imputación para aeronave: **{aeronave}** ---")
                 valores_predichos = []
-        
-                correlaciones_parametro = correlaciones_aceptables.loc[parametro].dropna()
-        
+
+                correlaciones_parametro = correlaciones_aceptables[parametro].dropna()  # Ajustar para trabajar con columnas
+
                 for parametro_correlacionado, correlacion in correlaciones_parametro.items():
-                    datos_validos = df.loc[[parametro, parametro_correlacionado]].dropna(axis=1)
-        
-                    if datos_validos.shape[1] < 5:
+                    datos_validos = df[[parametro, parametro_correlacionado]].dropna(axis=0)  # Ajustar para trabajar con filas
+
+                    if datos_validos.shape[0] < 5:  # Cambiar a filas
                         continue
-        
+
                     # Evitar duplicados
-                    datos_validos = datos_validos.T.drop_duplicates().T
-        
-                    X = datos_validos.loc[parametro_correlacionado].values.reshape(-1, 1)
-                    y = datos_validos.loc[parametro].values
-        
+                    datos_validos = datos_validos.drop_duplicates()
+
+                    X = datos_validos[parametro_correlacionado].values.reshape(-1, 1)
+                    y = datos_validos[parametro].values
+
                     # Entrenar modelo de regresión
                     modelo = LinearRegression().fit(X, y)
                     r2 = modelo.score(X, y)
@@ -153,32 +153,32 @@ def Imputacion_por_correlacion(
                     incertidumbre = desviacion_std / np.sqrt(len(y))
                     puntaje_confianza = 0.4 * r2 + 0.3 * (1 - incertidumbre) + 0.2 * (1 - desviacion_std) + 0.1 * (1 - varianza)
                     nivel_confianza = evaluar_confianza(puntaje_confianza)
-        
-                    if pd.notna(df.loc[parametro_correlacionado, aeronave]):
-                        valor_imputado = modelo.predict([[df.loc[parametro_correlacionado, aeronave]]])[0]
+
+                    if pd.notna(df.at[aeronave, parametro_correlacionado]):  # Ajustar para trabajar con filas
+                        valor_imputado = modelo.predict(np.array([[df.at[aeronave, parametro_correlacionado]]]))[0]  # Convertir a numpy.ndarray
                         valores_predichos.append(
                             (parametro_correlacionado, round(valor_imputado, 3), round(r2, 3), round(desviacion_std, 3))
                         )
-        
+
                         # Detalle de datos usados
                         print(f"\n--- Correlación: {parametro_correlacionado} (r = {round(correlacion, 3)}) ---")
-                        print(f"Aeronaves utilizadas: {datos_validos.columns.tolist()}")
+                        print(f"Aeronaves utilizadas: {datos_validos.index.tolist()}")
                         print(f"Valores para {parametro_correlacionado}: {X.flatten().round(3).tolist()}")
                         print(f"Valores para {parametro}: {y.round(3).tolist()}")
                         print(f"Ecuación de regresión: y = {round(modelo.coef_[0], 3)}x + {round(modelo.intercept_, 3)}")
-                        print(f"Valor del parámetro correlacionado para la aeronave: {round(df.loc[parametro_correlacionado, aeronave], 3)}")
+                        print(f"Valor del parámetro correlacionado para la aeronave: {round(df.at[aeronave, parametro_correlacionado], 3)}")
                         print(f"Predicción obtenida: {round(valor_imputado, 3)}")
                         print(f"\tR²: {r2}, Desviación Estándar: {desviacion_std}, Varianza: {varianza}, Incertidumbre: {incertidumbre}")
                         print(f"\tNivel de confianza: {nivel_confianza}")
                         lineas_impresas += 1
-        
+
                 if valores_predichos:
                     valor_final = np.median([pred[1] for pred in valores_predichos])
-                    df.loc[parametro, aeronave] = round(valor_final, 3)
+                    df.at[aeronave, parametro] = round(valor_final, 3)  # Ajustar para trabajar con filas
                     valores_imputados += 1
                     print(f"Valores imputados: {[f'{pred[0]}: {pred[1]}' for pred in valores_predichos]}")
                     print(f"**Mediana calculada:** {round(valor_final, 3)}")
-                
+
                     # Registro correcto
                     reporte_imputaciones.append({
                         "Aeronave": aeronave,

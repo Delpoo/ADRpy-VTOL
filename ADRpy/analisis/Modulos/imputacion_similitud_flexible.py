@@ -1,14 +1,28 @@
+"""
+imputacion_similitud_flexible.py
+--------------------------------
+Implementa la lógica de K‑NN con 3 ejes obligatorios (físico, geométrico, prestacional)
+y filtrado progresivo de familia (F0‑F3).  Diseñado para integrarse sin romper
+los nombres ni los flujos que ya existen en tu proyecto ADRpy.
+
+Uso rápido:
+    python imputacion_similitud_flexible.py --ruta_excel Datos_aeronaves.xlsx \
+        --aeronave "Stalker XE" \
+        --parametro "Velocidad a la que se realiza el crucero (KTAS)"
+"""
+
+import argparse
 import pandas as pd
 import numpy as np
-
 # ------------------------ HELPERS ------------------------
 
 def imprimir(msg, bold=False):
     prefix = "\033[1m" if bold else ""
     suffix = "\033[0m" if bold else ""
     print(f"{prefix}{msg}{suffix}")
-
-# ------------------------ CONFIGURACIÓN ------------------------
+# ------------------------------------------------------------------ #
+#  CONFIGURACIÓN DE BLOQUES Y CAPAS DE FAMILIA
+# ------------------------------------------------------------------ #
 
 def configurar_similitud():
     """
@@ -59,10 +73,10 @@ def imputar_por_similitud(
     imprimir(f"\n=== Imputación por similitud: {aeronave_obj} - {parametro_objetivo} ===", True)
 
     # Validaciones
-    if parametro_objetivo not in df_parametros.index:
+    if parametro_objetivo not in df_parametros.columns:
         imprimir(f"⚠️ Parámetro '{parametro_objetivo}' no encontrado.", True)
         return None
-    if aeronave_obj not in df_parametros.columns:
+    if aeronave_obj not in df_parametros.index:
         imprimir(f"⚠️ Aeronave '{aeronave_obj}' no encontrada.", True)
         return None
 
@@ -71,28 +85,27 @@ def imputar_por_similitud(
         familia = f"F{capa_idx}"
         imprimir(f"\n--- Capa {familia}: criterios {list(criterios.keys())} ---", True)
         # Filtrar familia
-        mask = np.ones(df_parametros.shape[1], dtype=bool)
+        mask = np.ones(df_parametros.shape[0], dtype=bool)
         for fila, modo in criterios.items():
-            val = df_atributos.at[fila, aeronave_obj]
-            mask &= (df_atributos.loc[fila] == val).values
-        df_familia = df_parametros.loc[:, mask]
-        if df_familia.shape[1] == 0:
-            imprimir(f"❌ Sin drones en {familia}. Continuando...", True)
+            val = df_atributos.loc[aeronave_obj, fila]
+            mask &= (df_atributos[fila] == val).values
+        df_familia = df_parametros.loc[mask, :]
+        if df_familia.shape[0] == 0:
+            imprimir(f"❌ Sin drones en {familia}. Relajando...", True)
             continue
         #  —> Validar que haya vecinos con el parámetro objetivo
-        cols_validas = df_familia.columns[df_familia.loc[parametro_objetivo].notna()]
-        if len(cols_validas) == 0:
+        rows_validas = df_familia.index[df_familia[parametro_objetivo].notna()]
+        if len(rows_validas) == 0:
             imprimir(f"❌ Ningún dron en {familia} tiene '{parametro_objetivo}'.", True)
             continue
 
-
         # Parámetros MTOW y filtro ±20%
-        mtow_obj = df_familia.at["Peso máximo al despegue (MTOW)", aeronave_obj]
-        mtow_vec = df_familia.loc["Peso máximo al despegue (MTOW)", cols_validas].values
+        mtow_obj = df_familia.loc[aeronave_obj, "Peso máximo al despegue (MTOW)"]
+        mtow_vec = df_familia.loc[rows_validas, "Peso máximo al despegue (MTOW)"].values
         delta_mtow = np.abs(mtow_vec - mtow_obj) / mtow_obj * 100
         mask_mtow = delta_mtow <= 20
-        cols_filtrados = cols_validas[mask_mtow]
-        if len(cols_filtrados) == 0:
+        rows_filtrados = rows_validas[mask_mtow]
+        if len(rows_filtrados) == 0:
             imprimir(f"❌ Sin vecinos ±20% MTOW en {familia}.", True)
             continue
 
@@ -110,8 +123,8 @@ def imputar_por_similitud(
             for parametro in parametros:
                 try:
                     # Valores de la aeronave objetivo y los vecinos
-                    valor_objetivo = df_parametros.at[parametro, aeronave_obj]
-                    valores_vecinos = df_familia.loc[parametro, cols_filtrados].values
+                    valor_objetivo = df_parametros.loc[aeronave_obj, parametro]
+                    valores_vecinos = df_familia.loc[rows_filtrados, parametro].values
 
                     # Si el valor de la aeronave objetivo es NaN, el bono es 0
                     if pd.isna(valor_objetivo):
@@ -164,20 +177,20 @@ def imputar_por_similitud(
         sim_i = fam_score * mtow_scores + bonus_geom + bonus_prest
 
         # Mostrar similitudes
-        for nbr, s in zip(cols_filtrados, sim_i):
+        for nbr, s in zip(rows_filtrados, sim_i):
             imprimir(f" vecino '{nbr}' → sim_i: {s:.3f}")
 
         # Filtrar por umbral
         umbral = 0.0
         mask_sim = sim_i >= umbral
-        vecinos_val = cols_filtrados[mask_sim]
+        vecinos_val = rows_filtrados[mask_sim]
         sim_vals = sim_i[mask_sim]
         if len(vecinos_val) == 0 or sim_vals.sum() < 1e-6:
             imprimir(f"❌ Sin vecinos ≥{umbral} en {familia}.", True)
             continue
 
         # Imputación y confianza
-        y = df_familia.loc[parametro_objetivo, vecinos_val].values
+        y = df_familia.loc[vecinos_val, parametro_objetivo].values
         valor_imp = np.dot(sim_vals, y) / sim_vals.sum()
 
         # Cálculo de métricas estadísticas

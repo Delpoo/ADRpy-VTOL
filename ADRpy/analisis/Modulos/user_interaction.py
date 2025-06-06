@@ -4,7 +4,7 @@ def seleccionar_parametros_por_indices(parametros_disponibles, parametros_presel
     for i, parametro in enumerate(parametros_disponibles, 1):
         print(f"{i}. {parametro}")
 
-    print(f"\nPreseleccionados:  {', '.join(str(parametros_disponibles.index(p) + 1) for p in parametros_preseleccionados)}")
+    print(f"\nPreseleccionados:  {', '.join(str(parametros_disponibles.index(p) + 1) for p in parametros_preseleccionados if p in parametros_disponibles)}")
 
     if entrada_indices is None:
         indices = input("Ingresa los números separados por coma (o presiona Enter para usar los preseleccionados): ")

@@ -41,28 +41,29 @@ def exportar_excel_con_imputaciones(archivo_origen, df_procesado, resumen_imputa
         # Recorrer las celdas del archivo original y actualizar según las imputaciones
         for fila in ws.iter_rows(min_row=2, min_col=2):  # Ajustar filas/columnas según tu estructura
             for celda in fila:
-                aeronave = ws.cell(row=1, column=celda.column).value  # Obtener nombre del parámetro
-                parametro = ws.cell(row=celda.row, column=1).value  # Obtener nombre de la aeronave
+                if celda and celda.column and celda.row:  # Validar que la celda y sus propiedades no sean None
+                    parametro = ws.cell(row=1, column=celda.column).value  # Obtener nombre del parámetro
+                    aeronave = ws.cell(row=celda.row, column=1).value  # Obtener nombre de la aeronave
 
-                if (parametro, aeronave) in imputaciones_por_celda:
-                    registro = imputaciones_por_celda[(parametro, aeronave)]
-                    valor_imputado = df_procesado.loc[parametro, aeronave]
+                    if (parametro, aeronave) in imputaciones_por_celda:
+                        registro = imputaciones_por_celda[(parametro, aeronave)]
+                        valor_imputado = df_procesado.at[aeronave, parametro]  # Acceder usando filas como aeronaves y columnas como parámetros
 
-                    # Actualizar el valor en la celda
-                    celda.value = valor_imputado
+                        # Actualizar el valor en la celda
+                        celda.value = valor_imputado
 
-                    # Asignar color según el tipo de imputación
-                    if registro["Método"] == "Similitud":
-                        celda.fill = color_similitud
-                    elif registro["Método"] == "Correlación":
-                        celda.fill = color_correlacion
+                        # Asignar color según el tipo de imputación
+                        if registro["Método"] == "Similitud":
+                            celda.fill = color_similitud
+                        elif registro["Método"] == "Correlación":
+                            celda.fill = color_correlacion
 
-                    # Agregar comentario con el nivel de confianza y la iteración
-                    comentario = (
-                        f"Nivel de confianza: {registro['Nivel de Confianza']*100:.2f}%\n"
-                        f"Iteración: {registro['Iteración']}"
-                    )
-                    celda.comment = Comment(comentario, "Sistema")
+                        # Agregar comentario con el nivel de confianza y la iteración
+                        comentario = (
+                            f"Nivel de confianza: {registro['Nivel de Confianza']*100:.2f}%\n"
+                            f"Iteración: {registro['Iteración']}"
+                        )
+                        celda.comment = Comment(comentario, "Sistema")
 
         # Guardar el archivo con las imputaciones
         wb.save(archivo_destino)
