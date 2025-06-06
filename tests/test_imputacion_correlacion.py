@@ -7,4 +7,5 @@ def test_imputacion_correlacion_basica():
     assert not df.isna().any().any(), "Deberia imputar todos los valores faltantes"
     # Verificamos que el valor imputado para Potencia en la fila 2 sea cercano al calculo esperado
     valor = df.loc[2, 'Potencia']
-    assert round(valor, 3) == round(25.8272522839, 3)
+    assert round(valor, 3) == round(25.9691788448, 3)
+    assert 'Confianza' in reporte.columns
