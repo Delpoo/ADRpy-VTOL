@@ -375,19 +375,18 @@ def imputacion_correlacion(df, path: str = "ADRpy/analisis/Data/Datos_aeronaves.
             if not validos:
                 # registra advertencias y NO imputa
                 for m in descartados or [{"motivo": "Sin predictores válidos"}]:
-                    for idx in faltantes:
-                        reporte.append({
-                            "Fila": idx,
-                            "Parametro": objetivo,
-                            "Valor imputado": np.nan,
-                            "Confianza": 0.0,
-                            "Corr": 0.0,
-                            "k": 0,
-                            "Tipo Modelo": m.get("tipo", "n/a"),
-                            "Predictores": ",".join(m.get("predictores", [])),
-                            "Penalizacion_k": 0.0,
-                            "Advertencia": f"Modelo descartado: {m['motivo']}",
-                        })
+                    reporte.append({
+                        "Fila": idx,
+                        "Parametro": objetivo,
+                        "Valor imputado": np.nan,
+                        "Confianza": 0.0,
+                        "Corr": 0.0,
+                        "k": 0,
+                        "Tipo Modelo": m.get("tipo", "n/a"),
+                        "Predictores": ",".join(m.get("predictores", [])),
+                        "Penalizacion_k": 0.0,
+                        "Advertencia": f"Modelo descartado: {m['motivo']}",
+                    })
                 continue
 
             mejores = filtrar_mejores_modelos(validos)

@@ -1,16 +1,26 @@
-import sys
 import os
+import tempfile
+import pandas as pd
+import numpy as np
+from ADRpy.analisis.Modulos.imputacion_correlacion.imputacion_correlacion import imputacion_correlacion
 
-# Ensure repository root is on the path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+def test_imputacion_correlacion_basica():
+    df, reporte = imputacion_correlacion('ADRpy/analisis/Data/Datos_aeronaves.xlsx')
+    assert not df.isna().any().any()
+    assert 'Confianza_cv' in reporte.columns
 
-
-def test_mejor_copy():
-    candidatos = [
-        {"Confianza_cv": 0.8, "MAPE_cv": 3},
-        {"Confianza_cv": 0.7, "MAPE_cv": 2},
-    ]
-    candidatos.sort(key=lambda x: (-x["Confianza_cv"], x["MAPE_cv"]))
-    mejor = candidatos[0].copy()
-    mejor["warning"] = "changed"
-    assert "warning" not in candidatos[0]
+def test_single_warning_per_missing_cell():
+    data = pd.DataFrame({
+        'Modelo': ['a', 'b', 'c'],
+        'Misión': [1, 1, 1],
+        'X': [1, 1, 1],
+        'Y': [np.nan, np.nan, 5],
+    })
+    tmp = tempfile.mktemp(suffix='.xlsx')
+    with pd.ExcelWriter(tmp, engine='openpyxl') as writer:
+        data.to_excel(writer, sheet_name='data_frame_prueba', index=False)
+    try:
+        _, reporte = imputacion_correlacion(None, path=tmp)
+        assert len(reporte) == data['Y'].isna().sum()
+    finally:
+        os.remove(tmp)
