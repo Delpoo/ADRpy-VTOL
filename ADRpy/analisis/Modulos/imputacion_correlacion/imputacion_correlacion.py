@@ -398,7 +398,7 @@ def imputacion_correlacion(df, path: str = "ADRpy/analisis/Data/Datos_aeronaves.
             candidatos = robustos or mejores
             warning_text = "Modelo robusto" if robustos else "Modelo no robusto"
             candidatos.sort(key=lambda x: (-x["Confianza_cv"], x["MAPE_cv"]))
-            mejor = candidatos[0]
+            mejor = candidatos[0].copy()
             mejor["warning"] = warning_text
 
             # Imputar el valor de la celda actual
@@ -466,8 +466,3 @@ def imputar_valores_celda(df_resultado, df_filtrado, objetivo, info, idx):
 
     return df_resultado, imputacion
 
-def test_imputacion_correlacion_basica():
-    df_final, reporte = imputacion_correlacion('ADRpy/analisis/Data/Datos_aeronaves.xlsx')
-    assert not df_final.isna().any().any(), "Deberia imputar todos los valores faltantes"
-    print("listo")
-test_imputacion_correlacion_basica()

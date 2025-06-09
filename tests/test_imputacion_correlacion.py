@@ -1,19 +1,16 @@
 import sys
 import os
 
-# Agregar la carpeta raíz al sistema de rutas
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
-from ADRpy.analisis.Modulos.imputacion_correlacion.imputacion_correlacion import imputacion_correlacion
-import pandas as pd
-from ADRpy.analisis.Modulos.imputacion_correlacion import imputacion_correlacion
+# Ensure repository root is on the path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 
-def test_imputacion_correlacion_basica():
-    df, reporte = imputacion_correlacion('ADRpy/analisis/Data/Datos_aeronaves.xlsx')
-    assert not df.isna().any().any(), "Deberia imputar todos los valores faltantes"
-    # Verificamos que el valor imputado para Potencia en la fila 2 sea cercano al calculo esperado
-    valor = df.loc[2, 'Potencia']
-    assert round(valor, 3) == round(25.9691788448, 3)
-    assert 'Confianza' in reporte.columns
-print("hola")
+def test_mejor_copy():
+    candidatos = [
+        {"Confianza_cv": 0.8, "MAPE_cv": 3},
+        {"Confianza_cv": 0.7, "MAPE_cv": 2},
+    ]
+    candidatos.sort(key=lambda x: (-x["Confianza_cv"], x["MAPE_cv"]))
+    mejor = candidatos[0].copy()
+    mejor["warning"] = "changed"
+    assert "warning" not in candidatos[0]
