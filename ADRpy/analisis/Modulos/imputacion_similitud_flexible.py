@@ -228,14 +228,32 @@ def imputar_por_similitud(
         imprimir(f"  Confianza final: {confianza_final*100:.3f}%")
 
 
-        # Retornar resultados
-        imprimir(f"✅ Valor imputado: {valor_imp:.3f} (conf {confianza_final:.3f}, datos {len(vecinos_val)}, familia {familia})")
+        # Determinar advertencias básicas
+        advertencias = []
+        if len(vecinos_val) < 3:
+            advertencias.append("k<3")
+        if confianza_datos < 0.5:
+            advertencias.append("confianza_baja")
+        advertencia_texto = ", ".join(advertencias)
+
+        # Retornar resultados enriquecidos
+        imprimir(
+            f"✅ Valor imputado: {valor_imp:.3f} (conf {confianza_final:.3f}, datos {len(vecinos_val)}, familia {familia})"
+        )
 
         return {
             "valor": valor_imp,
             "confianza": confianza_final,
             "num_vecinos": len(vecinos_val),
-            "familia": familia
+            "familia": familia,
+            "k": len(vecinos_val),
+            "penalizacion_k": penalizacion_k,
+            "confianza_vecinos": promedio_sim_i,
+            "confianza_datos": confianza_datos,
+            "confianza_cv": confianza_cv,
+            "coef_variacion": cv,
+            "dispersion": dispersion,
+            "warning": advertencia_texto,
         }
 
     imprimir("⚠️ No se pudo imputar en ninguna capa. Delegar a correlación...", True)

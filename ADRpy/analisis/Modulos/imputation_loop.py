@@ -126,12 +126,21 @@ def bucle_imputacion_similitud_correlacion(
                     )
 
                     if resultado is not None:
-                        df_similitud_resultado.at[aeronave, parametro] = resultado["valor"]  # Corregir lógica para asignar valores
+                        df_similitud_resultado.at[aeronave, parametro] = resultado["valor"]
                         reporte_similitud.append({
                             "Aeronave": aeronave,
                             "Parámetro": parametro,
                             "Valor Imputado": resultado["valor"],
-                            "Nivel de Confianza": resultado["confianza"]
+                            "Nivel de Confianza": resultado["confianza"],
+                            "Familia": resultado.get("familia"),
+                            "k": resultado.get("k"),
+                            "Penalizacion_k": resultado.get("penalizacion_k"),
+                            "Confianza Vecinos": resultado.get("confianza_vecinos"),
+                            "Confianza Datos": resultado.get("confianza_datos"),
+                            "Confianza CV": resultado.get("confianza_cv"),
+                            "CV": resultado.get("coef_variacion"),
+                            "Dispersión": resultado.get("dispersion"),
+                            "Advertencia": resultado.get("warning", "")
                         })
 
         if reporte_similitud and len(reporte_similitud) > 0:
