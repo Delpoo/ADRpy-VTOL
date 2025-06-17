@@ -20,6 +20,16 @@ def imprimir(msg, bold=False):
     prefix = "\033[1m" if bold else ""
     suffix = "\033[0m" if bold else ""
     print(f"{prefix}{msg}{suffix}")
+
+def is_missing(val):
+    """
+    Returns True if the value is considered missing (NaN, empty string, special codes, etc.).
+    """
+    if pd.isna(val):
+        return True
+    if isinstance(val, str) and val.strip().lower() in ["", "nan", "nan " "-", "#n/d", "n/d", "#¡valor!"]:
+        return True
+    return False
 # ------------------------------------------------------------------ #
 #  CONFIGURACIÓN DE BLOQUES Y CAPAS DE FAMILIA
 # ------------------------------------------------------------------ #
@@ -31,6 +41,16 @@ def configurar_similitud():
     - filas_familia: atributos para clasificación familiar
     - capas_familia: filtros progresivos de familia F0, F1, F2
     """
+    """
+    bloques_rasgos = {
+        "fisico": ["MTOW", "Payload","Cantidad de motores"],
+        "geom": ["Envergadura", "Ancho de fuselaje"],
+        "prest": [
+            "Potencia", "Alcance", 
+            "Velocidad crucero", "Rango de comunicación",
+        ],
+    }
+    """
     bloques_rasgos = {
         "fisico": ["Peso máximo al despegue (MTOW)", "Peso vacío"],
         "geom": ["Área del ala", "envergadura", "Longitud del fuselaje", "Relación de aspecto del ala"],
@@ -40,6 +60,7 @@ def configurar_similitud():
             "Velocidad máxima (KIAS)",
         ],
     }
+    
     filas_familia = [
         "Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal",
         "Cantidad de motores propulsión vertical", "Cantidad de motores propulsión horizontal",
@@ -56,7 +77,7 @@ def configurar_similitud():
 def penalizacion_por_k(k):
     """
     Calcula la penalización por cantidad de vecinos (k) usando una ecuación polinomial.
-    Para k > 10, la penalización se fija en 1.0 (confianza máxima).
+    Para k > 10, la penalización se fija en 1.0 (Confianza máxima).
     """
     if k > 10:
         return 1.0
@@ -102,6 +123,9 @@ def imputar_por_similitud(
         # Parámetros MTOW y filtro ±20%
         mtow_obj = df_familia.loc[aeronave_obj, "Peso máximo al despegue (MTOW)"]
         mtow_vec = df_familia.loc[rows_validas, "Peso máximo al despegue (MTOW)"].values
+        
+        mtow_vec = mtow_vec.astype(float)
+        mtow_obj = float(mtow_obj)
         delta_mtow = np.abs(mtow_vec - mtow_obj) / mtow_obj * 100
         mask_mtow = delta_mtow <= 20
         rows_filtrados = rows_validas[mask_mtow]
@@ -127,7 +151,7 @@ def imputar_por_similitud(
                     valores_vecinos = df_familia.loc[rows_filtrados, parametro].values
 
                     # Si el valor de la aeronave objetivo es NaN, el bono es 0
-                    if pd.isna(valor_objetivo):
+                    if is_missing(valor_objetivo):
                         imprimir(f"⚠️ Parámetro '{parametro}' no tiene valor en la aeronave objetivo. Bono = 0.")
                         continue
 
@@ -135,7 +159,7 @@ def imputar_por_similitud(
                     diferencias = np.abs(valores_vecinos - valor_objetivo) / valor_objetivo * 100
 
                     for d, vecino in zip(diferencias, valores_vecinos):
-                        if pd.isna(d):
+                        if is_missing(d):
                             imprimir(f"⚠️ Diferencia NaN para el parámetro '{parametro}'. Vecino: {vecino}. Bono = 0.")
                             continue
 
@@ -189,7 +213,7 @@ def imputar_por_similitud(
             imprimir(f"❌ Sin vecinos ≥{umbral} en {familia}.", True)
             continue
 
-        # Imputación y confianza
+        # Imputación y Confianza
         y = df_familia.loc[vecinos_val, parametro_objetivo].values
         valor_imp = np.dot(sim_vals, y) / sim_vals.sum()
 
@@ -206,20 +230,20 @@ def imputar_por_similitud(
         # Penalización por cantidad de datos usados
         penalizacion_k = penalizacion_por_k(len(vecinos_val))
         # Penalización por la calidad de los datos
-        confianza_cv = max(0,1-(cv/0.5)) #cuando la desviacion estandar es igual al 50% de la media entonces confianza 0  # Dispersión de los valores
+        confianza_cv = max(0,1-(cv/0.5)) #cuando la desviacion estandar es igual al 50% de la media entonces Confianza 0  # Dispersión de los valores
 
         # Confianza final combinada
         beta = 0.7  # Peso para cantidad de datos usados
         pesos = sim_vals / sim_vals.sum()  # Normalizar los pesos
         promedio_sim_i = np.dot(pesos, sim_vals)
         confianza_datos = beta * penalizacion_k + (1 - beta) * (confianza_cv) # Confianza basada en K y CV
-        confianza_final = promedio_sim_i*confianza_datos  # Confianza final = promedio de confianza de vecinos * confianza de datos
+        confianza_final = promedio_sim_i*confianza_datos  # Confianza final = promedio de Confianza de vecinos * Confianza de datos
 
-        # Mostrar detalles del cálculo de confianza final
-        imprimir("\nDetalles del cálculo de confianza:")
+        # Mostrar detalles del cálculo de Confianza final
+        imprimir("\nDetalles del cálculo de Confianza:")
 
         imprimir(f"  Confianza que tan similares son los vecinos (familia x Mtow + Bonos): {[f'{s:.3f}' for s in sim_i]}")
-        imprimir(f"  Promedio ponderado de confianza de similitud de aeronaves: {promedio_sim_i:.3f}")
+        imprimir(f"  Promedio ponderado de Confianza de similitud de aeronaves: {promedio_sim_i:.3f}")
         imprimir(f"  Media de valores (y): {media_y:.3f}")
         imprimir(f"  Coeficiente de variación (CV): {confianza_cv:.3f}")
         imprimir(f"  Dispersión: {dispersion:.3f}")
@@ -243,8 +267,9 @@ def imputar_por_similitud(
 
         return {
             "valor": valor_imp,
-            "confianza": confianza_final,
+            "Confianza": confianza_final,
             "num_vecinos": len(vecinos_val),
+            "Vecinos": list(vecinos_val),
             "familia": familia,
             "k": len(vecinos_val),
             "penalizacion_k": penalizacion_k,
@@ -254,7 +279,57 @@ def imputar_por_similitud(
             "coef_variacion": cv,
             "dispersion": dispersion,
             "warning": advertencia_texto,
+            "Método predictivo" : "Similitud",
         }
 
     imprimir("⚠️ No se pudo imputar en ninguna capa. Delegar a correlación...", True)
     return None
+
+def imputacion_por_similitud_general(
+    df_parametros: pd.DataFrame,
+    df_atributos: pd.DataFrame,
+    parametros_preseleccionados: list,
+    bloques_rasgos: dict,
+    capas_familia: list,
+    df_base: pd.DataFrame
+) -> tuple:
+    """
+    Realiza imputaciones por similitud para los parámetros preseleccionados.
+    Retorna un DataFrame con los valores imputados y un reporte detallado.
+    """
+    df_resultado = df_base.copy()
+    reporte_similitud = []
+
+    for parametro in parametros_preseleccionados:
+        for aeronave in df_resultado.index:  # Acceder usando filas como aeronaves y columnas como parámetros
+            if is_missing(df_resultado.at[aeronave, parametro]):
+                resultado = imputar_por_similitud(
+                    df_parametros=df_parametros,
+                    df_atributos=df_atributos,
+                    aeronave_obj=aeronave,
+                    parametro_objetivo=parametro,
+                    bloques_rasgos=bloques_rasgos,
+                    capas_familia=capas_familia
+                )
+
+                if resultado is not None:
+                    df_resultado.at[aeronave, parametro] = resultado["valor"]
+                    reporte_similitud.append({
+                        "Aeronave": aeronave,
+                        "Parámetro": parametro,
+                        "Valor imputado": resultado["valor"],
+                        "Confianza": resultado["Confianza"],
+                        "Vecinos entrenamiento": resultado.get("Vecinos"),
+                        "Familia": resultado.get("familia"),
+                        "k": resultado.get("k"),
+                        "Penalizacion_k": resultado.get("penalizacion_k"),
+                        "Confianza Vecinos": resultado.get("confianza_vecinos"),
+                        "Confianza Datos": resultado.get("confianza_datos"),
+                        "Confianza CV": resultado.get("confianza_cv"),
+                        "CV": resultado.get("coef_variacion"),
+                        "Dispersión": resultado.get("dispersion"),
+                        "Advertencia": resultado.get("warning", ""),
+                        "Método predictivo" : "Similitud",
+                    })
+
+    return df_resultado, reporte_similitud
