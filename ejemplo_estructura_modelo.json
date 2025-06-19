@@ -1,0 +1,107 @@
+{
+  "descartado": false,
+  "Aeronave": "A7",
+  "Parámetro": "payload",
+  "predictores": [
+    "Potencia HP"
+  ],
+  "tipo": "linear-1",
+  "tipo_transformacion": "normalización",
+  "n": 7,
+  "datos_originales": {
+    "X_original": [
+      [
+        18.0
+      ],
+      [
+        24.0
+      ],
+      [
+        32.0
+      ],
+      [
+        39.0
+      ],
+      [
+        44.0
+      ],
+      [
+        53.0
+      ],
+      [
+        42.0
+      ]
+    ],
+    "y_original": [
+      20.0,
+      32.0,
+      40.0,
+      52.0,
+      61.0,
+      70.0,
+      55.0
+    ],
+    "columnas_predictores": [
+      "Potencia HP"
+    ]
+  },
+  "coeficientes_originales": [
+    1.4285714285714284
+  ],
+  "intercepto_original": -4.285714285714278,
+  "mape": 3.626281296488724,
+  "r2": 0.9907218116055984,
+  "corr": 0.8744848625865084,
+  "Confianza": 0.3868417058411713,
+  "modelo": "<class 'sklearn.linear_model._base.LinearRegression'>",
+  "pf": null,
+  "scaler_X": "<class 'sklearn.preprocessing._data.StandardScaler'>",
+  "scaler_y": "<class 'sklearn.preprocessing._data.StandardScaler'>",
+  "ecuacion_normalizada": "y = -1.5875078727786249e-16 + 0.9953500949945191*x0",
+  "ecuacion_desnormalizada": "y = -4.285714285714278 + 1.4285714285714284*x0",
+  "datos_ecuacion": {
+    "tipo": "linear-1",
+    "tipo_transformacion": "normalización",
+    "predictores": [
+      "Potencia HP"
+    ],
+    "coeficientes": [
+      1.4285714285714284
+    ],
+    "intercepto": -4.285714285714278,
+    "rango_x": {
+      "Potencia HP": {
+        "min": 18.0,
+        "max": 53.0,
+        "mean": 36.0,
+        "std": 12.12435565298214
+      }
+    },
+    "rango_y": {
+      "min": 20.0,
+      "max": 70.0,
+      "mean": 47.142857142857146,
+      "std": 17.401423039783953
+    },
+    "funcion": {
+      "tipo": "lineal",
+      "formula": "a + b1*x1 + b2*x2 + ...",
+      "params": {
+        "intercepto": -4.285714285714278,
+        "coeficientes": [
+          1.4285714285714284
+        ],
+        "predictores": [
+          "Potencia HP"
+        ]
+      }
+    }
+  },
+  "Df entrenamiento": "DataFrame: (9, 9)",
+  "n_LOOCV": 7,
+  "MAPE_LOOCV": 5.666375136748832,
+  "R2_LOOCV": 0.9791971037711484,
+  "Corr_LOOCV": 0.8007193806606132,
+  "Confianza_LOOCV": 0.35421042074835873,
+  "Confianza_promedio": 0.370526063294765
+}
