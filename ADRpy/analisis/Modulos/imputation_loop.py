@@ -286,10 +286,46 @@ def bucle_imputacion_similitud_correlacion(
     imputaciones_validas = [imp for imp in resumen_imputaciones if not is_missing(imp.get("Valor imputado", None))]
     print(f"\033[1mTotal de valores imputados: {len(imputaciones_validas)}\033[0m")
 
-    # Al final del bucle, exportar modelos_por_celda a JSON
+    # --- Nuevo: armar detalles_por_celda limpio para exportar solo lo esencial ---
+    CAMPOS_CLAVE = [
+        "Valor imputado", "Confianza", "Iteración imputación", "Método predictivo", "Detalle imputacion"
+    ]
+    def extraer_campos(dic, campos, advertencia=None):
+        if not dic:
+            return {}
+        d = {k: dic.get(k) for k in campos if k in dic}
+        if advertencia:
+            d["Advertencia"] = advertencia
+        elif "Advertencia" in dic:
+            d["Advertencia"] = dic["Advertencia"]
+        return d
+
+    detalles_por_celda = {}
+    for detalle in detalles_para_excel:
+        aeronave = detalle.get("Aeronave")
+        parametro = detalle.get("Parámetro")
+        if not aeronave or not parametro:
+            continue
+        key = f"{aeronave}|{parametro}"
+        # Extraer advertencias de cada subdiccionario
+        adv_final = (detalle.get("final") or {}).get("Advertencia")
+        adv_similitud = (detalle.get("similitud") or {}).get("Advertencia")
+        adv_correlacion = (detalle.get("correlacion") or {}).get("Advertencia")
+        detalles_por_celda[key] = {
+            "final": extraer_campos(detalle.get("final"), CAMPOS_CLAVE, adv_final),
+            "similitud": extraer_campos(detalle.get("similitud"), CAMPOS_CLAVE, adv_similitud),
+            "correlacion": extraer_campos(detalle.get("correlacion"), CAMPOS_CLAVE, adv_correlacion),
+        }
+    print(f"[DEBUG] detalles_por_celda FINAL: {len(detalles_por_celda)} claves")
+
+    # Al final del bucle, exportar modelos_por_celda y detalles_por_celda a JSON
     import json
     output_path = "ADRpy/analisis/Results/modelos_completos_por_celda.json"
+    export_dict = {
+        "modelos_por_celda": modelos_por_celda,
+        "detalles_por_celda": detalles_por_celda
+    }
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(modelos_por_celda, f, ensure_ascii=False, indent=2)
+        json.dump(export_dict, f, ensure_ascii=False, indent=2)
 
-    return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel, modelos_por_celda
+    return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel, modelos_por_celda, detalles_por_celda

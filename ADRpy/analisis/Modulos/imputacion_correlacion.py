@@ -625,7 +625,13 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
             # Guardar todos los modelos NO descartados (sin filtrar por mape/r2)
             for m in modelos:
                 if m is not None and not m.get("descartado", False):
-                    # Guardar info extendida para graficar/interactividad
+                    # Seleccionar solo columnas relevantes y filas válidas (sin NaN) para graficar
+                    columnas_grafico = list(m["predictores"]) + [objetivo]
+                    # df_original: todos los datos originales válidos para esos campos
+                    df_original_graf = df_original[columnas_grafico].dropna().to_dict(orient="list")
+                    # df_filtrado: solo los datos filtrados válidos para esos campos
+                    df_filtrado_graf = df_filtrado[columnas_grafico].dropna().to_dict(orient="list")
+
                     modelos_info.append({
                         "Aeronave": idx,
                         "Parámetro": objetivo,
@@ -653,9 +659,9 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                         "df_filtrado_columns": list(df_filtrado.columns),
                         "df_original_shape": df_original.shape,
                         "df_original_columns": list(df_original.columns),
-                        # Para graficar: todos los puntos posibles (df_original) y los usados (datos_entrenamiento)
-                        "df_original": df_original.to_dict(orient="list"),
-                        "df_filtrado": df_filtrado.to_dict(orient="list"),
+                        # Solo los puntos válidos y relevantes para graficar
+                        "df_original": df_original_graf,
+                        "df_filtrado": df_filtrado_graf,
                     })
 
             # Solo pasar a LOOCV los modelos con MAPE <= 7.5% y R2 >= 0.6
