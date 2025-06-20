@@ -52,6 +52,7 @@ def bucle_imputacion_similitud_correlacion(
     # Inicializar acumuladores fuera del bucle principal
     detalles_para_excel = []
     imputaciones_finales = []  # Inicializar para evitar variable posiblemente no definida
+    modelos_por_celda = {}  # Nuevo: diccionario global para modelos de correlación por celda
 
     iteracion = 0  # Inicializar iteracion antes del bucle
     for iteracion in range(1, max_iteraciones + 1):
@@ -96,7 +97,18 @@ def bucle_imputacion_similitud_correlacion(
             f"\033[1m*** IMPUTACIÓN POR CORRELACIÓN - ITERACIÓN {iteracion} ***\033[0m"
         )
         print("-" * 80)
-        df_correlacion_resultado, reporte_correlacion = imputaciones_correlacion(df_correlacion)
+        # Cambia aquí: obtener también modelos_info
+        df_correlacion_resultado, reporte_correlacion, modelos_info_correlacion = imputaciones_correlacion(df_correlacion)
+
+        # Guardar modelos_info_correlacion por cada celda (idx, objetivo)
+        if modelos_info_correlacion:
+            for modelo in modelos_info_correlacion:
+                idx = modelo["Aeronave"]
+                objetivo = modelo["Parámetro"]
+                key = f"{idx}|{objetivo}"
+                if key not in modelos_por_celda:
+                    modelos_por_celda[key] = []
+                modelos_por_celda[key].append(modelo)
 
         if reporte_correlacion is not None and len(reporte_correlacion) > 0:
             validos_correlacion = [r for r in reporte_correlacion if not is_missing(r.get("Valor imputado", None))]
@@ -259,8 +271,8 @@ def bucle_imputacion_similitud_correlacion(
                 imputaciones_finales = []
             if 'detalles_para_excel' not in locals():
                 detalles_para_excel = []
-            return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel
-
+            break
+       
         print("\n" + "=" * 80)
         print(f"\033[1m=== FIN DE ITERACIÓN {iteracion} ===\033[0m")
         print("=" * 80)
@@ -274,4 +286,10 @@ def bucle_imputacion_similitud_correlacion(
     imputaciones_validas = [imp for imp in resumen_imputaciones if not is_missing(imp.get("Valor imputado", None))]
     print(f"\033[1mTotal de valores imputados: {len(imputaciones_validas)}\033[0m")
 
-    return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel
+    # Al final del bucle, exportar modelos_por_celda a JSON
+    import json
+    output_path = "ADRpy/analisis/Results/modelos_completos_por_celda.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(modelos_por_celda, f, ensure_ascii=False, indent=2)
+
+    return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel, modelos_por_celda

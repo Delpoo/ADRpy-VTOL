@@ -183,109 +183,16 @@ bloques_rasgos, filas_familia, capas_familia = configurar_similitud()
 df_atributos = df_procesado[filas_familia]
 df_parametros = df_procesado.drop(columns=filas_familia)
 
-# Step 11: Main imputation loop (alternates similarity and correlation methods)
-# Returns processed DataFrame, summary, final imputations, and details for Excel export
 
-# Usar bucle con generación de diccionarios para análisis visual
-try:
-    from Modulos.imputation_loop_con_diccionarios import bucle_imputacion_similitud_correlacion_con_diccionarios
-    print("🔧 Usando bucle con generación de diccionarios...")
-    
-    resultado_bucle = bucle_imputacion_similitud_correlacion_con_diccionarios(
-        df_parametros=df_parametros,
-        df_atributos=df_atributos,
-        parametros_preseleccionados=parametros_preseleccionados,
-        bloques_rasgos=bloques_rasgos,
-        capas_familia=capas_familia,
-        df_procesado=df_procesado,
-        debug_mode=args.debug_mode,
-        generar_diccionarios=True  # ← Activar generación de diccionarios
-    )
-    
-    if len(resultado_bucle) == 5:
-        # Con diccionarios
-        df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel, diccionarios_modelos_globales = resultado_bucle
-        print(f"✅ Diccionarios generados: {len(diccionarios_modelos_globales)} celdas")
-    else:
-        # Sin diccionarios (fallback)
-        df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel = resultado_bucle
-        diccionarios_modelos_globales = {}
-        print("⚠️ No se generaron diccionarios - usando modo fallback")
-        
-except ImportError as e:
-    print(f"⚠️ Módulo con diccionarios no disponible ({e}) - usando versión original")
-    from Modulos.imputation_loop import bucle_imputacion_similitud_correlacion
-    
-    df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel = bucle_imputacion_similitud_correlacion(
-        df_parametros=df_parametros,
-        df_atributos=df_atributos,
-        parametros_preseleccionados=parametros_preseleccionados,
-        bloques_rasgos=bloques_rasgos,
-        capas_familia=capas_familia,
-        df_procesado=df_procesado,
-        debug_mode=args.debug_mode
-    )
-    diccionarios_modelos_globales = {}
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# ANÁLISIS VISUAL DE MODELOS (NUEVO)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-print("\n" + "=" * 60)
-print("🎯 ANÁLISIS VISUAL DE MODELOS DE CORRELACIÓN")
-print("=" * 60)
-
-try:
-    if 'diccionarios_modelos_globales' in locals() and diccionarios_modelos_globales:
-        print(f"✅ Diccionarios disponibles: {len(diccionarios_modelos_globales)} celdas")
-        
-        # Guardar en namespace global para el notebook
-        import __main__
-        __main__.df_original_main = df_original_para_analisis
-        __main__.diccionarios_modelos_main = diccionarios_modelos_globales  
-        __main__.df_resultado_main = df_procesado_actualizado
-        __main__.detalles_excel_main = detalles_para_excel
-        
-        print("📊 Variables guardadas para análisis visual:")
-        print("  - df_original_main")
-        print("  - diccionarios_modelos_main")
-        print("  - df_resultado_main") 
-        print("  - detalles_excel_main")
-        
-        print("\n🎮 INSTRUCCIONES PARA ANÁLISIS VISUAL:")
-        print("=" * 45)
-        print("1. Abra Jupyter: analisis_modelos_imputacion.ipynb")
-        print("2. Ejecute las celdas de importación y definición de clases")
-        print("3. Ejecute esta celda para cargar los datos:")
-        print()
-        print("```python")
-        print("# Cargar datos del flujo principal")
-        print("datos_cargados = analizador.cargar_desde_bucle_imputacion(")
-        print("    df_original_main,")
-        print("    detalles_excel_main,")
-        print("    diccionarios_modelos_main")
-        print(")")
-        print()
-        print("if datos_cargados is not None:")
-        print("    print('✅ Datos cargados desde main.py')")
-        print("    # Crear y mostrar interfaz")
-        print("    interfaz = InterfazInteractiva(analizador)")
-        print("    interfaz.mostrar_interfaz_completa()")
-        print("else:")
-        print("    print('❌ Error cargando datos')")
-        print("```")
-        print()
-        print("4. Use la interfaz interactiva para explorar modelos")
-        
-    else:
-        print("⚠️ No hay diccionarios de modelos disponibles")
-        print("💡 El análisis visual requiere diccionarios del bucle de imputación")
-        
-except Exception as e:
-    print(f"❌ Error en análisis visual: {e}")
-    print("💡 Continuando con el flujo normal...")
-
-print("\n" + "=" * 60)
+df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel, modelos_por_celda = bucle_imputacion_similitud_correlacion(
+    df_parametros=df_parametros,
+    df_atributos=df_atributos,
+    parametros_preseleccionados=parametros_preseleccionados,
+    bloques_rasgos=bloques_rasgos,
+    capas_familia=capas_familia,
+    df_procesado=df_procesado,
+    debug_mode=args.debug_mode
+)
 
 # Step 12: Export results to Excel with color and comments for each imputed cell
 archivo_destino = args.archivo_destino

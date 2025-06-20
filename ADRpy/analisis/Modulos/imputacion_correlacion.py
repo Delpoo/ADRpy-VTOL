@@ -174,6 +174,8 @@ def entrenar_modelo(
 
     try:
         # Determinar tipo de modelo y aplicar transformaciones si es necesario
+        ecuacion_string = None
+        ecuacion_latex = None
         if modelo_extra == "log":
             # Logarítmico: y = a + b*log(x)
             if len(predictores) != 1:
@@ -189,10 +191,8 @@ def entrenar_modelo(
             pf = None
             scaler_X = None
             scaler_y = None
-            
             if len(df_train) < min_required:
                 return None
-                
             # Entrenar modelo
             modelo = LinearRegression().fit(X_transformed.reshape(-1, 1), y_transformed)
             pred_transformed = modelo.predict(X_transformed.reshape(-1, 1))
@@ -202,7 +202,10 @@ def entrenar_modelo(
             intercepto_original = float(modelo.intercept_)
             pred_original = pred_transformed
             y_original_metrics = y_transformed
-            
+            # Ecuación string y LaTeX
+            var = str(predictores[0])
+            ecuacion_string = f"y = {intercepto_original:.6g} + {coef_original[0]:.6g}*log({var})"
+            ecuacion_latex = f"y = {intercepto_original:.6g} + {coef_original[0]:.6g} \\cdot \\log({var})"
         elif modelo_extra == "potencia":
             # Potencia: y = a*x^b  <=> log(y) = log(a) + b*log(x)
             if len(predictores) != 1:
@@ -219,7 +222,6 @@ def entrenar_modelo(
             pf = None
             scaler_X = None
             scaler_y = None
-            
             if len(df_train) < min_required:
                 return None
                 
@@ -232,7 +234,10 @@ def entrenar_modelo(
             intercepto_original = float(np.exp(modelo.intercept_))  # a (coeficiente)
             pred_original = np.exp(pred_transformed)
             y_original_metrics = np.exp(y_transformed)
-            
+            # Ecuación string y LaTeX
+            var = str(predictores[0])
+            ecuacion_string = f"y = {intercepto_original:.6g}*{var}**{coef_original[0]:.6g}"
+            ecuacion_latex = f"y = {intercepto_original:.6g} \\cdot {var}^{{{coef_original[0]:.6g}}}"
         elif modelo_extra == "exp":
             # Exponencial: y = a*exp(b*x) <=> log(y) = log(a) + b*x
             if len(predictores) != 1:
@@ -249,7 +254,6 @@ def entrenar_modelo(
             pf = None
             scaler_X = None
             scaler_y = None
-            
             if len(df_train) < min_required:
                 return None
                 
@@ -262,7 +266,10 @@ def entrenar_modelo(
             intercepto_original = float(np.exp(modelo.intercept_))  # a
             pred_original = np.exp(pred_transformed)
             y_original_metrics = np.exp(y_transformed)
-            
+            # Ecuación string y LaTeX
+            var = str(predictores[0])
+            ecuacion_string = f"y = {intercepto_original:.6g}*exp({coef_original[0]:.6g}*{var})"
+            ecuacion_latex = f"y = {intercepto_original:.6g} \\cdot e^{{{coef_original[0]:.6g} \\cdot {var}}}"
         else:
             # Modelos lineales y polinómicos
             if poly:
@@ -276,10 +283,8 @@ def entrenar_modelo(
                 num_coeficientes = len(predictores) + 1
                 min_required = max(5, num_coeficientes)
             num_coeficientes += 1  # Se agrega un valor extra para garantizar LOOCV
-            
             if len(df_train) < min_required:
                 return None
-                
             X_df = df_train[list(predictores)]
             X_raw = np.array(X_df.values, dtype=float)
             y_raw = np.array(df_train[objetivo].values, dtype=float)
@@ -289,7 +294,6 @@ def entrenar_modelo(
             scaler_y = StandardScaler()
             X_transformed = scaler_X.fit_transform(X_raw)
             y_transformed = scaler_y.fit_transform(y_raw.reshape(-1, 1)).flatten()
-            
             if poly:
                 pf = PolynomialFeatures(degree=2, include_bias=False)
                 X_trans = pf.fit_transform(X_transformed)
@@ -298,9 +302,7 @@ def entrenar_modelo(
                 pf = None
                 X_trans = X_transformed
                 tipo_transformacion = "normalización"
-            
             tipo = ("poly" if poly else "linear") + f"-{len(predictores)}"
-            
             # Validaciones numéricas
             const_cols = [i for i in range(X_transformed.shape[1]) if np.isclose(X_transformed[:, i].var(), 0)]
             if const_cols:
@@ -320,10 +322,16 @@ def entrenar_modelo(
             coeficientes = modelo.coef_
             intercepto = modelo.intercept_
 
-            # Crear ecuación normalizada
+            # Crear ecuación normalizada (string y LaTeX)
             ecuacion_normalizada = f"y = {intercepto} + " + " + ".join([
                 f"{coef}*x{i}" for i, coef in enumerate(coeficientes)
-            ])            # Desnormalizar coeficientes e intercepto
+            ])
+            ecuacion_normalizada_latex = (
+                "y = " + f"{intercepto:.6g}" + " + " + " + ".join([
+                    f"{coef:.6g} x_{{{i}}}" for i, coef in enumerate(coeficientes)
+                ])
+            )
+            # Desnormalizar coeficientes e intercepto
             if poly and pf is not None and hasattr(pf, 'powers_'):
                 powers = pf.powers_
                 if scaler_X.scale_ is not None and scaler_X.mean_ is not None:
@@ -353,18 +361,23 @@ def entrenar_modelo(
                 f"y = {intercepto_original} + " +
                 " + ".join(f"{coef}*x{i}" for i, coef in enumerate(coef_original))
             )
-
+            ecuacion_desnormalizada_latex = (
+                "y = " + f"{intercepto_original:.6g}" + " + " + " + ".join([
+                    f"{coef:.6g} x_{{{i}}}" for i, coef in enumerate(coef_original)
+                ])
+            )
             # Calcular predicciones y métricas en escala original
             pred_transformed = modelo.predict(X_trans)
             pred_original = scaler_y.inverse_transform(pred_transformed.reshape(-1, 1)).flatten()
             y_original_metrics = scaler_y.inverse_transform(y_transformed.reshape(-1, 1)).flatten()
-
+            # Ecuación string y LaTeX (desnormalizada)
+            ecuacion_string = ecuacion_desnormalizada
+            ecuacion_latex = ecuacion_desnormalizada_latex
         # Calcular métricas siempre en escala original
         mape = float(mean_absolute_percentage_error(y_original_metrics, pred_original) * 100)
         r2 = r2_score(y_original_metrics, pred_original)
         corr = 0.5 * r2 + 0.5 * (1 - mape / 15)
         confianza = max(0, float(corr * penalizacion_por_k(len(df_train))))
-
         # Construir diccionario de retorno unificado
         resultado = {
             "descartado": False,
@@ -374,26 +387,26 @@ def entrenar_modelo(
             "tipo": tipo,
             "tipo_transformacion": tipo_transformacion,
             "n": len(df_train),
-            
             # Datos en unidades originales
             "datos_originales": datos_originales,
             "coeficientes_originales": coef_original,
             "intercepto_original": intercepto_original,
-            
+            # Ecuaciones
+            "ecuacion_string": ecuacion_string,
+            "ecuacion_latex": ecuacion_latex,
+            "ecuacion_normalizada": ecuacion_normalizada,
+            "ecuacion_normalizada_latex": ecuacion_normalizada_latex if 'ecuacion_normalizada_latex' in locals() else None,
             # Métricas (calculadas en escala original)
             "mape": mape,
             "r2": r2,
             "corr": corr,
             "Confianza": confianza,
-              # Objetos del modelo (para predicción posterior)
+            # Objetos del modelo (para predicción posterior)
             "modelo": modelo,
             "pf": pf,
             "scaler_X": scaler_X,
             "scaler_y": scaler_y,
-            "ecuacion_normalizada": ecuacion_normalizada,
-            "ecuacion_desnormalizada": ecuacion_desnormalizada,
         }
-            
         return resultado
         
     except ModeloDescartado as e:
@@ -561,15 +574,16 @@ def imputar_valores_celda(df_resultado, df_filtrado, objetivo, info, idx):
 
     return df_resultado, imputacion
 
-def imputaciones_correlacion(df, path: str | None = None):
+def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: str = None):
     if isinstance(df, str):
         df = pd.read_excel(df)
     df = df.rename(columns=lambda c: str(c).strip())
     # Reemplazar valores inválidos por np.nan
     df.replace("", np.nan, inplace=True)
-    df_original = df
+    df_original = df.copy()  # <- Copia del DF original antes de filtrar
     df_resultado = df_original.copy()
     reporte = []
+    modelos_info = []  # Lista de modelos completos (solo descartado=False)
 
     for objetivo in [c for c in df_original.columns if df_original[c].isna().any()]:
         faltantes = df_original[df_original[objetivo].isna()].index
@@ -608,10 +622,45 @@ def imputaciones_correlacion(df, path: str | None = None):
                     modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="potencia"))
                     modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="exp"))
 
+            # Guardar todos los modelos NO descartados (sin filtrar por mape/r2)
+            for m in modelos:
+                if m is not None and not m.get("descartado", False):
+                    # Guardar info extendida para graficar/interactividad
+                    modelos_info.append({
+                        "Aeronave": idx,
+                        "Parámetro": objetivo,
+                        "Familia": familia_usada,
+                        "Filtro_aplicado": filtro_aplicado,
+                        "predictores": list(m["predictores"]),
+                        "n_predictores": len(m["predictores"]),
+                        "n_muestras_entrenamiento": m["n"],
+                        "tipo": m["tipo"],
+                        "tipo_transformacion": m["tipo_transformacion"],
+                        "coeficientes_originales": m["coeficientes_originales"],
+                        "intercepto_original": m["intercepto_original"],
+                        "ecuacion_string": m.get("ecuacion_string"),
+                        "ecuacion_latex": m.get("ecuacion_latex"),
+                        "ecuacion_normalizada": m.get("ecuacion_normalizada"),
+                        "ecuacion_normalizada_latex": m.get("ecuacion_normalizada_latex"),
+                        "mape": m["mape"],
+                        "r2": m["r2"],
+                        "corr": m["corr"],
+                        "Confianza": m["Confianza"],
+                        "Advertencia": m.get("warning", None),
+                        "datos_entrenamiento": m["datos_originales"],
+                        "indices_entrenamiento": m["datos_originales"]["X_original"],
+                        "df_filtrado_shape": df_filtrado.shape,
+                        "df_filtrado_columns": list(df_filtrado.columns),
+                        "df_original_shape": df_original.shape,
+                        "df_original_columns": list(df_original.columns),
+                        # Para graficar: todos los puntos posibles (df_original) y los usados (datos_entrenamiento)
+                        "df_original": df_original.to_dict(orient="list"),
+                        "df_filtrado": df_filtrado.to_dict(orient="list"),
+                    })
+
             # Solo pasar a LOOCV los modelos con MAPE <= 7.5% y R2 >= 0.6
             validos = [m for m in modelos if m is not None and not m["descartado"] and m["mape"] <= 7.5 and m["r2"] >= 0.6]
             descartados = [m for m in modelos if m is not None and m["descartado"]]
-
             if not validos:
                 for m in descartados or [{"motivo": "Sin predictores válidos"}]:
                     reporte.append({
@@ -629,12 +678,10 @@ def imputaciones_correlacion(df, path: str | None = None):
                         "Advertencia": f"Modelo descartado: {m['motivo']}" + ("; modelo sin filtrado por familia" if not filtro_aplicado else ""),
                     })
                 continue
-
             # Validar con LOOCV y calcular confianza promedio
             for m in validos:
                 m.update(validar_con_loocv(df_filtrado, objetivo, m))
                 m["Confianza_promedio"] = (m["Confianza"] + m["Confianza_LOOCV"]) / 2
-
             # Filtrar modelos robustos por LOOCV
             robustos = [m for m in validos if m["MAPE_LOOCV"] <= 15 and m["R2_LOOCV"] >= 0.6]
             if robustos:
@@ -647,11 +694,9 @@ def imputaciones_correlacion(df, path: str | None = None):
                 warning_text += "; modelo sin filtrado por familia"
             mejor["warning"] = warning_text
             mejor["Familia"] = familia_usada
-
             # Verificar si ya imputamos algo en esta fila/parámetro
             if not pd.isna(df_resultado.at[idx, objetivo]):
                 print(f"⚠️ Ya se imputó {objetivo} en fila {idx}. No debería ocurrir.")
-
             # Imputar el valor de la celda actual
             df_resultado, imputacion = imputar_valores_celda(df_resultado, df_filtrado, objetivo, mejor, idx)
             imputacion["Familia"] = familia_usada
@@ -665,9 +710,8 @@ def imputaciones_correlacion(df, path: str | None = None):
                 imputacion["Advertencia"] = advertencia_final
             reporte.append(imputacion)
 
-    return df_resultado, reporte
 
-
+    return df_resultado, reporte, modelos_info
 """
 def test_imputacion_correlacion_basica():
     df_final, reporte = imputaciones_correlacion('ADRpy/analisis/Data/Datos_aeronaves.xlsx')
