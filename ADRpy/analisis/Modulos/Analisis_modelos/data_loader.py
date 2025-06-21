@@ -155,83 +155,99 @@ def filter_models(modelos_por_celda: Dict,
                  aeronave: Optional[str] = None,
                  parametro: Optional[str] = None,
                  tipos_modelo: Optional[List[str]] = None,
-                 n_predictores: Optional[List[int]] = None,
-                 predictores: Optional[List[str]] = None) -> Dict:
+                 predictores: Optional[List[str]] = None,
+                 only_real_curves: bool = False,
+                 comparison_type: str = 'by_type',
+                 mejores: bool = False) -> Dict:
     """
-    Filtra los modelos según los criterios especificados.
-    
-    Parameters:
-    -----------
-    modelos_por_celda : Dict
-        Diccionario con todos los modelos
-    aeronave : Optional[str]
-        Aeronave a filtrar
-    parametro : Optional[str]
-        Parámetro a filtrar
-    tipos_modelo : Optional[List[str]]
-        Tipos de modelo a incluir
-    n_predictores : Optional[List[int]]
-        Números de predictores a incluir
-    predictores : Optional[List[str]]
-        Predictores específicos a incluir
-        
-    Returns:
-    --------
-    Dict
-        Diccionario filtrado de modelos
+    Filtra los modelos según los criterios especificados y el modo de comparación.
+    Mejor modelo: mayor confianza promedio (entrenamiento + validación), solo si tiene validación.
+    Permite filtrar por nombre de predictor (no por número).
+    comparison_type:
+        - 'by_type': Todos los modelos filtrados (default)
+        - 'best_overall': Solo el modelo de mayor confianza promedio (si empate, mayor r2)
+        - 'by_predictors': Mejor modelo por cada combinación única de predictores
+    only_real_curves:
+        - Si True, solo modelos con datos reales en y_original
     """
     filtered_models = {}
-    
-    # Construir clave de celda si se especifican aeronave y parámetro
     target_key = None
     if aeronave and parametro:
         target_key = f"{aeronave}|{parametro}"
-    
     for celda_key, modelos in modelos_por_celda.items():
-        # Filtrar por celda específica
         if target_key and celda_key != target_key:
             continue
-            
-        # Filtrar por aeronave
         if aeronave and not celda_key.startswith(f"{aeronave}|"):
             continue
-            
-        # Filtrar modelos dentro de la celda
         filtered_models_celda = []
-        
         for modelo in modelos:
             if not isinstance(modelo, dict):
                 continue
-                
             # Filtrar por tipo de modelo
             if tipos_modelo:
                 tipo = modelo.get('tipo')
                 if tipo not in tipos_modelo:
                     continue
-            
-            # Filtrar por número de predictores
-            if n_predictores:
-                n_pred = modelo.get('n_predictores')
-                if n_pred not in n_predictores:
-                    continue
-            
-            # Filtrar por predictores específicos
+            # Filtrar por nombre de predictor (al menos uno debe estar en la lista)
             if predictores:
-                modelo_predictores = set(modelo.get('predictores', []))
-                if not any(pred in modelo_predictores for pred in predictores):
+                modelo_preds = set(modelo.get('predictores', []))
+                if not any(pred in modelo_preds for pred in predictores):
                     continue
-            
+            # Filtro: solo curvas con datos reales
+            if only_real_curves:
+                datos_entrenamiento = modelo.get('datos_entrenamiento', {})
+                y_original = datos_entrenamiento.get('y_original')
+                if not y_original or (isinstance(y_original, list) and len([y for y in y_original if y is not None]) == 0):
+                    continue
             filtered_models_celda.append(modelo)
-        
+        # Modos de comparación
         if filtered_models_celda:
+            if comparison_type == 'best_overall':
+                # Solo el modelo de mayor confianza promedio (entrenamiento + validación), solo si tiene validación
+                def confianza_promedio(m):
+                    conf_train = m.get('Confianza', 0)
+                    conf_val = m.get('Confianza_validacion')
+                    if conf_val is None:
+                        return -1  # Descarta modelos sin validación
+                    return (conf_train + conf_val) / 2
+                # Filtrar solo modelos con validación
+                modelos_validos = [m for m in filtered_models_celda if m.get('Confianza_validacion') is not None]
+                if modelos_validos:
+                    best = max(modelos_validos, key=lambda m: (confianza_promedio(m), m.get('r2', 0)))
+                    filtered_models_celda = [best]
+                else:
+                    filtered_models_celda = []
+            elif comparison_type == 'by_predictors':
+                # Mejor modelo por cada combinación única de predictores (por nombre)
+                best_by_pred = {}
+                def confianza_promedio(m):
+                    conf_train = m.get('Confianza', 0)
+                    conf_val = m.get('Confianza_validacion')
+                    if conf_val is None:
+                        return -1
+                    return (conf_train + conf_val) / 2
+                for m in filtered_models_celda:
+                    preds = tuple(sorted(m.get('predictores', [])))
+                    conf = confianza_promedio(m)
+                    r2 = m.get('r2', 0)
+                    if preds not in best_by_pred:
+                        best_by_pred[preds] = m
+                    else:
+                        best = best_by_pred[preds]
+                        best_conf = confianza_promedio(best)
+                        if conf > best_conf or (conf == best_conf and r2 > best.get('r2', 0)):
+                            best_by_pred[preds] = m
+                # Solo modelos con validación
+                filtered_models_celda = [m for m in best_by_pred.values() if m.get('Confianza_validacion') is not None]
+            # else: by_type (default): no cambio, todos los modelos filtrados
             filtered_models[celda_key] = filtered_models_celda
-    
     return filtered_models
 
 
 def prepare_plot_data(modelo: Dict) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     """
     Prepara los datos de un modelo para visualización.
+    Asegura que los DataFrames devueltos contengan SOLO el predictor y parámetro del modelo actual.
     
     Parameters:
     -----------
@@ -245,23 +261,35 @@ def prepare_plot_data(modelo: Dict) -> Tuple[Optional[pd.DataFrame], Optional[pd
     """
     try:
         datos_entrenamiento = modelo.get('datos_entrenamiento', {})
-        
+        predictor = None
+        parametro = None
+        # Obtener nombre del predictor y parámetro
+        if 'predictores' in modelo and isinstance(modelo['predictores'], list) and len(modelo['predictores']) == 1:
+            predictor = modelo['predictores'][0]
+        parametro = modelo.get('Parámetro') or modelo.get('parametro')
+
         # Datos originales
         df_original_dict = datos_entrenamiento.get('df_original')
         df_original = None
         if df_original_dict:
             df_original = pd.DataFrame(df_original_dict)
-            # Reemplazar strings 'NaN' con np.nan
             df_original = df_original.replace('NaN', np.nan)
-        
+            # Filtrar solo columnas relevantes
+            if predictor and parametro:
+                cols = [c for c in [predictor, parametro] if c in df_original.columns]
+                df_original = df_original[cols]
+
         # Datos filtrados (entrenamiento)
         df_filtrado_dict = datos_entrenamiento.get('df_filtrado')
         df_filtrado = None
         if df_filtrado_dict:
             df_filtrado = pd.DataFrame(df_filtrado_dict)
-            # Reemplazar strings 'NaN' con np.nan
             df_filtrado = df_filtrado.replace('NaN', np.nan)
-        
+            # Filtrar solo columnas relevantes
+            if predictor and parametro:
+                cols = [c for c in [predictor, parametro] if c in df_filtrado.columns]
+                df_filtrado = df_filtrado[cols]
+
         return df_original, df_filtrado
         
     except Exception as e:

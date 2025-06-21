@@ -99,29 +99,31 @@ def create_tipo_modelo_checklist(tipos_modelo: List[str]) -> dcc.Checklist:
     )
 
 
-def create_n_predictores_checklist(n_predictores: List[int]) -> dcc.Checklist:
+def create_predictor_dropdown(predictors: List[str], selected: Optional[str] = None) -> dcc.Dropdown:
     """
-    Crea checklist para selección del número de predictores.
+    Crea un dropdown para selección de predictor.
     
     Parameters:
     -----------
-    n_predictores : List[int]
-        Lista de números de predictores disponibles
+    predictors : List[str]
+        Lista de predictores disponibles
+    selected : Optional[str]
+        Predictor seleccionado por defecto
         
     Returns:
     --------
-    dcc.Checklist
-        Componente checklist de Dash
+    dcc.Dropdown
+        Componente dropdown de Dash
     """
-    options = [{'label': f'{n} predictor{"es" if n > 1 else ""}', 'value': n} 
-               for n in sorted(n_predictores)]
-    
-    return dcc.Checklist(
-        id='n-predictores-checklist',
+    options = [{'label': 'Todos los predictores', 'value': '__all__'}] + [
+        {'label': pred, 'value': pred} for pred in predictors
+    ]
+    return dcc.Dropdown(
+        id='predictor-dropdown',
         options=options,
-        value=n_predictores,  # Todos seleccionados por defecto
-        style={'marginBottom': '10px'},
-        inputStyle={"marginRight": "5px"}
+        value=selected if selected is not None else '__all__',
+        placeholder="Seleccione un predictor...",
+        style={'marginBottom': '10px'}
     )
 
 
@@ -152,6 +154,24 @@ def create_visualization_options() -> html.Div:
             style={'marginBottom': '10px'},
             inputStyle={"marginRight": "5px"}
         ),
+        
+        dcc.Checklist(
+            id='show-only-real-curves',
+            options=[{'label': 'Mostrar solo curvas con datos reales', 'value': 'only_real'}],
+            value=[],
+            style={'marginBottom': '10px'},
+            inputStyle={"marginRight": "5px"}
+        ),
+        
+        dcc.Checklist(
+            id='hide-plot-legend',
+            options=[{'label': 'Ocultar leyenda de la gráfica', 'value': 'hide'}],
+            value=[],
+            style={'marginBottom': '10px'},
+            inputStyle={"marginRight": "5px"}
+        ),
+        
+        html.Div(id='predictor-checklist-container'),
         
         html.Label("Tipo de comparación:"),
         dcc.RadioItems(
@@ -212,85 +232,108 @@ def create_main_layout() -> html.Div:
         Layout principal
     """
     return html.Div([
-        # Título principal
         html.H1("Análisis Interactivo de Modelos de Imputación", 
                style={'textAlign': 'center', 'marginBottom': '30px'}),
-        
-        # Contenedor principal
         html.Div([
-            # Panel de controles (izquierda)
+            # Botón SIEMPRE visible, fuera del panel de filtros
+            html.Button(
+                id='toggle-filters-btn',
+                children='Ocultar/Mostrar Filtros',
+                n_clicks=0,
+                style={
+                    'position': 'absolute',
+                    'top': '20px',
+                    'left': '20px',
+                    'zIndex': 10,
+                    'padding': '8px 16px',
+                    'backgroundColor': '#007bff',
+                    'color': 'white',
+                    'border': 'none',
+                    'borderRadius': '5px',
+                    'cursor': 'pointer',
+                    'boxShadow': '0 2px 6px rgba(0,0,0,0.1)'
+                }
+            ),
             html.Div([
-                html.H3("Filtros y Controles"),
-                
-                html.Label("Aeronave:"),
-                html.Div(id='aeronave-dropdown-container'),
-                
-                html.Label("Parámetro:"),
-                html.Div(id='parametro-dropdown-container'),
-                
-                html.Label("Tipos de Modelo:"),
-                html.Div(id='tipo-modelo-container'),
-                
-                html.Label("Número de Predictores:"),
-                html.Div(id='n-predictores-container'),
-                
-                html.Div(id='visualization-options-container'),
-                
-                html.Button('Actualizar Visualización', 
-                           id='update-button',
-                           style={
-                               'marginTop': '20px',
-                               'padding': '10px 20px',
-                               'backgroundColor': '#007bff',
-                               'color': 'white',
-                               'border': 'none',
-                               'borderRadius': '5px',
-                               'cursor': 'pointer'
-                           })
-                
+                # Panel de filtros (colapsable)
+                html.Div(id='filters-panel', children=[
+                    html.H3("Filtros y Controles"),
+                    html.Label("Aeronave:"),
+                    html.Div(id='aeronave-dropdown-container'),
+                    html.Label("Parámetro:"),
+                    html.Div(id='parametro-dropdown-container'),
+                    html.Label("Tipos de Modelo:"),
+                    html.Div(id='tipo-modelo-container'),
+                    html.Label("Predictor:"),
+                    html.Div(id='predictor-dropdown-container'),
+                    html.Div(id='visualization-options-container'),
+                    html.Button('Actualizar Visualización', 
+                               id='update-button',
+                               style={
+                                   'marginTop': '20px',
+                                   'padding': '10px 20px',
+                                   'backgroundColor': '#007bff',
+                                   'color': 'white',
+                                   'border': 'none',
+                                   'borderRadius': '5px',
+                                   'cursor': 'pointer'
+                               })
+                ], style={
+                    'width': '22%',
+                    'minWidth': '220px',
+                    'maxWidth': '320px',
+                    'display': 'block',  # Será cambiado dinámicamente por callback
+                    'verticalAlign': 'top',
+                    'padding': '20px',
+                    'backgroundColor': '#f8f9fa',
+                    'borderRadius': '5px',
+                    'margin': '10px',
+                    'boxSizing': 'border-box',
+                    'transition': 'width 0.3s, min-width 0.3s, max-width 0.3s, opacity 0.3s',
+                    'overflowY': 'auto',
+                    'height': 'fit-content'
+                }),
+                # Gráfico principal (centro, expandible)
+                html.Div(id='main-plot-container', children=[
+                    dcc.Graph(id='main-plot', style={'height': '70vh', 'width': '100%'}),
+                    dcc.Tabs(id='plot-tabs', value='main-view', children=[
+                        dcc.Tab(label='Vista Principal', value='main-view'),
+                        dcc.Tab(label='Comparación', value='comparison-view'),
+                        dcc.Tab(label='Métricas', value='metrics-view')
+                    ]),
+                    html.Div(id='tab-content')
+                ], style={
+                    'width': '56%',  # Se ajustará dinámicamente
+                    'minWidth': '320px',
+                    'display': 'inline-block',
+                    'verticalAlign': 'top',
+                    'margin': '10px',
+                    'boxSizing': 'border-box',
+                    'transition': 'width 0.3s',
+                }),
+                # Panel de información (derecha)
+                html.Div([
+                    create_info_panel()
+                ], style={
+                    'width': '22%',
+                    'minWidth': '220px',
+                    'maxWidth': '340px',
+                    'display': 'inline-block',
+                    'verticalAlign': 'top',
+                    'boxSizing': 'border-box',
+                    'margin': '10px',
+                    'transition': 'width 0.3s'
+                })
             ], style={
-                'width': '25%',
-                'display': 'inline-block',
-                'verticalAlign': 'top',
-                'padding': '20px',
-                'backgroundColor': '#f8f9fa',
-                'borderRadius': '5px',
-                'margin': '10px'
+                'display': 'flex',
+                'flexWrap': 'nowrap',
+                'alignItems': 'flex-start',
+                'justifyContent': 'space-between',
+                'width': '100%',
+                'position': 'relative',
+                'minHeight': '650px'
             }),
-            
-            # Gráfico principal (centro)
-            html.Div([
-                dcc.Graph(id='main-plot', 
-                         style={'height': '600px'}),
-                
-                # Tabs para diferentes vistas
-                dcc.Tabs(id='plot-tabs', value='main-view', children=[
-                    dcc.Tab(label='Vista Principal', value='main-view'),
-                    dcc.Tab(label='Comparación', value='comparison-view'),
-                    dcc.Tab(label='Métricas', value='metrics-view')
-                ]),
-                
-                html.Div(id='tab-content')
-                
-            ], style={
-                'width': '45%',
-                'display': 'inline-block',
-                'verticalAlign': 'top',
-                'margin': '10px'
-            }),
-            
-            # Panel de información (derecha)
-            html.Div([
-                create_info_panel()
-            ], style={
-                'width': '25%',
-                'display': 'inline-block',
-                'verticalAlign': 'top'
-            })
-            
-        ], style={'display': 'flex', 'flexWrap': 'wrap'}),
-        
-        # Tabla de resumen (abajo)
+        ], style={'position': 'relative', 'width': '100%'}),
         html.Div([
             html.H3("Resumen de Modelos"),
             html.Div(id='summary-table-container')
@@ -300,12 +343,9 @@ def create_main_layout() -> html.Div:
             'backgroundColor': '#f8f9fa',
             'borderRadius': '5px'
         }),
-        
-        # Store para datos
         dcc.Store(id='models-data-store'),
         dcc.Store(id='filtered-models-store'),
         dcc.Store(id='unique-values-store')
-        
     ])
 
 

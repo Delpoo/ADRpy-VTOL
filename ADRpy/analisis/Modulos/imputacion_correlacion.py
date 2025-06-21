@@ -668,22 +668,40 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
             validos = [m for m in modelos if m is not None and not m["descartado"] and m["mape"] <= 7.5 and m["r2"] >= 0.6]
             descartados = [m for m in modelos if m is not None and m["descartado"]]
             if not validos:
-                for m in descartados or [{"motivo": "Sin predictores válidos"}]:
-                    reporte.append({
-                        "Aeronave" : idx,
-                        "Parámetro": objetivo,
-                        "Valor imputado": np.nan,
-                        "Confianza": 0.0,
-                        "Corr": 0.0,
-                        "k": 0,
-                        "Tipo Modelo": m.get("tipo", "n/a"),
-                        "Predictores": ",".join(m.get("predictores", [])),
-                        "Penalizacion_k": 0.0,
-                        "Familia": familia_usada,
-                        "Método predictivo": "Correlacion",
-                        "Advertencia": f"Modelo descartado: {m['motivo']}" + ("; modelo sin filtrado por familia" if not filtro_aplicado else ""),
-                    })
-                continue
+                # Clasificar motivos de descarte para cada modelo no válido
+                motivos_descartes = []
+                for m in modelos:
+                    if m is None:
+                        continue
+                    if m.get("descartado", False):
+                        motivo = m.get("motivo", "Problema numérico, modelo descartado en entrenamiento")
+                    elif m["mape"] > 7.5 and m["r2"] < 0.6:
+                        motivo = "MAPE fuera de rango (>7.5%) y R2 fuera de rango (<0.6)"
+                    elif m["mape"] > 7.5:
+                        motivo = "MAPE fuera de rango (>7.5%)"
+                    elif m["r2"] < 0.6:
+                        motivo = "R2 fuera de rango (<0.6)"
+                    else:
+                        motivo = "Sin predictores válidos"
+                    motivos_descartes.append((m, motivo))
+
+                if not validos:
+                    for m, motivo in motivos_descartes or [({"motivo": "Sin predictores válidos"}, "Sin predictores válidos")]:
+                        reporte.append({
+                            "Aeronave" : idx,
+                            "Parámetro": objetivo,
+                            "Valor imputado": np.nan,
+                            "Confianza": 0.0,
+                            "Corr": 0.0,
+                            "k": 0,
+                            "Tipo Modelo": m.get("tipo", "n/a"),
+                            "Predictores": ",".join(m.get("predictores", [])),
+                            "Penalizacion_k": 0.0,
+                            "Familia": familia_usada,
+                            "Método predictivo": "Correlacion",
+                            "Advertencia": f"Modelo descartado: {motivo}" + ("; modelo sin filtrado por familia" if not filtro_aplicado else ""),
+                        })
+                    continue
             # Validar con LOOCV y calcular confianza promedio
             for m in validos:
                 m.update(validar_con_loocv(df_filtrado, objetivo, m))
