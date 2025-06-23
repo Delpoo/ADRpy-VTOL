@@ -31395,13 +31395,15 @@
         "Valor imputado": 39.244763370325344,
         "Confianza": 0.3863071541703211,
         "Iteración imputación": 1,
-        "Método predictivo": "Similitud y Correlación"
+        "Método predictivo": "Similitud y Correlación",
+        "X_visualizacion": 0.2278878489977275
       },
       "similitud": {
         "Valor imputado": 38.0,
         "Confianza": 0.05029887120880999,
         "Iteración imputación": 1,
         "Método predictivo": "Similitud",
+        "X_visualizacion": 0.20999999999999996,
         "Advertencia": "k<3, confianza_baja"
       },
       "correlacion": {
@@ -31409,6 +31411,7 @@
         "Confianza": 0.42598214425544456,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
+        "X_visualizacion": 0.23,
         "Advertencia": "Modelo no robusto; modelo sin filtrado por familia"
       }
     },
@@ -31417,13 +31420,15 @@
         "Valor imputado": 708.3797963468627,
         "Confianza": 0.3517680775607778,
         "Iteración imputación": 1,
-        "Método predictivo": "Similitud y Correlación"
+        "Método predictivo": "Similitud y Correlación",
+        "X_visualizacion": 32.0
       },
       "similitud": {
         "Valor imputado": 700.0,
         "Confianza": 0.05029887120880999,
         "Iteración imputación": 1,
         "Método predictivo": "Similitud",
+        "X_visualizacion": 32.0,
         "Advertencia": "k<3, confianza_baja"
       },
       "correlacion": {
@@ -31431,6 +31436,7 @@
         "Confianza": 0.3905902470777298,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
+        "X_visualizacion": 32.0,
         "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
       }
     },
@@ -31439,13 +31445,15 @@
         "Valor imputado": 5.660674536403106,
         "Confianza": 0.3747209286611575,
         "Iteración imputación": 1,
-        "Método predictivo": "Similitud y Correlación"
+        "Método predictivo": "Similitud y Correlación",
+        "X_visualizacion": 32.0
       },
       "similitud": {
         "Valor imputado": 5.64,
         "Confianza": 0.05029887120880999,
         "Iteración imputación": 1,
         "Método predictivo": "Similitud",
+        "X_visualizacion": 32.0,
         "Advertencia": "k<3, confianza_baja"
       },
       "correlacion": {
@@ -31453,6 +31461,7 @@
         "Confianza": 0.41412467420343957,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
+        "X_visualizacion": 32.0,
         "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
       }
     },
@@ -31461,13 +31470,15 @@
         "Valor imputado": 40.103530799854376,
         "Confianza": 0.3662975751373917,
         "Iteración imputación": 1,
-        "Método predictivo": "Similitud y Correlación"
+        "Método predictivo": "Similitud y Correlación",
+        "X_visualizacion": 31.124322258002767
       },
       "similitud": {
         "Valor imputado": 40.0,
         "Confianza": 0.05821402499619786,
         "Iteración imputación": 1,
         "Método predictivo": "Similitud",
+        "X_visualizacion": 32.0,
         "Advertencia": "k<3, confianza_baja"
       },
       "correlacion": {
@@ -31475,6 +31486,7 @@
         "Confianza": 0.410037002063676,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
+        "X_visualizacion": 31.0,
         "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
       }
     },
@@ -31483,7 +31495,8 @@
         "Valor imputado": 63.15356565373054,
         "Confianza": 0.410037002063676,
         "Iteración imputación": 1,
-        "Método predictivo": "Correlacion"
+        "Método predictivo": "Correlacion",
+        "X_visualizacion": 46.0
       },
       "similitud": {},
       "correlacion": {
@@ -31491,6 +31504,7 @@
         "Confianza": 0.410037002063676,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
+        "X_visualizacion": 46.0,
         "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
       }
     },
@@ -31499,7 +31513,8 @@
         "Valor imputado": 25.808068696143145,
         "Confianza": 0.40049860490420425,
         "Iteración imputación": 1,
-        "Método predictivo": "Correlacion"
+        "Método predictivo": "Correlacion",
+        "X_visualizacion": 32.0
       },
       "similitud": {},
       "correlacion": {
@@ -31507,6 +31522,7 @@
         "Confianza": 0.40049860490420425,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
+        "X_visualizacion": 32.0,
         "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
       }
     }

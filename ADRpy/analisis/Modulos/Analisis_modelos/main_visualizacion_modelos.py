@@ -52,7 +52,12 @@ from .ui_components import (
 )
 
 if DASH_AVAILABLE:
-    from .plot_utils import create_interactive_plot, create_comparison_plot, create_metrics_summary_table
+    from .plot_interactive import (
+    create_interactive_plot,
+    add_model_data_points,
+    create_comparison_plot,
+    create_metrics_summary_table,
+)
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -109,7 +114,10 @@ def main_visualizacion_modelos(json_path: Optional[str] = None,
 
 def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, debug):
     """Ejecuta la aplicación con Dash."""
-    
+    if not DASH_AVAILABLE:
+        print("Dash no está disponible. No se puede ejecutar la aplicación interactiva.")
+        return
+
     # Crear aplicación Dash
     app = dash.Dash(__name__)
     app.title = "Análisis de Modelos de Imputación"
@@ -181,12 +189,13 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          Input('show-model-curves', 'value'),
          Input('show-only-real-curves', 'value'),
          Input('hide-plot-legend', 'value'),
+         Input('imputation-methods-checklist', 'value'),
          Input('comparison-type', 'value'),
          Input('main-plot', 'hoverData'),
          Input('main-plot', 'clickData')],
         [State('models-data-store', 'data')]
     )
-    def update_main_plot(n_clicks, aeronave, parametro, tipos_modelo, predictor, show_training, show_curves, only_real_curves, hide_legend, comparison_type, hoverData, clickData, models_data):
+    def update_main_plot(n_clicks, aeronave, parametro, tipos_modelo, predictor, show_training, show_curves, only_real_curves, hide_legend, imputation_methods, comparison_type, hoverData, clickData, models_data):
         import copy
         if not aeronave or not parametro or not models_data:
             empty_fig = go.Figure()
@@ -243,7 +252,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             selected_idx = 0
         # Crear gráfico principal, resaltando el modelo seleccionado
         show_training_points = 'show' in (show_training or [])
-        show_model_curves = 'show' in (show_curves or [])
+        show_model_curves = 'show' in (show_curves or [])        
         fig = create_interactive_plot(
             modelos_filtrados,
             aeronave,
@@ -251,7 +260,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             show_training_points=show_training_points,
             show_model_curves=show_model_curves,
             highlight_model_idx=selected_idx,
-            detalles_por_celda=models_data.get('detalles') if models_data else None
+            detalles_por_celda=models_data.get('detalles') if models_data else None,
+            selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
         )
         fig.update_layout(showlegend=('hide' not in (hide_legend or [])))
         # Crear tabla resumen, resaltando el modelo seleccionado

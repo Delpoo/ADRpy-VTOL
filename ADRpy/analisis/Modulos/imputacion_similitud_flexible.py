@@ -265,11 +265,18 @@ def imputar_por_similitud(
             f"✅ Valor imputado: {valor_imp:.3f} (conf {confianza_final:.3f}, datos {len(vecinos_val)}, familia {familia})"
         )
 
+        # --- NUEVO: Guardar valores de predictores de vecinos para visualización ---
+        vecinos_predictores = {}
+        for col in df_parametros.columns:
+            vecinos_predictores[col] = df_familia.loc[vecinos_val, col].values.tolist()
+
         return {
             "valor": valor_imp,
             "Confianza": confianza_final,
             "num_vecinos": len(vecinos_val),
             "Vecinos": list(vecinos_val),
+            "sim_vals": sim_vals.tolist(),
+            "vecinos_predictores": vecinos_predictores,
             "familia": familia,
             "k": len(vecinos_val),
             "penalizacion_k": penalizacion_k,
@@ -314,7 +321,8 @@ def imputacion_por_similitud_general(
 
                 if resultado is not None:
                     df_resultado.at[aeronave, parametro] = resultado["valor"]
-                    reporte_similitud.append({
+                    # Construir el diccionario con TODOS los campos originales
+                    resultado_full = {
                         "Aeronave": aeronave,
                         "Parámetro": parametro,
                         "Valor imputado": resultado["valor"],
@@ -329,7 +337,11 @@ def imputacion_por_similitud_general(
                         "CV": resultado.get("coef_variacion"),
                         "Dispersión": resultado.get("dispersion"),
                         "Advertencia": resultado.get("warning", ""),
-                        "Método predictivo" : "Similitud",
-                    })
+                        "Método predictivo": "Similitud",
+                        # Agregar campos auxiliares al nivel principal
+                        "sim_vals": resultado.get("sim_vals"),
+                        "vecinos_predictores": resultado.get("vecinos_predictores"),
+                    }
+                    reporte_similitud.append(resultado_full)
 
     return df_resultado, reporte_similitud

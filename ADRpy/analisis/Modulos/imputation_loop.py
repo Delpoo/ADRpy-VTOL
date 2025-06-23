@@ -231,6 +231,50 @@ def bucle_imputacion_similitud_correlacion(
                     "similitud": dict_similitud,
                     "correlacion": dict_correlacion
                 })
+            # === NUEVO: Cálculo robusto de X_visualizacion y final ===
+            # Determinar predictor relevante si correlacion existe
+            predictor_relevante = None
+            if dict_correlacion is not None:
+                predictores_corr = dict_correlacion.get("Predictores")
+                if predictores_corr and isinstance(predictores_corr, str):
+                    predictor_relevante = predictores_corr.split(",")[0].strip()
+                elif predictores_corr and isinstance(predictores_corr, (list, tuple)):
+                    predictor_relevante = predictores_corr[0]
+                else:
+                    predictor_relevante = None
+            # Calcular X_visualizacion para similitud si ambos existen
+            if dict_similitud is not None and predictor_relevante:
+                if "sim_vals" in dict_similitud and "vecinos_predictores" in dict_similitud:
+                    sim_vals = np.array(dict_similitud["sim_vals"])
+                    vecinos_predictores = dict_similitud["vecinos_predictores"]
+                    valores_x = np.array(vecinos_predictores.get(predictor_relevante, []), dtype=float)
+                    if len(valores_x) == len(sim_vals) and sim_vals.sum() > 0:
+                        x_similitud = float(np.dot(sim_vals, valores_x) / sim_vals.sum())
+                        dict_similitud["X_visualizacion"] = x_similitud
+                    else:
+                        dict_similitud["X_visualizacion"] = None
+            # Calcular X_visualizacion para correlacion SIEMPRE que correlacion exista y haya predictor relevante
+            if dict_correlacion is not None and predictor_relevante:
+                try:
+                    x_correlacion = float(df_parametros.at[aeronave, predictor_relevante])
+                except Exception:
+                    x_correlacion = None
+                dict_correlacion["X_visualizacion"] = x_correlacion
+            # Calcular X_visualizacion para final
+            x_s = dict_similitud.get("X_visualizacion") if dict_similitud is not None else None
+            x_c = dict_correlacion.get("X_visualizacion") if dict_correlacion is not None else None
+            conf_s = dict_similitud.get("Confianza", 0) if dict_similitud is not None else 0
+            conf_c = dict_correlacion.get("Confianza", 0) if dict_correlacion is not None else 0
+            if x_s is not None and x_c is not None and (conf_s + conf_c) > 0:
+                x_final = float((x_s * conf_s + x_c * conf_c) / (conf_s + conf_c))
+                detalles_iteracion[-1]["final"]["X_visualizacion"] = x_final
+            elif x_s is not None:
+                detalles_iteracion[-1]["final"]["X_visualizacion"] = x_s
+            elif x_c is not None:
+                detalles_iteracion[-1]["final"]["X_visualizacion"] = x_c
+            else:
+                if detalles_iteracion[-1]["final"] is not None:
+                    detalles_iteracion[-1]["final"]["X_visualizacion"] = None
         # Aplicar las imputaciones finales al DataFrame base
         for imp in imputaciones_iteracion:
             parametro = imp["Parámetro"]
@@ -288,7 +332,7 @@ def bucle_imputacion_similitud_correlacion(
 
     # --- Nuevo: armar detalles_por_celda limpio para exportar solo lo esencial ---
     CAMPOS_CLAVE = [
-        "Valor imputado", "Confianza", "Iteración imputación", "Método predictivo", "Detalle imputacion"
+        "Valor imputado", "Confianza", "Iteración imputación", "Método predictivo", "Detalle imputacion", "X_visualizacion"
     ]
     def extraer_campos(dic, campos, advertencia=None):
         if not dic:

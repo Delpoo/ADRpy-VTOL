@@ -162,14 +162,16 @@ def create_visualization_options() -> html.Div:
             style={'marginBottom': '10px'},
             inputStyle={"marginRight": "5px"}
         ),
-        
-        dcc.Checklist(
+          dcc.Checklist(
             id='hide-plot-legend',
             options=[{'label': 'Ocultar leyenda de la gráfica', 'value': 'hide'}],
             value=[],
             style={'marginBottom': '10px'},
             inputStyle={"marginRight": "5px"}
         ),
+        
+        html.H5("Métodos de Imputación", style={'marginTop': '15px', 'marginBottom': '5px'}),
+        create_imputation_methods_checklist(),
         
         html.Div(id='predictor-checklist-container'),
         
@@ -267,6 +269,8 @@ def create_main_layout() -> html.Div:
                     html.Label("Predictor:"),
                     html.Div(id='predictor-dropdown-container'),
                     html.Div(id='visualization-options-container'),
+                    html.Label("Métodos de Imputación:"),
+                    html.Div(id='imputation-methods-container'),
                     html.Button('Actualizar Visualización', 
                                id='update-button',
                                style={
@@ -462,3 +466,34 @@ def format_model_info(modelo: Dict) -> html.Div:
         components.append(html.P(advertencia, style={'color': 'red'}))
     
     return html.Div(components)
+
+
+def create_imputation_methods_checklist(selected: Optional[List[str]] = None) -> dcc.Checklist:
+    """
+    Crea checklist para selección de métodos de imputación a visualizar.
+    
+    Parameters:
+    -----------
+    selected : Optional[List[str]]
+        Métodos seleccionados por defecto
+        
+    Returns:
+    --------
+    dcc.Checklist
+        Componente checklist de Dash
+    """
+    default_selected = selected or ['final', 'similitud', 'correlacion']
+    
+    options = [
+        {'label': 'Final (Promedio Ponderado)', 'value': 'final'},
+        {'label': 'Similitud', 'value': 'similitud'},
+        {'label': 'Correlación', 'value': 'correlacion'}
+    ]
+    
+    return dcc.Checklist(
+        id='imputation-methods-checklist',
+        options=options,
+        value=default_selected,
+        style={'marginBottom': '10px'},
+        inputStyle={"marginRight": "5px"}
+    )
