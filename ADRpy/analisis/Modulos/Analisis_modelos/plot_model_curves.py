@@ -10,20 +10,24 @@ Funciones para:
 FUNCIONES PRINCIPALES PARA UI:
 ------------------------------
 
-1. prepare_normalized_model_curves_data(): 
-   - Retorna datos de curvas preparados para la UI
+1. add_normalized_model_curves(): 
+   - Añade curvas de modelos normalizadas al gráfico Plotly
    - Solo modelos de 1 predictor para gráficos 2D
    - Incluye información sobre curvas sintéticas (is_synthetic, warning)
-   - Retorna listas con x_normalized, y_predicted, etiquetas, estilos
+   - Maneja curvas con rangos sintéticos y reales
 
-2. prepare_imputed_points_data():
-   - Retorna datos de puntos imputados preparados para scatter plotting
+2. extract_imputed_values_from_details():
+   - Extrae valores imputados desde detalles_por_celda para visualización
    - Incluye tooltips completos, símbolos según método, tamaños según confianza
    - Campos: value, confidence, iteration, warning para filtrado en UI
 
 3. filter_single_predictor_models():
    - Filtra modelos para retornar solo los de 1 predictor
    - Usar antes de cualquier visualización 2D
+
+4. filter_imputed_points_by_method():
+   - Filtra puntos imputados según métodos seleccionados
+   - Para control de visibilidad en la UI
 
 CAMPOS PARA UI CALLBACKS:
 ------------------------
@@ -42,6 +46,11 @@ import plotly.graph_objects as go
 import logging
 from .plot_config import COLORS, SYMBOLS, _ensure_list
 from .plot_data_access import get_model_original_data, get_model_training_data
+from .utils import (
+    is_valid_numeric, clean_numeric_value, clean_numeric_series,
+    validate_numeric_array, generate_safe_range, safe_format_number,
+    log_nan_warning, compute_range_and_warning, validate_model_coefficients
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +73,7 @@ def add_normalized_model_curves(fig: go.Figure,
     modelos : List[Dict]
         Lista de modelos (solo se procesan los de 1 predictor)
     parametro : str
-        Nombre del parámetro objetivo
-    show_synthetic_curves : bool
+        Nombre del parámetro objetivo    show_synthetic_curves : bool
         Si mostrar curvas generadas con rangos sintéticos (líneas punteadas)
     """
     
@@ -82,55 +90,22 @@ def add_normalized_model_curves(fig: go.Figure,
         if not predictor:
             continue
             
-        # Obtener datos originales del modelo para definir el rango
+        # Usar la nueva función centralizada para computar rango y advertencias
         df_original = get_model_original_data(modelo)
+        x_range_orig, x_min, x_max, using_synthetic_range, warning_msg = compute_range_and_warning(
+            modelo, predictor, df_original
+        )
         
-        x_range_orig = None
-        x_min = None
-        x_max = None
-        using_synthetic_range = False
-        
-        if df_original is not None and not df_original.empty:
-            x_data = df_original[predictor].dropna() if predictor in df_original.columns else pd.Series()
-            
-            if len(x_data) > 0:
-                x_min = x_data.min()
-                x_max = x_data.max()
-                
-                if x_max > x_min:
-                    x_range_orig = np.linspace(x_min, x_max, 100)
-        
-        # Si no hay datos originales, crear un rango sintético
-        if x_range_orig is None:
-            # Generar un rango sintético basado en el tipo de modelo y sus coeficientes
-            tipo = modelo.get('tipo', '')
-            coefs = modelo.get('coeficientes_originales', [0])
-            intercept = modelo.get('intercepto_original', 0)
-            
-            # Estimar un rango razonable basado en el tipo de modelo
-            if tipo.startswith('linear'):
-                # Para modelos lineales, usar un rango estándar
-                x_min, x_max = 0, 10
-            elif tipo.startswith('log'):
-                # Para modelos logarítmicos, evitar valores cercanos a 0
-                x_min, x_max = 0.1, 10
-            elif tipo.startswith('exp'):
-                # Para modelos exponenciales, usar un rango más pequeño
-                x_min, x_max = 0, 5
-            else:
-                # Rango por defecto
-                x_min, x_max = 0, 10
-            
-            x_range_orig = np.linspace(x_min, x_max, 100)
-            using_synthetic_range = True
-            synthetic_ranges_used += 1
-            
-            logger.info(f"Usando rango sintético para modelo {predictor} ({tipo}): [{x_min}, {x_max}]")
-          # Verificar que tenemos un rango válido
-        if x_max is None or x_min is None or x_max == x_min:
-            warning_msg = f"Rango de X inválido para predictor {predictor}"
-            warnings_added.append(warning_msg)
+        # Verificar que tenemos un rango válido
+        if x_range_orig is None or x_min is None or x_max is None:
+            if warning_msg:
+                warnings_added.append(warning_msg)
             continue
+        
+        # Contabilizar rangos sintéticos
+        if using_synthetic_range:
+            synthetic_ranges_used += 1
+            logger.info(f"Usando rango sintético para {predictor}: {warning_msg}")
         
         # Si el usuario no quiere mostrar curvas sintéticas y solo hay rango sintético, omitir
         if using_synthetic_range and not show_synthetic_curves:
@@ -262,13 +237,12 @@ def get_model_predictions_safe(modelo: Dict, x_range: np.ndarray) -> Optional[np
             intercept = 0
             
         coef = coefs[0]
-        
-        # Validar que los coeficientes son números válidos
-        if not isinstance(coef, (int, float)) or np.isnan(coef) or np.isinf(coef):
+          # Validar que los coeficientes son números válidos
+        if not is_valid_numeric(coef):
             logger.warning(f"Coeficiente inválido para modelo tipo {tipo}: {coef}")
             return None
         
-        if not isinstance(intercept, (int, float)) or np.isnan(intercept) or np.isinf(intercept):
+        if not is_valid_numeric(intercept):
             logger.warning(f"Intercepto inválido para modelo tipo {tipo}: {intercept}")
             return None
         
@@ -300,10 +274,10 @@ def get_model_predictions_safe(modelo: Dict, x_range: np.ndarray) -> Optional[np
         else:
             # Por defecto, usar modelo lineal
             predictions = coef * x_range + intercept
-        
-        # Verificar que las predicciones son válidas
-        if np.any(np.isnan(predictions)) or np.any(np.isinf(predictions)):
-            logger.warning(f"Predicciones inválidas para modelo tipo {tipo}")
+          # Verificar que las predicciones son válidas
+        is_valid, error_msg = validate_numeric_array(predictions, f"predicciones del modelo {tipo}")
+        if not is_valid:
+            logger.warning(f"Predicciones inválidas para modelo tipo {tipo}: {error_msg}")
             return None
         
         return predictions
@@ -353,362 +327,11 @@ def create_model_hover_info(modelo: Dict) -> str:
         return "Error en información del modelo"
 
 
-def add_model_curves(fig: go.Figure, 
-                    modelos: List[Dict], 
-                    predictor: str, 
-                    parametro: str,
-                    df_original: pd.DataFrame) -> None:
-    """
-    Añade curvas de modelos al gráfico (función legacy).
-    Solo procesa modelos de 1 predictor para gráficos 2D.
-    
-    Parameters:
-    -----------
-    fig : go.Figure
-        Figura de Plotly donde añadir las curvas
-    modelos : List[Dict]
-        Lista de modelos (solo se procesan los de 1 predictor)
-    predictor : str
-        Nombre del predictor
-    parametro : str
-        Nombre del parámetro objetivo
-    df_original : pd.DataFrame
-        DataFrame con datos originales
-    """
-    if df_original.empty:
-        return
-    
-    # Crear rango de valores X para las curvas basado en datos válidos
-    x_data = df_original[predictor].dropna()
-    if x_data.empty:
-        return
-        
-    x_min = x_data.min()
-    x_max = x_data.max()
-    x_range = np.linspace(x_min, x_max, 100)
-    
-    color_idx = 0
-    curves_added = 0
-    
-    for modelo in modelos:
-        if not isinstance(modelo, dict):
-            continue
-        
-        # Solo manejar modelos de 1 predictor
-        if modelo.get('n_predictores', 0) != 1:
-            continue
-        
-        # Verificar que el predictor coincide
-        model_predictors = modelo.get('predictores', [])
-        if not model_predictors or model_predictors[0] != predictor:
-            continue
-        
-        # Generar predicciones
-        predictions = get_model_predictions_safe(modelo, x_range)
-        if predictions is None:
-            continue
-        
-        # Información del modelo
-        tipo = modelo.get('tipo', 'unknown')
-        mape = modelo.get('mape', 0)
-        r2 = modelo.get('r2', 0)
-        
-        # Información de hover
-        hover_info = create_model_hover_info(modelo)
-        
-        # Determinar color y símbolo
-        tipo_base = tipo.split('-')[0] if '-' in tipo else tipo
-        symbol = SYMBOLS.get(tipo_base, 'circle')
-        color = COLORS['model_lines'][color_idx % len(COLORS['model_lines'])]
-        
-        # Añadir curva del modelo
-        fig.add_trace(go.Scatter(
-            x=x_range,
-            y=predictions,
-            mode='lines',
-            name=f'{tipo} (R²={r2:.3f})',
-            line=dict(color=color, width=2),
-            hovertemplate=hover_info + '<extra></extra>',
-            legendgroup=tipo
-        ))
-        
-        color_idx += 1
-        curves_added += 1
-      # Log información para debugging
-    logger.info(f"Añadidas {curves_added} curvas de modelos para {predictor} -> {parametro}")
 
 
-def prepare_normalized_model_curves_data(modelos: List[Dict], 
-                                        parametro: str,
-                                        include_synthetic: bool = True) -> List[Dict]:
-    """
-    Prepara datos de curvas de modelos normalizadas para la UI.
-    Solo retorna modelos de 1 predictor para gráficos 2D.
-    
-    Parameters:
-    -----------
-    modelos : List[Dict]
-        Lista de modelos
-    parametro : str
-        Nombre del parámetro objetivo
-    include_synthetic : bool
-        Si incluir curvas con rangos sintéticos
-        
-    Returns:
-    --------
-    List[Dict]
-        Lista de diccionarios con datos de curvas preparados para la UI
-    """
-    curves_data = []
-    
-    for i, modelo in enumerate(modelos):
-        # Solo modelos de 1 predictor para gráficos 2D
-        if not isinstance(modelo, dict) or modelo.get('n_predictores', 0) != 1:
-            continue
-            
-        predictor = modelo.get('predictores', [None])[0]
-        if not predictor:
-            continue
-          # Obtener rango de datos y determinar si es sintético
-        x_range, x_min, x_max, is_synthetic, warning = _compute_range_and_warning(modelo, predictor)
-        
-        if x_range is None or x_min is None or x_max is None:
-            continue
-            
-        # Si no incluir sintéticos y este es sintético, omitir
-        if is_synthetic and not include_synthetic:
-            continue
-        
-        # Generar predicciones
-        predictions = get_model_predictions_safe(modelo, x_range)
-        if predictions is None:
-            continue
-        
-        # Normalizar X al rango [0, 1]
-        x_range_norm = (x_range - x_min) / (x_max - x_min)
-        
-        # Información del modelo
-        tipo = modelo.get('tipo', 'unknown')
-        mape = modelo.get('mape', 0)
-        r2 = modelo.get('r2', 0)
-        ecuacion = modelo.get('ecuacion_string', '')
-        
-        # Preparar datos para la UI
-        curve_data = {
-            'x_normalized': x_range_norm.tolist(),
-            'y_predicted': predictions.tolist(),
-            'x_original': x_range.tolist(),
-            'predictor': predictor,
-            'model_type': tipo,
-            'mape': mape,
-            'r2': r2,
-            'equation': ecuacion,
-            'is_synthetic': is_synthetic,
-            'warning': warning,
-            'model_index': i,
-            'label': f'Curva - {predictor} ({tipo})' + (' [sintética]' if is_synthetic else ''),
-            'line_style': 'dash' if is_synthetic else 'solid',
-            'line_width': 2 if is_synthetic else 3,
-            'color_index': i % len(COLORS['model_lines'])
-        }
-        
-        curves_data.append(curve_data)
-    
-    logger.info(f"Preparados {len(curves_data)} curvas para UI del parámetro {parametro}")
-    return curves_data
 
 
-def prepare_imputed_points_data(modelos: List[Dict], 
-                               parametro: str,
-                               datos_originales: Optional[pd.DataFrame] = None,
-                               detalles_por_celda: Optional[Dict] = None,
-                               celda_key: Optional[str] = None) -> List[Dict]:
-    """
-    Prepara datos de puntos imputados para scatter plotting con tooltips.
-    Utiliza detalles_por_celda si está disponible, sino intenta extraer
-    de los datos de entrenamiento de los modelos.
-    
-    Parameters:
-    -----------
-    modelos : List[Dict]
-        Lista de modelos
-    parametro : str
-        Nombre del parámetro objetivo
-    datos_originales : Optional[pd.DataFrame]
-        DataFrame con datos originales para contexto
-    detalles_por_celda : Optional[Dict]
-        Diccionario con detalles de imputación por celda
-    celda_key : Optional[str]
-        Clave de celda en formato "aeronave|parametro"
-        
-    Returns:
-    --------
-    List[Dict]
-        Lista de diccionarios con datos de puntos imputados preparados para la UI
-    """
-    # Si tenemos detalles_por_celda y celda_key, extraer de ahí (método preferido)
-    if detalles_por_celda is not None and celda_key is not None:
-        # Filtrar solo modelos de 1 predictor
-        modelos_1pred = filter_single_predictor_models(modelos)
-        return extract_imputed_values_from_details(detalles_por_celda, celda_key, modelos_1pred)
-    
-    # Método alternativo: extraer de datos de entrenamiento de modelos
-    logger.info("Usando método alternativo de extracción de datos imputados desde datos de entrenamiento")
-    imputed_points = []
-    
-    for modelo in modelos:
-        if not isinstance(modelo, dict):
-            continue
-        
-        # Solo modelos de 1 predictor para gráficos 2D
-        if modelo.get('n_predictores', 0) != 1:
-            continue
-            
-        predictor = modelo.get('predictores', [None])[0]
-        if not predictor:
-            continue
-        
-        # Obtener datos de entrenamiento del modelo
-        df_training = get_model_training_data(modelo)
-        if df_training is None or df_training.empty:
-            continue
-        
-        # Buscar valores imputados en los datos de entrenamiento
-        imputed_mask = df_training.get('es_imputado', pd.Series([False] * len(df_training)))
-        metodo_imputacion = df_training.get('metodo_imputacion', pd.Series([''] * len(df_training)))
-        confianza_imputacion = df_training.get('confianza_imputacion', pd.Series([0.0] * len(df_training)))
-        iteracion_imputacion = df_training.get('iteracion_imputacion', pd.Series([0] * len(df_training)))
-        
-        if not any(imputed_mask):
-            continue
-        
-        # Filtrar solo puntos imputados
-        df_imputed = df_training[imputed_mask].copy()
-        
-        if df_imputed.empty:
-            continue
-        
-        # Obtener rango original para normalización
-        x_range, x_min, x_max, _, _ = _compute_range_and_warning(modelo, predictor)
-        if x_range is None or x_min is None or x_max is None or x_max == x_min:
-            continue
-        
-        # Procesar cada punto imputado
-        for idx, row in df_imputed.iterrows():
-            x_value = row.get(predictor)
-            y_value = row.get(parametro)
-            metodo = row.get('metodo_imputacion', '')
-            confianza = row.get('confianza_imputacion', 0.0)
-            iteracion = row.get('iteracion_imputacion', 0)
-            
-            if pd.isna(x_value) or pd.isna(y_value):
-                continue
-            
-            # Normalizar X
-            x_normalized = (x_value - x_min) / (x_max - x_min)
-            
-            # Determinar warning basado en el método y confianza
-            warning = ""
-            if metodo == 'similitud' and confianza < 0.7:
-                warning = "Baja confianza en similitud"
-            elif metodo == 'correlacion' and abs(confianza) < 0.5:
-                warning = "Baja correlación"
-            elif metodo == 'promedio_ponderado':
-                warning = "Valor promedio ponderado"
-            
-            # Preparar datos para la UI
-            point_data = {
-                'x_normalized': x_normalized,
-                'y_value': y_value,
-                'x_original': x_value,
-                'predictor': predictor,
-                'parameter': parametro,
-                'imputation_method': metodo,
-                'confidence': confianza,
-                'iteration': iteracion,
-                'warning': warning,
-                'tooltip': (
-                    f"Predictor: {predictor}<br>"
-                    f"Valor X: {x_value:.3f}<br>"
-                    f"X normalizado: {x_normalized:.3f}<br>"
-                    f"Valor Y: {y_value:.3f}<br>"
-                    f"Método: {metodo}<br>"
-                    f"Confianza: {confianza:.3f}<br>"
-                    f"Iteración: {iteracion}<br>"
-                    + (f"Advertencia: {warning}<br>" if warning else "")
-                ),
-                'symbol': 'diamond' if metodo == 'similitud' else 'triangle-up' if metodo == 'correlacion' else 'circle',
-                'size': max(6, min(15, 6 + confianza * 9)),  # Tamaño basado en confianza
-                'color_method': metodo
-            }
-            
-            imputed_points.append(point_data)
-    
-    logger.info(f"Preparados {len(imputed_points)} puntos imputados para UI del parámetro {parametro}")
-    return imputed_points
 
-
-def _compute_range_and_warning(modelo: Dict, predictor: str) -> Tuple[Optional[np.ndarray], Optional[float], Optional[float], bool, str]:
-    """
-    Calcula el rango de datos para un modelo y determina si es sintético.
-    
-    Parameters:
-    -----------
-    modelo : Dict
-        Diccionario con información del modelo
-    predictor : str
-        Nombre del predictor
-        
-    Returns:
-    --------
-    tuple
-        (x_range, x_min, x_max, is_synthetic, warning)
-    """
-    # Obtener datos originales del modelo
-    df_original = get_model_original_data(modelo)
-    
-    x_range = None
-    x_min = None
-    x_max = None
-    is_synthetic = False
-    warning = ""
-    
-    if df_original is not None and not df_original.empty:
-        x_data = df_original[predictor].dropna() if predictor in df_original.columns else pd.Series()
-        
-        if len(x_data) > 0:
-            x_min = x_data.min()
-            x_max = x_data.max()
-            
-            if x_max > x_min:
-                x_range = np.linspace(x_min, x_max, 100)
-    
-    # Si no hay datos originales, crear un rango sintético
-    if x_range is None:
-        tipo = modelo.get('tipo', '')
-        
-        # Estimar un rango razonable basado en el tipo de modelo
-        if tipo.startswith('linear'):
-            x_min, x_max = 0, 10
-        elif tipo.startswith('log'):
-            x_min, x_max = 0.1, 10
-        elif tipo.startswith('exp'):
-            x_min, x_max = 0, 5
-        else:
-            x_min, x_max = 0, 10
-        
-        x_range = np.linspace(x_min, x_max, 100)
-        is_synthetic = True
-        warning = f"Rango sintético generado para {predictor} (sin datos originales)"
-        
-        logger.info(f"Usando rango sintético para modelo {predictor} ({tipo}): [{x_min}, x_max]")
-    
-    # Verificar que tenemos un rango válido
-    if x_max is None or x_min is None or x_max == x_min:
-        warning = f"Rango de X inválido para predictor {predictor}"
-        return None, None, None, False, warning
-    
-    return x_range, x_min, x_max, is_synthetic, warning
 
 
 def filter_single_predictor_models(modelos: List[Dict]) -> List[Dict]:
@@ -794,9 +417,9 @@ def extract_imputed_values_from_details(detalles_por_celda: Dict,
     if not predictor:
         logger.warning(f"No se encontró predictor válido en el mejor modelo para celda {celda_key}")
         return imputed_points
-        
-    # Obtener rango original para normalización del mejor modelo seleccionado
-    x_range, x_min, x_max, _, _ = _compute_range_and_warning(modelo_referencia, predictor)
+          # Obtener rango original para normalización del mejor modelo seleccionado
+    df_original = get_model_original_data(modelo_referencia)
+    x_range, x_min, x_max, _, _ = compute_range_and_warning(modelo_referencia, predictor, df_original)
     if x_range is None or x_min is None or x_max is None or x_max == x_min:
         logger.warning(f"No se pudo determinar rango válido del mejor modelo para celda {celda_key}")
         return imputed_points
@@ -814,9 +437,8 @@ def extract_imputed_values_from_details(detalles_por_celda: Dict,
         iteracion = datos_metodo.get("Iteración imputación", "N/A")
         advertencia = datos_metodo.get("Advertencia", "")
         x_value = datos_metodo.get("X_visualizacion")
-        
-        # Solo mostrar si existen ambos valores y no son None/NaN
-        if x_value is None or pd.isna(x_value) or valor_imputado is None or pd.isna(valor_imputado):
+          # Solo mostrar si existen ambos valores y no son None/NaN
+        if not is_valid_numeric(x_value) or not is_valid_numeric(valor_imputado):
             continue
         
         # Normalizar X usando el rango del mejor modelo seleccionado (consistente con curvas)

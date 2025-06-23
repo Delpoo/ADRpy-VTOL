@@ -18,6 +18,8 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
 import logging
 
+from .utils import safe_json_load, log_nan_warning
+
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,21 +33,18 @@ def load_models_data(json_path: str) -> Tuple[Dict, Dict]:
     -----------
     json_path : str
         Ruta al archivo JSON con los modelos
-        
-    Returns:
+          Returns:
     --------
     Tuple[Dict, Dict]
         Tupla con (modelos_por_celda, detalles_por_celda)
     """
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
-            # Leer como texto primero para reemplazar NaN problemático
+            # Leer como texto primero para manejar NaN problemático
             json_text = f.read()
-            # Reemplazar NaN que no es válido en JSON estándar
-            json_text = json_text.replace(': NaN', ': "NaN"')
             
-        # Parsear JSON corregido
-        data = json.loads(json_text)
+        # Usar la función utilitaria para cargar JSON de manera segura
+        data = safe_json_load(json_text)
         
         modelos_por_celda = data.get('modelos_por_celda', {})
         detalles_por_celda = data.get('detalles_por_celda', {})
@@ -199,42 +198,29 @@ def filter_models(modelos_por_celda: Dict,
                 y_original = datos_entrenamiento.get('y_original')
                 if not y_original or (isinstance(y_original, list) and len([y for y in y_original if y is not None]) == 0):
                     continue
-            filtered_models_celda.append(modelo)
-        # Modos de comparación
+            filtered_models_celda.append(modelo)        # Modos de comparación
         if filtered_models_celda:
             if comparison_type == 'best_overall':
                 # Solo el modelo de mayor confianza promedio (entrenamiento + validación), solo si tiene validación
-                def confianza_promedio(m):
-                    conf_train = m.get('Confianza', 0)
-                    conf_val = m.get('Confianza_validacion')
-                    if conf_val is None:
-                        return -1  # Descarta modelos sin validación
-                    return (conf_train + conf_val) / 2
                 # Filtrar solo modelos con validación
                 modelos_validos = [m for m in filtered_models_celda if m.get('Confianza_validacion') is not None]
                 if modelos_validos:
-                    best = max(modelos_validos, key=lambda m: (confianza_promedio(m), m.get('r2', 0)))
+                    best = max(modelos_validos, key=lambda m: (_confianza_promedio(m), m.get('r2', 0)))
                     filtered_models_celda = [best]
                 else:
                     filtered_models_celda = []
             elif comparison_type == 'by_predictors':
                 # Mejor modelo por cada combinación única de predictores (por nombre)
                 best_by_pred = {}
-                def confianza_promedio(m):
-                    conf_train = m.get('Confianza', 0)
-                    conf_val = m.get('Confianza_validacion')
-                    if conf_val is None:
-                        return -1
-                    return (conf_train + conf_val) / 2
                 for m in filtered_models_celda:
                     preds = tuple(sorted(m.get('predictores', [])))
-                    conf = confianza_promedio(m)
+                    conf = _confianza_promedio(m)
                     r2 = m.get('r2', 0)
                     if preds not in best_by_pred:
                         best_by_pred[preds] = m
                     else:
                         best = best_by_pred[preds]
-                        best_conf = confianza_promedio(best)
+                        best_conf = _confianza_promedio(best)
                         if conf > best_conf or (conf == best_conf and r2 > best.get('r2', 0)):
                             best_by_pred[preds] = m
                 # Solo modelos con validación
@@ -244,10 +230,9 @@ def filter_models(modelos_por_celda: Dict,
     return filtered_models
 
 
-def prepare_plot_data(modelo: Dict) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+def _confianza_promedio(modelo) -> float:
     """
-    Prepara los datos de un modelo para visualización.
-    Asegura que los DataFrames devueltos contengan SOLO el predictor y parámetro del modelo actual.
+    Calcula la confianza promedio de un modelo (entrenamiento + validación).
     
     Parameters:
     -----------
@@ -256,173 +241,20 @@ def prepare_plot_data(modelo: Dict) -> Tuple[Optional[pd.DataFrame], Optional[pd
         
     Returns:
     --------
-    Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]
-        Tupla con (df_original, df_filtrado) o (None, None) si hay error
+    float
+        Confianza promedio. Retorna -1 si no tiene validación.
     """
-    try:
-        datos_entrenamiento = modelo.get('datos_entrenamiento', {})
-        predictor = None
-        parametro = None
-        # Obtener nombre del predictor y parámetro
-        if 'predictores' in modelo and isinstance(modelo['predictores'], list) and len(modelo['predictores']) == 1:
-            predictor = modelo['predictores'][0]
-        parametro = modelo.get('Parámetro') or modelo.get('parametro')
-
-        # Datos originales
-        df_original_dict = datos_entrenamiento.get('df_original')
-        df_original = None
-        if df_original_dict:
-            df_original = pd.DataFrame(df_original_dict)
-            df_original = df_original.replace('NaN', np.nan)
-            # Filtrar solo columnas relevantes
-            if predictor and parametro:
-                cols = [c for c in [predictor, parametro] if c in df_original.columns]
-                df_original = df_original[cols]
-
-        # Datos filtrados (entrenamiento)
-        df_filtrado_dict = datos_entrenamiento.get('df_filtrado')
-        df_filtrado = None
-        if df_filtrado_dict:
-            df_filtrado = pd.DataFrame(df_filtrado_dict)
-            df_filtrado = df_filtrado.replace('NaN', np.nan)
-            # Filtrar solo columnas relevantes
-            if predictor and parametro:
-                cols = [c for c in [predictor, parametro] if c in df_filtrado.columns]
-                df_filtrado = df_filtrado[cols]
-
-        return df_original, df_filtrado
-        
-    except Exception as e:
-        logger.error(f"Error preparando datos de plot: {e}")
-        return None, None
+    conf_train = modelo.get('Confianza', 0)
+    conf_val = modelo.get('Confianza_validacion')
+    if conf_val is None:
+        return -1  # Descarta modelos sin validación
+    return (conf_train + conf_val) / 2
 
 
-def get_model_predictions(modelo: Dict, x_range: np.ndarray) -> Optional[np.ndarray]:
-    """
-    Genera predicciones del modelo para un rango de valores X.
-    
-    Parameters:
-    -----------
-    modelo : Dict
-        Diccionario con información del modelo
-    x_range : np.ndarray
-        Rango de valores X para predecir
-        
-    Returns:
-    --------
-    Optional[np.ndarray]
-        Array con las predicciones o None si hay error
-    """
-    try:
-        tipo = modelo.get('tipo', '')
-        coefs = modelo.get('coeficientes_originales', [])
-        intercept = modelo.get('intercepto_original', 0)
-        
-        if not coefs:
-            return None
-        
-        # Solo manejar modelos de 1 predictor por ahora
-        if modelo.get('n_predictores', 0) != 1:
-            return None
-        
-        coef = coefs[0]
-        
-        if 'linear' in tipo:
-            # Modelo lineal: y = intercept + coef * x
-            predictions = intercept + coef * x_range
-            
-        elif 'poly' in tipo:
-            # Para modelos polinómicos, necesitaríamos más información
-            # Por ahora, tratarlo como lineal
-            predictions = intercept + coef * x_range
-            
-        elif 'log' in tipo:
-            # Modelo logarítmico: y = intercept + coef * log(x)
-            # Evitar log de valores <= 0
-            x_safe = np.where(x_range > 0, x_range, 1e-10)
-            predictions = intercept + coef * np.log(x_safe)
-            
-        elif 'exp' in tipo:
-            # Modelo exponencial: y = intercept + coef * exp(x)
-            # Limitar para evitar overflow
-            x_limited = np.clip(x_range, -50, 50)
-            predictions = intercept + coef * np.exp(x_limited)
-            
-        elif 'pot' in tipo:
-            # Modelo de potencia: y = intercept + coef * x^poder
-            # Por simplicidad, asumimos potencia 2
-            predictions = intercept + coef * np.power(np.abs(x_range), 2) * np.sign(x_range)
-            
-        else:
-            # Tipo desconocido, usar lineal como fallback
-            predictions = intercept + coef * x_range
-        
-        return predictions
-        
-    except Exception as e:
-        logger.error(f"Error generando predicciones: {e}")
-        return None
 
 
-def get_model_info_text(modelo: Dict) -> str:
-    """
-    Genera texto informativo sobre un modelo para mostrar en hover.
-    
-    Parameters:
-    -----------
-    modelo : Dict
-        Diccionario con información del modelo
-        
-    Returns:
-    --------
-    str
-        Texto formateado con información del modelo
-    """
-    info_lines = []
-    
-    # Información básica
-    aeronave = modelo.get('Aeronave', 'N/A')
-    parametro = modelo.get('Parámetro', 'N/A')
-    tipo = modelo.get('tipo', 'N/A')
-    
-    info_lines.append(f"<b>Aeronave:</b> {aeronave}")
-    info_lines.append(f"<b>Parámetro:</b> {parametro}")
-    info_lines.append(f"<b>Tipo:</b> {tipo}")
-    
-    # Predictores
-    predictores = modelo.get('predictores', [])
-    if predictores:
-        pred_text = ', '.join(predictores)
-        info_lines.append(f"<b>Predictores:</b> {pred_text}")
-    
-    # Ecuación
-    ecuacion = modelo.get('ecuacion_string', '')
-    if ecuacion:
-        info_lines.append(f"<b>Ecuación:</b> {ecuacion}")
-    
-    # Métricas
-    mape = modelo.get('mape')
-    r2 = modelo.get('r2')
-    corr = modelo.get('corr')
-    confianza = modelo.get('Confianza')
-    
-    if mape is not None:
-        info_lines.append(f"<b>MAPE:</b> {mape:.3f}%")
-    if r2 is not None:
-        info_lines.append(f"<b>R²:</b> {r2:.3f}")
-    if corr is not None:
-        info_lines.append(f"<b>Correlación:</b> {corr:.3f}")
-    if confianza is not None:
-        info_lines.append(f"<b>Confianza:</b> {confianza:.3f}")
-    
-    # Entrenamiento
-    n_muestras = modelo.get('n_muestras_entrenamiento')
-    if n_muestras:
-        info_lines.append(f"<b>N° muestras:</b> {n_muestras}")
-    
-    # Advertencias
-    advertencia = modelo.get('Advertencia')
-    if advertencia:
-        info_lines.append(f"<b>Advertencia:</b> {advertencia}")
-    
-    return '<br>'.join(info_lines)
+
+
+
+
+

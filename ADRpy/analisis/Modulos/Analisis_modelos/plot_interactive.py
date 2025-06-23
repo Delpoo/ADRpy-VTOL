@@ -14,17 +14,18 @@ import plotly.graph_objects as go
 import logging
 from .plot_config import COLORS, SYMBOLS, _ensure_list
 from .plot_data_access import get_model_original_data, get_model_training_data
-from .plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, add_model_curves, create_model_hover_info
+from .plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
+
+
+def _to_list_safe(val):
+    if val is None:
+        return []
+    if isinstance(val, (list, np.ndarray, pd.Series)):
+        return list(val)
+    return [val]
+
 
 logger = logging.getLogger(__name__)
-
-def _safe_list(x):
-    l = _ensure_list(x)
-    if l is None:
-        return []
-    if isinstance(l, (list, tuple)):
-        return list(l)
-    return [l]
 
 
 def create_interactive_plot(
@@ -93,9 +94,9 @@ def create_interactive_plot(
             else:
                 # Si todos los valores de X son iguales, normalizar a 0.5
                 x_orig_norm = pd.Series([0.5] * len(x_orig), index=x_orig.index)
-            x_orig_list = _safe_list(x_orig)
-            x_orig_norm_list = _safe_list(x_orig_norm)
-            y_orig_list = _safe_list(y_orig)
+            x_orig_list = _to_list_safe(x_orig)
+            x_orig_norm_list = _to_list_safe(x_orig_norm)
+            y_orig_list = _to_list_safe(y_orig)
             fig.add_trace(go.Scatter(
                 x=x_orig_norm_list,
                 y=y_orig_list,
@@ -135,9 +136,9 @@ def create_interactive_plot(
                 x_train_norm = (x_train - x_min) / (x_max - x_min)
             else:
                 x_train_norm = pd.Series([0.5] * len(x_train), index=x_train.index)
-            x_train_list = _safe_list(x_train)
-            x_train_norm_list = _safe_list(x_train_norm)
-            y_train_list = _safe_list(y_train)
+            x_train_list = _to_list_safe(x_train)
+            x_train_norm_list = _to_list_safe(x_train_norm)
+            y_train_list = _to_list_safe(y_train)
             fig.add_trace(go.Scatter(
                 x=x_train_norm_list,
                 y=y_train_list,
@@ -501,43 +502,7 @@ def add_model_data_points(fig: go.Figure,
         )
 
 
-def create_comparison_plot(modelos_filtrados: Dict, 
-                         aeronave: str, 
-                         parametro: str,
-                         predictor_seleccionado: str,
-                         show_training_points: bool = True,
-                         show_model_curves: bool = True,
-                         df_original: Optional[pd.DataFrame] = None,
-                         df_filtrado: Optional[pd.DataFrame] = None,
-                         detalles_por_celda: Optional[Dict] = None) -> go.Figure:
-    """
-    Crea un gráfico de comparación entre datos originales, imputados y modelos (función legacy).
-    
-    Parameters:
-    -----------
-    modelos_filtrados : Dict
-        Modelos filtrados por celda
-    aeronave : str
-        Nombre de la aeronave
-    parametro : str
-        Parámetro objetivo
-    predictor_seleccionado : str
-        Predictor seleccionado
-    show_training_points : bool
-        Si mostrar puntos de entrenamiento
-    show_model_curves : bool
-        Si mostrar curvas de modelos
-    df_original : Optional[pd.DataFrame]
-        DataFrame con datos originales
-    df_filtrado : Optional[pd.DataFrame]
-        DataFrame con datos de entrenamiento
-    detalles_por_celda : Optional[Dict]
-        Diccionario con detalles de imputación por celda
-    """
-    # Esta función mantiene la funcionalidad anterior para compatibilidad
-    # En el nuevo sistema, se usa create_interactive_plot
-    return create_interactive_plot(modelos_filtrados, aeronave, parametro, 
-                                 show_training_points, show_model_curves, detalles_por_celda=detalles_por_celda)
+
 
 
 def create_metrics_summary_table(modelos_filtrados: Dict, 

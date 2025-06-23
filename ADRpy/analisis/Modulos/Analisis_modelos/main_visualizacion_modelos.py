@@ -29,9 +29,21 @@ try:
     DASH_AVAILABLE = True
 except ImportError:
     DASH_AVAILABLE = False
+    # Crear dummies para evitar errores de importación
+    dash = None
+    dcc = None
+    html = None
+    dash_table = None
+    Input = None
+    Output = None
+    State = None
+    go = None
     import matplotlib.pyplot as plt
     import matplotlib
     matplotlib.use('TkAgg')  # Backend para Windows
+
+# Importar pandas por separado (siempre necesario)
+import pandas as pd
 
 from .data_loader import (
     load_models_data, 
@@ -49,14 +61,6 @@ from .ui_components import (
     create_summary_table,
     format_model_info,
     create_predictor_dropdown
-)
-
-if DASH_AVAILABLE:
-    from .plot_interactive import (
-    create_interactive_plot,
-    add_model_data_points,
-    create_comparison_plot,
-    create_metrics_summary_table,
 )
 
 # Configurar logging
@@ -116,6 +120,20 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
     """Ejecuta la aplicación con Dash."""
     if not DASH_AVAILABLE:
         print("Dash no está disponible. No se puede ejecutar la aplicación interactiva.")
+        return
+
+    # Re-importar los componentes de Dash dentro de la función para evitar errores
+    try:
+        import dash
+        from dash import dcc, html, dash_table
+        from dash.dependencies import Input, Output, State
+        import plotly.graph_objects as go
+        from .plot_interactive import (
+            create_interactive_plot,
+            create_metrics_summary_table,
+        )
+    except ImportError as e:
+        print(f"Error: No se pueden importar los componentes necesarios de Dash: {e}")
         return
 
     # Crear aplicación Dash
