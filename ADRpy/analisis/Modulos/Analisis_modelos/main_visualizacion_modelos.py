@@ -193,27 +193,24 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 all_preds.update(m.get('predictores', []))
         return create_predictor_dropdown(sorted(all_preds))
 
-    # Callback principal para actualizar gráfica, tabla y panel de información
+    # Callback principal: actualiza gráfica y tabla resumen según TODOS los filtros
     @app.callback(
         [Output('main-plot', 'figure'),
-         Output('summary-table-container', 'children'),
-         Output('model-info-content', 'children')],
+         Output('summary-table-container', 'children')],
         [Input('update-button', 'n_clicks'),
          Input('aeronave-dropdown', 'value'),
          Input('parametro-dropdown', 'value'),
-         Input('tipo-modelo-checklist', 'value'),
          Input('predictor-dropdown', 'value'),
+         Input('tipo-modelo-checklist', 'value'),
          Input('show-training-points', 'value'),
          Input('show-model-curves', 'value'),
          Input('show-only-real-curves', 'value'),
          Input('hide-plot-legend', 'value'),
          Input('imputation-methods-checklist', 'value'),
-         Input('comparison-type', 'value'),
-         Input('main-plot', 'hoverData'),
-         Input('main-plot', 'clickData')],
+         Input('comparison-type', 'value')],
         [State('models-data-store', 'data')]
     )
-    def update_main_plot(n_clicks, aeronave, parametro, tipos_modelo, predictor, show_training, show_curves, only_real_curves, hide_legend, imputation_methods, comparison_type, hoverData, clickData, models_data):
+    def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_curves, only_real_curves, hide_legend, imputation_methods, comparison_type, models_data):
         import copy
         if not aeronave or not parametro or not models_data:
             empty_fig = go.Figure()
@@ -224,9 +221,9 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 showarrow=False,
                 font=dict(size=16, color="gray")
             )
-            return empty_fig, html.P("Sin datos"), html.P("Sin información")
+            return empty_fig, html.P("Sin datos")
 
-        # Interpreta correctamente la opción 'Todos los predictores' ('__all__')
+        # Filtro de predictores
         if predictor == '__all__':
             predictores = None
         elif predictor:
@@ -234,65 +231,78 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         else:
             predictores = None
 
-        # Filtrar modelos según todos los filtros y modo de comparación
         modelos_filtrados = filter_models(
             models_data['modelos'],
             aeronave=aeronave,
             parametro=parametro,
             tipos_modelo=tipos_modelo,
             predictores=predictores,
-            only_real_curves='only_real' in (only_real_curves or []),
             comparison_type=comparison_type
         )
         celda_key = f"{aeronave}|{parametro}"
         modelos_celda = modelos_filtrados.get(celda_key, [])
-        # Determinar el índice de la curva seleccionada (solo curvas de modelos)
-        selected_model = None
-        selected_idx = None
-        hover_idx = None
-        # Solo considerar el número de curvas de modelos (no puntos ni extras)
-        num_model_curves = len(modelos_celda)
-        # Buscar por clickData
-        if clickData and 'points' in clickData and len(clickData['points']) > 0:
-            curve_idx = clickData['points'][0].get('curveNumber')
-            if curve_idx is not None and 0 <= curve_idx < num_model_curves:
-                selected_idx = curve_idx
-                selected_model = modelos_celda[selected_idx]
-        # Si no hay click, buscar por hover
-        if not selected_model and hoverData and 'points' in hoverData and len(hoverData['points']) > 0:
-            curve_idx = hoverData['points'][0].get('curveNumber')
-            if curve_idx is not None and 0 <= curve_idx < num_model_curves:
-                hover_idx = curve_idx
-                selected_model = modelos_celda[hover_idx]
-        # Si no hay selección, elegir el mejor modelo filtrado (primer modelo de la lista)
-        if not selected_model and modelos_celda:
-            selected_model = modelos_celda[0]
-            selected_idx = 0
-        # Crear gráfico principal, resaltando el modelo seleccionado
+
+        # Crear gráfico principal
         show_training_points = 'show' in (show_training or [])
-        show_model_curves = 'show' in (show_curves or [])        
+        show_model_curves = 'show' in (show_curves or [])
         fig = create_interactive_plot(
             modelos_filtrados,
             aeronave,
             parametro,
             show_training_points=show_training_points,
             show_model_curves=show_model_curves,
-            highlight_model_idx=selected_idx,
+            highlight_model_idx=None,
             detalles_por_celda=models_data.get('detalles') if models_data else None,
             selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
         )
         fig.update_layout(showlegend=('hide' not in (hide_legend or [])))
-        # Crear tabla resumen, resaltando el modelo seleccionado
+
+        # Crear tabla resumen
         df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
-        if not df_summary.empty and selected_model:
-            df_summary = copy.deepcopy(df_summary)
-            df_summary['__selected__'] = False
-            if selected_idx is not None and selected_idx < len(df_summary):
-                df_summary.at[selected_idx, '__selected__'] = True
         summary_table = create_summary_table(df_summary) if not df_summary.empty else html.P("Sin datos")
-        # Panel de información del modelo seleccionado
-        model_info = format_model_info(selected_model) if selected_model else html.P("Sin información disponible")
-        return fig, summary_table, model_info
+        return fig, summary_table
+
+    # Callback para el panel de información: hover/click y filtros
+    @app.callback(
+        Output('model-info-content', 'children'),
+        [Input('main-plot', 'hoverData'),
+         Input('main-plot', 'clickData'),
+         Input('aeronave-dropdown', 'value'),
+         Input('parametro-dropdown', 'value'),
+         Input('predictor-dropdown', 'value'),
+         Input('tipo-modelo-checklist', 'value'),
+         Input('comparison-type', 'value'),
+         Input('models-data-store', 'data')]
+    )
+    def update_info_panel(hoverData, clickData, aeronave, parametro, predictor, tipos_modelo, comparison_type, models_data):
+        if not aeronave or not parametro or not models_data:
+            return html.P("Seleccione una combinación válida para ver información del modelo.")
+        celda_key = f"{aeronave}|{parametro}"
+        modelos = models_data['modelos'].get(celda_key, [])
+        # Filtrar por tipo de modelo y predictor
+        modelos_filtrados = [m for m in modelos if (not tipos_modelo or m.get('tipo') in tipos_modelo)]
+        if predictor and predictor != '__all__':
+            modelos_filtrados = [m for m in modelos_filtrados if predictor in m.get('predictores', [])]
+        # Selección por hover/click
+        selected_model = None
+        if clickData and 'points' in clickData and clickData['points']:
+            idx = clickData['points'][0].get('curveNumber')
+            if idx is not None and idx < len(modelos_filtrados):
+                selected_model = modelos_filtrados[idx]
+        elif hoverData and 'points' in hoverData and hoverData['points']:
+            idx = hoverData['points'][0].get('curveNumber')
+            if idx is not None and idx < len(modelos_filtrados):
+                selected_model = modelos_filtrados[idx]
+        # Si no hay selección, mostrar el mejor modelo por confianza promedio
+        if not selected_model and modelos_filtrados:
+            def confianza_promedio(m):
+                c1 = m.get('Confianza', 0)
+                c2 = m.get('Confianza_validacion', 0)
+                return (c1 + c2) / 2 if c2 is not None else c1
+            selected_model = max(modelos_filtrados, key=confianza_promedio)
+        if selected_model:
+            return format_model_info(selected_model)
+        return html.P("No hay información disponible para el modelo seleccionado.")
     
     # Ejecutar aplicación
     print(f"Iniciando aplicación Dash en http://localhost:{port}")

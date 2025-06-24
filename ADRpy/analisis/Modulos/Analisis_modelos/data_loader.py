@@ -160,11 +160,11 @@ def filter_models(modelos_por_celda: Dict,
                  mejores: bool = False) -> Dict:
     """
     Filtra los modelos según los criterios especificados y el modo de comparación.
-    Mejor modelo: mayor confianza promedio (entrenamiento + validación), solo si tiene validación.
+    Mejor modelo: mayor confianza promedio (entrenamiento + validación, usando Confianza y Confianza_LOOCV), solo si tiene validación.
     Permite filtrar por nombre de predictor (no por número).
     comparison_type:
         - 'by_type': Todos los modelos filtrados (default)
-        - 'best_overall': Solo el modelo de mayor confianza promedio (si empate, mayor r2)
+        - 'best_overall': Mejor modelo de cada tipo (por confianza promedio, luego R2)
         - 'by_predictors': Mejor modelo por cada combinación única de predictores
     only_real_curves:
         - Si True, solo modelos con datos reales en y_original
@@ -198,17 +198,27 @@ def filter_models(modelos_por_celda: Dict,
                 y_original = datos_entrenamiento.get('y_original')
                 if not y_original or (isinstance(y_original, list) and len([y for y in y_original if y is not None]) == 0):
                     continue
-            filtered_models_celda.append(modelo)        # Modos de comparación
+            # Solo modelos con validación (Confianza_LOOCV no None)
+            if modelo.get('Confianza_LOOCV') is None:
+                continue
+            filtered_models_celda.append(modelo)
+        # Modos de comparación
         if filtered_models_celda:
             if comparison_type == 'best_overall':
-                # Solo el modelo de mayor confianza promedio (entrenamiento + validación), solo si tiene validación
-                # Filtrar solo modelos con validación
-                modelos_validos = [m for m in filtered_models_celda if m.get('Confianza_validacion') is not None]
-                if modelos_validos:
-                    best = max(modelos_validos, key=lambda m: (_confianza_promedio(m), m.get('r2', 0)))
-                    filtered_models_celda = [best]
-                else:
-                    filtered_models_celda = []
+                # Mejor modelo de cada tipo (por confianza promedio, luego R2)
+                best_by_type = {}
+                for m in filtered_models_celda:
+                    tipo = m.get('tipo', 'N/A')
+                    conf = _confianza_promedio(m)
+                    r2 = m.get('r2', 0)
+                    if tipo not in best_by_type:
+                        best_by_type[tipo] = m
+                    else:
+                        best = best_by_type[tipo]
+                        best_conf = _confianza_promedio(best)
+                        if conf > best_conf or (conf == best_conf and r2 > best.get('r2', 0)):
+                            best_by_type[tipo] = m
+                filtered_models_celda = list(best_by_type.values())
             elif comparison_type == 'by_predictors':
                 # Mejor modelo por cada combinación única de predictores (por nombre)
                 best_by_pred = {}
@@ -223,8 +233,7 @@ def filter_models(modelos_por_celda: Dict,
                         best_conf = _confianza_promedio(best)
                         if conf > best_conf or (conf == best_conf and r2 > best.get('r2', 0)):
                             best_by_pred[preds] = m
-                # Solo modelos con validación
-                filtered_models_celda = [m for m in best_by_pred.values() if m.get('Confianza_validacion') is not None]
+                filtered_models_celda = list(best_by_pred.values())
             # else: by_type (default): no cambio, todos los modelos filtrados
             filtered_models[celda_key] = filtered_models_celda
     return filtered_models
@@ -233,19 +242,11 @@ def filter_models(modelos_por_celda: Dict,
 def _confianza_promedio(modelo) -> float:
     """
     Calcula la confianza promedio de un modelo (entrenamiento + validación).
-    
-    Parameters:
-    -----------
-    modelo : Dict
-        Diccionario con información del modelo
-        
-    Returns:
-    --------
-    float
-        Confianza promedio. Retorna -1 si no tiene validación.
+    Usa 'Confianza' y 'Confianza_LOOCV'.
+    Si no tiene validación, retorna -1.
     """
     conf_train = modelo.get('Confianza', 0)
-    conf_val = modelo.get('Confianza_validacion')
+    conf_val = modelo.get('Confianza_LOOCV')
     if conf_val is None:
         return -1  # Descarta modelos sin validación
     return (conf_train + conf_val) / 2

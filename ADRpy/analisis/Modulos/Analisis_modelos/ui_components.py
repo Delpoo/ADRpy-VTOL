@@ -261,16 +261,18 @@ def create_main_layout() -> html.Div:
                 html.Div(id='filters-panel', children=[
                     html.H3("Filtros y Controles"),
                     html.Label("Aeronave:"),
-                    html.Div(id='aeronave-dropdown-container'),
+                    html.Div(id='aeronave-dropdown-container'),  # Contenedor para el dropdown de aeronave
                     html.Label("Parámetro:"),
-                    html.Div(id='parametro-dropdown-container'),
-                    html.Label("Tipos de Modelo:"),
-                    html.Div(id='tipo-modelo-container'),
+                    html.Div(id='parametro-dropdown-container'),  # Contenedor para el dropdown de parámetro
                     html.Label("Predictor:"),
-                    html.Div(id='predictor-dropdown-container'),
-                    html.Div(id='visualization-options-container'),
+                    html.Div(id='predictor-dropdown-container'),  # Nuevo: Contenedor para el dropdown de predictor
+                    html.Label("Tipos de Modelo:"),
+                    html.Div(id='tipo-modelo-container'),  # Checklist de tipo de modelo
+                    html.Div(id='visualization-options-container'),  # Opciones de visualización (toggles)
                     html.Label("Métodos de Imputación:"),
-                    html.Div(id='imputation-methods-container'),
+                    html.Div(id='imputation-methods-container'),  # Checklist de métodos de imputación
+                    html.Label("Tipo de comparación:"),
+                    html.Div(id='comparison-type-container'),  # RadioItems de tipo de comparación
                     html.Button('Actualizar Visualización', 
                                id='update-button',
                                style={
@@ -286,7 +288,7 @@ def create_main_layout() -> html.Div:
                     'width': '22%',
                     'minWidth': '220px',
                     'maxWidth': '320px',
-                    'display': 'block',  # Será cambiado dinámicamente por callback
+                    'display': 'block',
                     'verticalAlign': 'top',
                     'padding': '20px',
                     'backgroundColor': '#f8f9fa',
@@ -454,6 +456,27 @@ def format_model_info(modelo: Dict) -> html.Div:
     if confianza is not None:
         components.append(html.P(f"Confianza: {confianza:.3f}"))
     
+    # Métricas LOOCV
+    mape_loocv = modelo.get('MAPE_LOOCV')
+    if mape_loocv is not None:
+        components.append(html.P(f"MAPE LOOCV: {mape_loocv:.3f}%"))
+    
+    r2_loocv = modelo.get('R2_LOOCV')
+    if r2_loocv is not None:
+        components.append(html.P(f"R² LOOCV: {r2_loocv:.3f}"))
+    
+    corr_loocv = modelo.get('Corr_LOOCV')
+    if corr_loocv is not None:
+        components.append(html.P(f"Correlación LOOCV: {corr_loocv:.3f}"))
+    
+    confianza_loocv = modelo.get('Confianza_LOOCV')
+    if confianza_loocv is not None:
+        components.append(html.P(f"Confianza LOOCV: {confianza_loocv:.3f}"))
+    
+    k_loocv = modelo.get('k_LOOCV')
+    if k_loocv is not None and k_loocv != '':
+        components.append(html.P(f"k LOOCV: {k_loocv}"))
+    
     # Entrenamiento
     n_muestras = modelo.get('n_muestras_entrenamiento')
     if n_muestras:
@@ -497,3 +520,51 @@ def create_imputation_methods_checklist(selected: Optional[List[str]] = None) ->
         style={'marginBottom': '10px'},
         inputStyle={"marginRight": "5px"}
     )
+
+
+def create_filter_controls() -> html.Div:
+    """
+    Crea el panel de filtros optimizado para modelos de un predictor (2D).
+    Incluye solo los controles relevantes y con IDs únicos y claros.
+    """
+    return html.Div([
+        html.H3("Filtros y Controles"),
+        html.Label("Aeronave:"),
+        html.Div(id='aeronave-dropdown-container'),  # Contenedor para el dropdown de aeronave
+        html.Label("Parámetro:"),
+        html.Div(id='parametro-dropdown-container'),  # Contenedor para el dropdown de parámetro
+        html.Label("Predictor:"),
+        html.Div(id='predictor-dropdown-container'),  # Nuevo: Contenedor para el dropdown de predictor
+        html.Label("Tipos de Modelo:"),
+        html.Div(id='tipo-modelo-container'),  # Checklist de tipo de modelo
+        html.Div(id='visualization-options-container'),  # Opciones de visualización (toggles)
+        html.Label("Métodos de Imputación:"),
+        html.Div(id='imputation-methods-container'),  # Checklist de métodos de imputación
+        html.Label("Tipo de comparación:"),
+        html.Div(id='comparison-type-container'),  # RadioItems de tipo de comparación
+        html.Button('Actualizar Visualización', 
+                   id='update-button',
+                   style={
+                       'marginTop': '20px',
+                       'padding': '10px 20px',
+                       'backgroundColor': '#007bff',
+                       'color': 'white',
+                       'border': 'none',
+                       'borderRadius': '5px',
+                       'cursor': 'pointer'
+                   })
+    ], style={
+        'width': '22%',
+        'minWidth': '220px',
+        'maxWidth': '320px',
+        'display': 'block',
+        'verticalAlign': 'top',
+        'padding': '20px',
+        'backgroundColor': '#f8f9fa',
+        'borderRadius': '5px',
+        'margin': '10px',
+        'boxSizing': 'border-box',
+        'transition': 'width 0.3s, min-width 0.3s, max-width 0.3s, opacity 0.3s',
+        'overflowY': 'auto',
+        'height': 'fit-content'
+    })

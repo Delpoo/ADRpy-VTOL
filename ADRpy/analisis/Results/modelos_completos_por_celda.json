@@ -25,6 +25,11 @@
         "r2": 0.9907218116055984,
         "corr": 0.8744848625865084,
         "Confianza": 0.3868417058411713,
+        "Confianza_LOOCV": 0.35421042074835873,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8007193806606132,
+        "MAPE_LOOCV": 5.666375136748832,
+        "R2_LOOCV": 0.9791971037711484,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -187,6 +192,11 @@
         "r2": 0.9782457868226702,
         "corr": 0.819357495876733,
         "Confianza": 0.3624552750532608,
+        "Confianza_LOOCV": 0.35421042074835873,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8007193806606132,
+        "MAPE_LOOCV": 5.666375136748832,
+        "R2_LOOCV": 0.9791971037711484,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -349,6 +359,11 @@
         "r2": 0.9876920808146427,
         "corr": 0.8672821325630427,
         "Confianza": 0.3836554684479365,
+        "Confianza_LOOCV": 0.35421042074835873,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8007193806606132,
+        "MAPE_LOOCV": 5.666375136748832,
+        "R2_LOOCV": 0.9791971037711484,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -511,6 +526,11 @@
         "r2": 0.9268197721788312,
         "corr": 0.6880687215952286,
         "Confianza": 0.304377684949945,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -673,6 +693,11 @@
         "r2": 0.9673276120218998,
         "corr": 0.782824065276938,
         "Confianza": 0.34629415526937585,
+        "Confianza_LOOCV": 0.2806030928499668,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6343244624016869,
+        "MAPE_LOOCV": 9.928132767057278,
+        "R2_LOOCV": 0.9305244426071924,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -835,6 +860,11 @@
         "r2": 0.9440573192338959,
         "corr": 0.6805875977510059,
         "Confianza": 0.3010682958074636,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -997,6 +1027,11 @@
         "r2": 0.9769761547075811,
         "corr": 0.8780562488131122,
         "Confianza": 0.38842156296531954,
+        "Confianza_LOOCV": 0.2806030928499668,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6343244624016869,
+        "MAPE_LOOCV": 9.928132767057278,
+        "R2_LOOCV": 0.9305244426071924,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -1159,6 +1194,11 @@
         "r2": 0.9699389683218884,
         "corr": 0.8359440231778971,
         "Confianza": 0.36979257817842354,
+        "Confianza_LOOCV": 0.2806030928499668,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6343244624016869,
+        "MAPE_LOOCV": 9.928132767057278,
+        "R2_LOOCV": 0.9305244426071924,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -1321,6 +1361,11 @@
         "r2": 0.9343302799182261,
         "corr": 0.7518814391020079,
         "Confianza": 0.33260621302494214,
+        "Confianza_LOOCV": 0.2977798027215536,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.673153711019234,
+        "MAPE_LOOCV": 8.387741688402626,
+        "R2_LOOCV": 0.9054902012653099,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -1483,6 +1528,11 @@
         "r2": 0.9267827469396466,
         "corr": 0.6832353597719397,
         "Confianza": 0.3022395736884894,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -1645,6 +1695,11 @@
         "r2": 0.9246146171780836,
         "corr": 0.7496216175969126,
         "Confianza": 0.3316065465431897,
+        "Confianza_LOOCV": 0.2977798027215536,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.673153711019234,
+        "MAPE_LOOCV": 8.387741688402626,
+        "R2_LOOCV": 0.9054902012653099,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -1807,6 +1862,11 @@
         "r2": 0.9036190353445085,
         "corr": 0.6964768826311868,
         "Confianza": 0.3080971631219478,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -1969,6 +2029,11 @@
         "r2": 0.119252191979349,
         "corr": -0.5882278667162298,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -2131,6 +2196,11 @@
         "r2": 0.11759850109738657,
         "corr": -0.5935442740680817,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -2293,6 +2363,11 @@
         "r2": 0.08461946901485495,
         "corr": -0.5979503428859054,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -2455,6 +2530,11 @@
         "r2": 0.0856986038464651,
         "corr": -0.5831240042971904,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -2617,6 +2697,11 @@
         "r2": 0.0,
         "corr": -0.8086348206097183,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -2790,6 +2875,11 @@
         "r2": -0.037570502627588764,
         "corr": -0.7384005681100715,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -2963,6 +3053,11 @@
         "r2": -0.037570502627588764,
         "corr": -0.7384005681100715,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -3136,6 +3231,11 @@
         "r2": 0.4886630098526008,
         "corr": -0.12464142835578684,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -3310,6 +3410,11 @@
         "r2": 0.49420034381206723,
         "corr": -0.09088231078142572,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -3483,6 +3588,11 @@
         "r2": 0.47885320681477195,
         "corr": -0.1486658866778796,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -3656,6 +3766,11 @@
         "r2": 0.4789717439472213,
         "corr": -0.0748478279147407,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -3829,6 +3944,11 @@
         "r2": 0.4778106686403315,
         "corr": -0.06732605417707277,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -4002,6 +4122,11 @@
         "r2": 0.3677877757600577,
         "corr": -0.15870868509184038,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -4176,6 +4301,11 @@
         "r2": 0.7870356733065176,
         "corr": 0.2533032523545766,
         "Confianza": 0.1341284897304694,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -4349,6 +4479,11 @@
         "r2": 0.5683185872585628,
         "corr": -0.02647272359172037,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -4522,6 +4657,11 @@
         "r2": 0.565694245013503,
         "corr": 0.021361108830136977,
         "Confianza": 0.011311079663295526,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -4695,6 +4835,11 @@
         "r2": 0.284461601890867,
         "corr": -0.13838798440099775,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -4870,6 +5015,11 @@
         "r2": 0.995095994846898,
         "corr": 0.9269195797421568,
         "Confianza": 0.410037002063676,
+        "Confianza_LOOCV": 0.3910405090024805,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8839765739250289,
+        "MAPE_LOOCV": 3.324589739376744,
+        "R2_LOOCV": 0.9895924638085075,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -5067,6 +5217,11 @@
         "r2": 0.9929897814695405,
         "corr": 0.8978084036073036,
         "Confianza": 0.3971592296551966,
+        "Confianza_LOOCV": 0.35930833188568995,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8122435934150614,
+        "MAPE_LOOCV": 5.338001750934937,
+        "R2_LOOCV": 0.9803539702257852,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -5264,6 +5419,11 @@
         "r2": 0.9907633408565879,
         "corr": 0.8742585398012723,
         "Confianza": 0.3867415885080336,
+        "Confianza_LOOCV": 0.3321641822647347,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7508821952181084,
+        "MAPE_LOOCV": 7.020381830788283,
+        "R2_LOOCV": 0.9697898458221025,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -5461,6 +5621,11 @@
         "r2": 0.990776750569426,
         "corr": 0.8797494312741435,
         "Confianza": 0.3891705680305283,
+        "Confianza_LOOCV": 0.3226062607040518,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.72927579240166,
+        "MAPE_LOOCV": 7.47184675551137,
+        "R2_LOOCV": 0.9566747018374114,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -5658,6 +5823,11 @@
         "r2": 0.9936847242525763,
         "corr": 0.8939780396760564,
         "Confianza": 0.3954648097966601,
+        "Confianza_LOOCV": 0.3577144636533245,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8086405340212188,
+        "MAPE_LOOCV": 5.461432312855196,
+        "R2_LOOCV": 0.9813765555661175,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -5855,6 +6025,11 @@
         "r2": 0.9700504817480966,
         "corr": 0.7919102989555091,
         "Confianza": 0.35031358920845357,
+        "Confianza_LOOCV": 0.20072967184183158,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.45376456790238084,
+        "MAPE_LOOCV": 13.720403673957945,
+        "R2_LOOCV": 0.8222227140686247,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -6052,6 +6227,11 @@
         "r2": 0.9750198738650292,
         "corr": 0.8541244533916805,
         "Confianza": 0.3778349685475657,
+        "Confianza_LOOCV": 0.3131889186856555,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7079871802470319,
+        "MAPE_LOOCV": 7.846100582139494,
+        "R2_LOOCV": 0.9390477326366968,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -6249,6 +6429,11 @@
         "r2": 0.9758522237538904,
         "corr": 0.8239383248085712,
         "Confianza": 0.36448167454166086,
+        "Confianza_LOOCV": 0.2913839781773251,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6586954670831899,
+        "MAPE_LOOCV": 9.280200045184715,
+        "R2_LOOCV": 0.9360709371786942,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -6446,6 +6631,11 @@
         "r2": 0.977518712701251,
         "corr": 0.7863026235484102,
         "Confianza": 0.3478329485329026,
+        "Confianza_LOOCV": 0.24539168080200865,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.5547264088276028,
+        "MAPE_LOOCV": 12.151660765642728,
+        "R2_LOOCV": 0.9195635353647208,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -6643,6 +6833,11 @@
         "r2": 0.9715932727514419,
         "corr": 0.8613464773747883,
         "Confianza": 0.38102974091788205,
+        "Confianza_LOOCV": 0.3287145711365838,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7430840889957755,
+        "MAPE_LOOCV": 6.626553838088074,
+        "R2_LOOCV": 0.9279384338640893,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -6840,6 +7035,11 @@
         "r2": 0.9470896389877362,
         "corr": 0.7497569528619467,
         "Confianza": 0.3316664141601447,
+        "Confianza_LOOCV": 0.24772115676877676,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.5599923650053842,
+        "MAPE_LOOCV": 11.515491532959455,
+        "R2_LOOCV": 0.8876841655413987,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -7037,6 +7237,11 @@
         "r2": 0.9438548673325873,
         "corr": 0.7526048448679437,
         "Confianza": 0.33292622258998167,
+        "Confianza_LOOCV": 0.2707388371551362,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.612025568162621,
+        "MAPE_LOOCV": 10.158636521022736,
+        "R2_LOOCV": 0.9012935710600911,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -7234,6 +7439,11 @@
         "r2": 0.47435205760492183,
         "corr": -0.13782823273310896,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -7431,6 +7641,11 @@
         "r2": 0.359332862416038,
         "corr": -0.23125233743858292,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -7628,6 +7843,11 @@
         "r2": 0.5782937180505219,
         "corr": 0.053665589233146904,
         "Confianza": 0.028416865426827514,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -7843,6 +8063,11 @@
         "r2": 0.9064233004852349,
         "corr": 0.5857027260784011,
         "Confianza": 0.3101398081140562,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -8055,6 +8280,11 @@
         "r2": 0.9907218116055984,
         "corr": 0.8744848625865084,
         "Confianza": 0.3868417058411713,
+        "Confianza_LOOCV": 0.35421042074835873,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8007193806606132,
+        "MAPE_LOOCV": 5.666375136748832,
+        "R2_LOOCV": 0.9791971037711484,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -8217,6 +8447,11 @@
         "r2": 0.9782457868226702,
         "corr": 0.819357495876733,
         "Confianza": 0.3624552750532608,
+        "Confianza_LOOCV": 0.35421042074835873,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8007193806606132,
+        "MAPE_LOOCV": 5.666375136748832,
+        "R2_LOOCV": 0.9791971037711484,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -8379,6 +8614,11 @@
         "r2": 0.9876920808146427,
         "corr": 0.8672821325630427,
         "Confianza": 0.3836554684479365,
+        "Confianza_LOOCV": 0.35421042074835873,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8007193806606132,
+        "MAPE_LOOCV": 5.666375136748832,
+        "R2_LOOCV": 0.9791971037711484,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -8541,6 +8781,11 @@
         "r2": 0.9268197721788312,
         "corr": 0.6880687215952286,
         "Confianza": 0.304377684949945,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -8703,6 +8948,11 @@
         "r2": 0.9673276120218998,
         "corr": 0.782824065276938,
         "Confianza": 0.34629415526937585,
+        "Confianza_LOOCV": 0.2806030928499668,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6343244624016869,
+        "MAPE_LOOCV": 9.928132767057278,
+        "R2_LOOCV": 0.9305244426071924,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -8865,6 +9115,11 @@
         "r2": 0.9440573192338959,
         "corr": 0.6805875977510059,
         "Confianza": 0.3010682958074636,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -9027,6 +9282,11 @@
         "r2": 0.9769761547075811,
         "corr": 0.8780562488131122,
         "Confianza": 0.38842156296531954,
+        "Confianza_LOOCV": 0.2806030928499668,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6343244624016869,
+        "MAPE_LOOCV": 9.928132767057278,
+        "R2_LOOCV": 0.9305244426071924,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -9189,6 +9449,11 @@
         "r2": 0.9699389683218884,
         "corr": 0.8359440231778971,
         "Confianza": 0.36979257817842354,
+        "Confianza_LOOCV": 0.2806030928499668,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6343244624016869,
+        "MAPE_LOOCV": 9.928132767057278,
+        "R2_LOOCV": 0.9305244426071924,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -9351,6 +9616,11 @@
         "r2": 0.9343302799182261,
         "corr": 0.7518814391020079,
         "Confianza": 0.33260621302494214,
+        "Confianza_LOOCV": 0.2977798027215536,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.673153711019234,
+        "MAPE_LOOCV": 8.387741688402626,
+        "R2_LOOCV": 0.9054902012653099,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -9513,6 +9783,11 @@
         "r2": 0.9267827469396466,
         "corr": 0.6832353597719397,
         "Confianza": 0.3022395736884894,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -9675,6 +9950,11 @@
         "r2": 0.9246146171780836,
         "corr": 0.7496216175969126,
         "Confianza": 0.3316065465431897,
+        "Confianza_LOOCV": 0.2977798027215536,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.673153711019234,
+        "MAPE_LOOCV": 8.387741688402626,
+        "R2_LOOCV": 0.9054902012653099,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -9837,6 +10117,11 @@
         "r2": 0.9036190353445085,
         "corr": 0.6964768826311868,
         "Confianza": 0.3080971631219478,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -9999,6 +10284,11 @@
         "r2": 0.119252191979349,
         "corr": -0.5882278667162298,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -10161,6 +10451,11 @@
         "r2": 0.11759850109738657,
         "corr": -0.5935442740680817,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -10323,6 +10618,11 @@
         "r2": 0.08461946901485495,
         "corr": -0.5979503428859054,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -10485,6 +10785,11 @@
         "r2": 0.0856986038464651,
         "corr": -0.5831240042971904,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -10647,6 +10952,11 @@
         "r2": 0.0,
         "corr": -0.8086348206097183,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -10820,6 +11130,11 @@
         "r2": -0.037570502627588764,
         "corr": -0.7384005681100715,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -10993,6 +11308,11 @@
         "r2": -0.037570502627588764,
         "corr": -0.7384005681100715,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -11166,6 +11486,11 @@
         "r2": 0.4886630098526008,
         "corr": -0.12464142835578684,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -11340,6 +11665,11 @@
         "r2": 0.49420034381206723,
         "corr": -0.09088231078142572,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -11513,6 +11843,11 @@
         "r2": 0.47885320681477195,
         "corr": -0.1486658866778796,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -11686,6 +12021,11 @@
         "r2": 0.4789717439472213,
         "corr": -0.0748478279147407,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -11859,6 +12199,11 @@
         "r2": 0.4778106686403315,
         "corr": -0.06732605417707277,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -12032,6 +12377,11 @@
         "r2": 0.3677877757600577,
         "corr": -0.15870868509184038,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -12206,6 +12556,11 @@
         "r2": 0.7870356733065176,
         "corr": 0.2533032523545766,
         "Confianza": 0.1341284897304694,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -12379,6 +12734,11 @@
         "r2": 0.5683185872585628,
         "corr": -0.02647272359172037,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -12552,6 +12912,11 @@
         "r2": 0.565694245013503,
         "corr": 0.021361108830136977,
         "Confianza": 0.011311079663295526,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -12725,6 +13090,11 @@
         "r2": 0.284461601890867,
         "corr": -0.13838798440099775,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -12900,6 +13270,11 @@
         "r2": 0.995095994846898,
         "corr": 0.9269195797421568,
         "Confianza": 0.410037002063676,
+        "Confianza_LOOCV": 0.3910405090024805,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8839765739250289,
+        "MAPE_LOOCV": 3.324589739376744,
+        "R2_LOOCV": 0.9895924638085075,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -13097,6 +13472,11 @@
         "r2": 0.9929897814695405,
         "corr": 0.8978084036073036,
         "Confianza": 0.3971592296551966,
+        "Confianza_LOOCV": 0.35930833188568995,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8122435934150614,
+        "MAPE_LOOCV": 5.338001750934937,
+        "R2_LOOCV": 0.9803539702257852,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -13294,6 +13674,11 @@
         "r2": 0.9907633408565879,
         "corr": 0.8742585398012723,
         "Confianza": 0.3867415885080336,
+        "Confianza_LOOCV": 0.3321641822647347,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7508821952181084,
+        "MAPE_LOOCV": 7.020381830788283,
+        "R2_LOOCV": 0.9697898458221025,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -13491,6 +13876,11 @@
         "r2": 0.990776750569426,
         "corr": 0.8797494312741435,
         "Confianza": 0.3891705680305283,
+        "Confianza_LOOCV": 0.3226062607040518,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.72927579240166,
+        "MAPE_LOOCV": 7.47184675551137,
+        "R2_LOOCV": 0.9566747018374114,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -13688,6 +14078,11 @@
         "r2": 0.9936847242525763,
         "corr": 0.8939780396760564,
         "Confianza": 0.3954648097966601,
+        "Confianza_LOOCV": 0.3577144636533245,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8086405340212188,
+        "MAPE_LOOCV": 5.461432312855196,
+        "R2_LOOCV": 0.9813765555661175,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -13885,6 +14280,11 @@
         "r2": 0.9700504817480966,
         "corr": 0.7919102989555091,
         "Confianza": 0.35031358920845357,
+        "Confianza_LOOCV": 0.20072967184183158,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.45376456790238084,
+        "MAPE_LOOCV": 13.720403673957945,
+        "R2_LOOCV": 0.8222227140686247,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -14082,6 +14482,11 @@
         "r2": 0.9750198738650292,
         "corr": 0.8541244533916805,
         "Confianza": 0.3778349685475657,
+        "Confianza_LOOCV": 0.3131889186856555,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7079871802470319,
+        "MAPE_LOOCV": 7.846100582139494,
+        "R2_LOOCV": 0.9390477326366968,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -14279,6 +14684,11 @@
         "r2": 0.9758522237538904,
         "corr": 0.8239383248085712,
         "Confianza": 0.36448167454166086,
+        "Confianza_LOOCV": 0.2913839781773251,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.6586954670831899,
+        "MAPE_LOOCV": 9.280200045184715,
+        "R2_LOOCV": 0.9360709371786942,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -14476,6 +14886,11 @@
         "r2": 0.977518712701251,
         "corr": 0.7863026235484102,
         "Confianza": 0.3478329485329026,
+        "Confianza_LOOCV": 0.24539168080200865,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.5547264088276028,
+        "MAPE_LOOCV": 12.151660765642728,
+        "R2_LOOCV": 0.9195635353647208,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -14673,6 +15088,11 @@
         "r2": 0.9715932727514419,
         "corr": 0.8613464773747883,
         "Confianza": 0.38102974091788205,
+        "Confianza_LOOCV": 0.3287145711365838,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7430840889957755,
+        "MAPE_LOOCV": 6.626553838088074,
+        "R2_LOOCV": 0.9279384338640893,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -14870,6 +15290,11 @@
         "r2": 0.9470896389877362,
         "corr": 0.7497569528619467,
         "Confianza": 0.3316664141601447,
+        "Confianza_LOOCV": 0.24772115676877676,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.5599923650053842,
+        "MAPE_LOOCV": 11.515491532959455,
+        "R2_LOOCV": 0.8876841655413987,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -15067,6 +15492,11 @@
         "r2": 0.9438548673325873,
         "corr": 0.7526048448679437,
         "Confianza": 0.33292622258998167,
+        "Confianza_LOOCV": 0.2707388371551362,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.612025568162621,
+        "MAPE_LOOCV": 10.158636521022736,
+        "R2_LOOCV": 0.9012935710600911,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -15264,6 +15694,11 @@
         "r2": 0.47435205760492183,
         "corr": -0.13782823273310896,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -15461,6 +15896,11 @@
         "r2": 0.359332862416038,
         "corr": -0.23125233743858292,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -15658,6 +16098,11 @@
         "r2": 0.5782937180505219,
         "corr": 0.053665589233146904,
         "Confianza": 0.028416865426827514,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -15873,6 +16318,11 @@
         "r2": 0.9064233004852349,
         "corr": 0.5857027260784011,
         "Confianza": 0.3101398081140562,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -16085,6 +16535,11 @@
         "r2": 0.9907218116055984,
         "corr": 0.8911606522800456,
         "Confianza": 0.39421849554593125,
+        "Confianza_LOOCV": 0.3669209820959503,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8294525635765464,
+        "MAPE_LOOCV": 4.807819760086526,
+        "R2_LOOCV": 0.9794264444921944,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -16244,6 +16699,11 @@
         "r2": 0.9464539198120949,
         "corr": 0.7244185574170434,
         "Confianza": 0.3204575887858634,
+        "Confianza_LOOCV": 0.3669209820959503,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8294525635765464,
+        "MAPE_LOOCV": 4.807819760086526,
+        "R2_LOOCV": 0.9794264444921944,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -16403,6 +16863,11 @@
         "r2": 0.9877578018533723,
         "corr": 0.8837457505980155,
         "Confianza": 0.39093840078610076,
+        "Confianza_LOOCV": 0.3669209820959503,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8294525635765464,
+        "MAPE_LOOCV": 4.807819760086526,
+        "R2_LOOCV": 0.9794264444921944,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -16562,6 +17027,11 @@
         "r2": 0.973096804255815,
         "corr": 0.829324923783048,
         "Confianza": 0.3668645186881057,
+        "Confianza_LOOCV": 0.3669209820959503,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8294525635765464,
+        "MAPE_LOOCV": 4.807819760086526,
+        "R2_LOOCV": 0.9794264444921944,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -16721,6 +17191,11 @@
         "r2": 0.0,
         "corr": -0.5195078089530567,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -16902,6 +17377,11 @@
         "r2": -0.026902138478559046,
         "corr": -0.5021929281855442,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -17083,6 +17563,11 @@
         "r2": -0.026902138478559046,
         "corr": -0.5021929281855442,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -17264,6 +17749,11 @@
         "r2": 0.4896152751873045,
         "corr": 0.1477814230815892,
         "Confianza": 0.09071944897132322,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -17446,6 +17936,11 @@
         "r2": 0.5061949446050855,
         "corr": 0.14539835592348305,
         "Confianza": 0.089256541557543,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -17627,6 +18122,11 @@
         "r2": 0.49823631386569867,
         "corr": 0.15732956839840695,
         "Confianza": 0.09658082493981421,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -17808,6 +18308,11 @@
         "r2": 0.4712494672932601,
         "corr": 0.14309857688741145,
         "Confianza": 0.08784476271174702,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -17989,6 +18494,11 @@
         "r2": 0.44876698216695143,
         "corr": 0.1170590920556242,
         "Confianza": 0.07185975142834189,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -18170,6 +18680,11 @@
         "r2": 0.3087210777562782,
         "corr": -0.08740642890468703,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -18352,6 +18867,11 @@
         "r2": 0.7475226347444066,
         "corr": 0.3893038912973611,
         "Confianza": 0.23898426313969096,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -18533,6 +19053,11 @@
         "r2": 0.5538203110122741,
         "corr": 0.13877263967307707,
         "Confianza": 0.08518917426100994,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -18714,6 +19239,11 @@
         "r2": 0.5424474907422401,
         "corr": 0.1762886788844923,
         "Confianza": 0.10821936529501514,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -18895,6 +19425,11 @@
         "r2": 0.2250882847301432,
         "corr": -0.09524433372263508,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -19078,6 +19613,11 @@
         "r2": 0.9909655662318275,
         "corr": 0.9018277523168452,
         "Confianza": 0.3989372498104806,
+        "Confianza_LOOCV": 0.34429555251522276,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7783060729600801,
+        "MAPE_LOOCV": 6.0544000355549805,
+        "R2_LOOCV": 0.960238814957159,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -19272,6 +19812,11 @@
         "r2": 0.9932456066924479,
         "corr": 0.9053573133077282,
         "Confianza": 0.40049860490420425,
+        "Confianza_LOOCV": 0.3662128654438616,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8278518124583326,
+        "MAPE_LOOCV": 4.865914462282163,
+        "R2_LOOCV": 0.9800979224021428,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -19466,6 +20011,11 @@
         "r2": 0.5555507001739566,
         "corr": 0.2541029359685022,
         "Confianza": 0.15598765969611106,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -19693,6 +20243,11 @@
         "r2": 0.760909060513138,
         "corr": 0.40819111601043284,
         "Confianza": 0.2505786745537795,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -19917,6 +20472,11 @@
         "r2": 0.9673276120218999,
         "corr": 0.8882711328381272,
         "Confianza": 0.3929402725854253,
+        "Confianza_LOOCV": 0.36205300079125424,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8184481245565751,
+        "MAPE_LOOCV": 4.369845807065629,
+        "R2_LOOCV": 0.9282193029175254,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -20076,6 +20636,11 @@
         "r2": 0.9803994300946377,
         "corr": 0.9221137657791907,
         "Confianza": 0.40791107701805496,
+        "Confianza_LOOCV": 0.36205300079125424,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8184481245565751,
+        "MAPE_LOOCV": 4.369845807065629,
+        "R2_LOOCV": 0.9282193029175254,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -20235,6 +20800,11 @@
         "r2": 0.982249108971155,
         "corr": 0.9361600710218316,
         "Confianza": 0.41412467420343957,
+        "Confianza_LOOCV": 0.36205300079125424,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8184481245565751,
+        "MAPE_LOOCV": 4.369845807065629,
+        "R2_LOOCV": 0.9282193029175254,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -20394,6 +20964,11 @@
         "r2": 0.9372974125464762,
         "corr": 0.837860983440409,
         "Confianza": 0.370640574764421,
+        "Confianza_LOOCV": 0.36205300079125424,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8184481245565751,
+        "MAPE_LOOCV": 4.369845807065629,
+        "R2_LOOCV": 0.9282193029175254,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -20553,6 +21128,11 @@
         "r2": 0.0,
         "corr": -0.024288227214235736,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -20734,6 +21314,11 @@
         "r2": -0.008489503696310186,
         "corr": -0.02614973059471437,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -20915,6 +21500,11 @@
         "r2": -0.008489503696310186,
         "corr": -0.02614973059471437,
         "Confianza": 0,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -21096,6 +21686,11 @@
         "r2": 0.4783250519920158,
         "corr": 0.4449594019971658,
         "Confianza": 0.2731498379299427,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -21278,6 +21873,11 @@
         "r2": 0.47951022895139406,
         "corr": 0.45064987447339,
         "Confianza": 0.27664308164532175,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -21459,6 +22059,11 @@
         "r2": 0.4713931276119282,
         "corr": 0.4333961609762604,
         "Confianza": 0.26605144334241737,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -21640,6 +22245,11 @@
         "r2": 0.4751852774503713,
         "corr": 0.444958888487773,
         "Confianza": 0.2731495226989198,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -21821,6 +22431,11 @@
         "r2": 0.47613107593548887,
         "corr": 0.4468987367780891,
         "Confianza": 0.2743403487467126,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -22002,6 +22617,11 @@
         "r2": 0.4469575554472347,
         "corr": 0.37220319461792367,
         "Confianza": 0.22848655816815472,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -22184,6 +22804,11 @@
         "r2": 0.8274807858749658,
         "corr": 0.6868051317389798,
         "Confianza": 0.42161309454733176,
+        "Confianza_LOOCV": 0.27197798028064085,
+        "k_LOOCV": 9,
+        "Corr_LOOCV": 0.44305045311104974,
+        "MAPE_LOOCV": 10.45087214710508,
+        "R2_LOOCV": 0.5828257160291048,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -22365,6 +22990,11 @@
         "r2": 0.6107816435395041,
         "corr": 0.47681694287247983,
         "Confianza": 0.2927064134015044,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -22546,6 +23176,11 @@
         "r2": 0.6276017172826555,
         "corr": 0.4955595579344846,
         "Confianza": 0.30421205244091165,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -22727,6 +23362,11 @@
         "r2": 0.4027334048733261,
         "corr": 0.34026506857091454,
         "Confianza": 0.2088805134045873,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -22910,6 +23550,11 @@
         "r2": 0.9723735834685232,
         "corr": 0.8936582075077905,
         "Confianza": 0.3953233271628854,
+        "Confianza_LOOCV": 0.3462939780276113,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7828236646085567,
+        "MAPE_LOOCV": 5.204349504358028,
+        "R2_LOOCV": 0.912603962840982,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -23104,6 +23749,11 @@
         "r2": 0.9809926421092553,
         "corr": 0.9120507811543838,
         "Confianza": 0.4034595624125306,
+        "Confianza_LOOCV": 0.36774089650856373,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8313060419673726,
+        "MAPE_LOOCV": 4.180466562041337,
+        "R2_LOOCV": 0.9413098547375011,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -23298,6 +23948,11 @@
         "r2": 0.6296845434601918,
         "corr": 0.5549617481055158,
         "Confianza": 0.3406776233336111,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -23525,6 +24180,11 @@
         "r2": 0.8420967622772243,
         "corr": 0.7129253155397535,
         "Confianza": 0.43764764498015324,
+        "Confianza_LOOCV": 0,
+        "k_LOOCV": 9,
+        "Corr_LOOCV": -14.173852430660933,
+        "MAPE_LOOCV": 57.22866560243845,
+        "R2_LOOCV": -25.53246048782597,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -23749,6 +24409,11 @@
         "r2": 0.9343302799182263,
         "corr": 0.8737164973254182,
         "Confianza": 0.38650180775828163,
+        "Confianza_LOOCV": 0.3623273977434892,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8190684195698741,
+        "MAPE_LOOCV": 3.823999373112784,
+        "R2_LOOCV": 0.8930701306806003,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -23908,6 +24573,11 @@
         "r2": 0.9318209115256748,
         "corr": 0.8665790862630308,
         "Confianza": 0.38334446520292037,
+        "Confianza_LOOCV": 0.3623273977434892,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8190684195698741,
+        "MAPE_LOOCV": 3.823999373112784,
+        "R2_LOOCV": 0.8930701306806003,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -24067,6 +24737,11 @@
         "r2": 0.9393909923882013,
         "corr": 0.8829587228726525,
         "Confianza": 0.3905902470777298,
+        "Confianza_LOOCV": 0.3623273977434892,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8190684195698741,
+        "MAPE_LOOCV": 3.823999373112784,
+        "R2_LOOCV": 0.8930701306806003,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -24226,6 +24901,11 @@
         "r2": 0.9215526818708419,
         "corr": 0.8456055990516655,
         "Confianza": 0.37406652350558206,
+        "Confianza_LOOCV": 0.3623273977434892,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.8190684195698741,
+        "MAPE_LOOCV": 3.823999373112784,
+        "R2_LOOCV": 0.8930701306806003,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -24385,6 +25065,11 @@
         "r2": 0.0,
         "corr": 0.11900337059342475,
         "Confianza": 0.07305329709814273,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -24566,6 +25251,11 @@
         "r2": -0.005019375915604307,
         "corr": 0.12352079237793029,
         "Confianza": 0.0758264333050876,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -24747,6 +25437,11 @@
         "r2": -0.005019375915604307,
         "corr": 0.12352079237793029,
         "Confianza": 0.0758264333050876,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -24928,6 +25623,11 @@
         "r2": 0.401947896749522,
         "corr": 0.43955149376517766,
         "Confianza": 0.26983005358450035,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -25110,6 +25810,11 @@
         "r2": 0.40221530624466517,
         "corr": 0.4413273958286555,
         "Confianza": 0.27092023700042805,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -25291,6 +25996,11 @@
         "r2": 0.40066476838225906,
         "corr": 0.44077238934449575,
         "Confianza": 0.27057953191471046,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -25472,6 +26182,11 @@
         "r2": 0.40007498877841785,
         "corr": 0.4414004433543311,
         "Confianza": 0.2709650791134611,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -25653,6 +26368,11 @@
         "r2": 0.3978373693083608,
         "corr": 0.4387909538242169,
         "Confianza": 0.26936317647013835,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -25834,6 +26554,11 @@
         "r2": 0.44351950394227824,
         "corr": 0.45854902241597456,
         "Confianza": 0.2814921779238073,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -26016,6 +26741,11 @@
         "r2": 0.8227609353275844,
         "corr": 0.7567964391767052,
         "Confianza": 0.46457906896501866,
+        "Confianza_LOOCV": 0.32230710311551836,
+        "k_LOOCV": 9,
+        "Corr_LOOCV": 0.5250362839259767,
+        "MAPE_LOOCV": 7.501541770977879,
+        "R2_LOOCV": 0.550175352583812,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -26197,6 +26927,11 @@
         "r2": 0.6365328654860389,
         "corr": 0.5984937380705553,
         "Confianza": 0.3674008613421748,
+        "Confianza_LOOCV": 0.13383651008060024,
+        "k_LOOCV": 9,
+        "Corr_LOOCV": 0.21801884980845332,
+        "MAPE_LOOCV": 10.224218100202183,
+        "R2_LOOCV": 0.11765223963038551,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -26378,6 +27113,11 @@
         "r2": 0.6483487573830682,
         "corr": 0.6165202193913945,
         "Confianza": 0.3784668831615446,
+        "Confianza_LOOCV": 0.13383651008060024,
+        "k_LOOCV": 9,
+        "Corr_LOOCV": 0.21801884980845332,
+        "MAPE_LOOCV": 10.224218100202183,
+        "R2_LOOCV": 0.11765223963038551,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -26559,6 +27299,11 @@
         "r2": 0.4112634525912525,
         "corr": 0.427760506016342,
         "Confianza": 0.2625918507772948,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -26742,6 +27487,11 @@
         "r2": 0.9386541648755604,
         "corr": 0.8727049668468503,
         "Confianza": 0.38605434183567866,
+        "Confianza_LOOCV": 0.3440021094314673,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7776427227294818,
+        "MAPE_LOOCV": 4.748620279750109,
+        "R2_LOOCV": 0.8718601307756374,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -26936,6 +27686,11 @@
         "r2": 0.9533878901752667,
         "corr": 0.8895004106447413,
         "Confianza": 0.3934840623569907,
+        "Confianza_LOOCV": 0.3517716893253411,
+        "k_LOOCV": 7,
+        "Corr_LOOCV": 0.7952064442808461,
+        "MAPE_LOOCV": 4.410906441223804,
+        "R2_LOOCV": 0.8844733179766124,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -27130,6 +27885,11 @@
         "r2": 0.575691699527104,
         "corr": 0.5906562753450576,
         "Confianza": 0.36258963212970546,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -27357,6 +28117,11 @@
         "r2": 0.8839103168899063,
         "corr": 0.8113678709655595,
         "Confianza": 0.49807915387574364,
+        "Confianza_LOOCV": 0,
+        "k_LOOCV": 9,
+        "Corr_LOOCV": -5.288719566215307,
+        "MAPE_LOOCV": 31.009997196873023,
+        "R2_LOOCV": -9.510105985972412,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -27581,6 +28346,11 @@
         "r2": 0.11925219197934833,
         "corr": 0.3549719791058342,
         "Confianza": 0.15702726461949862,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -27740,6 +28510,11 @@
         "r2": 0.09046649292072673,
         "corr": 0.3411626088648462,
         "Confianza": 0.1509184792429105,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -27899,6 +28674,11 @@
         "r2": 0.09114845119296122,
         "corr": 0.34401488206178343,
         "Confianza": 0.15218022575932788,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -28058,6 +28838,11 @@
         "r2": 0.11864906673556475,
         "corr": 0.3564173175293179,
         "Confianza": 0.15766663209763251,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -28217,6 +29002,11 @@
         "r2": 0.0,
         "corr": 0.26708088688282283,
         "Confianza": 0.16395451054362278,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -28398,6 +29188,11 @@
         "r2": -0.0019182908238437602,
         "corr": 0.26282970393213356,
         "Confianza": 0.16134481193116665,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -28579,6 +29374,11 @@
         "r2": -0.0019182908238437602,
         "corr": 0.26282970393213356,
         "Confianza": 0.16134481193116665,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -28760,6 +29560,11 @@
         "r2": 0.13314075630252165,
         "corr": 0.35617569719874653,
         "Confianza": 0.21864766432116348,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -28942,6 +29747,11 @@
         "r2": 0.13400034772337555,
         "corr": 0.35746062842662846,
         "Confianza": 0.21943645259054656,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -29123,6 +29933,11 @@
         "r2": 0.13302991301629352,
         "corr": 0.3568280379461749,
         "Confianza": 0.21904812056196968,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -29304,6 +30119,11 @@
         "r2": 0.13180057347630936,
         "corr": 0.3545832536350396,
         "Confianza": 0.21767010165053158,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -29485,6 +30305,11 @@
         "r2": 0.13117917470142892,
         "corr": 0.3531559055680106,
         "Confianza": 0.21679388712078201,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -29666,6 +30491,11 @@
         "r2": 0.1063974778811495,
         "corr": 0.3448510843582486,
         "Confianza": 0.21169575781437378,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -29848,6 +30678,11 @@
         "r2": 0.10639748730977394,
         "corr": 0.34485902173486316,
         "Confianza": 0.21170063037831136,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -30029,6 +30864,11 @@
         "r2": 0.05768690000766408,
         "corr": 0.3163789115556013,
         "Confianza": 0.19421737809782166,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -30210,6 +31050,11 @@
         "r2": 0.056945667508239595,
         "corr": 0.3133274895662608,
         "Confianza": 0.19234418378368162,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -30391,6 +31236,11 @@
         "r2": 0.10451543407183961,
         "corr": 0.3432059657487966,
         "Confianza": 0.2106858592044547,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -30574,6 +31424,11 @@
         "r2": 0.11974446708573605,
         "corr": 0.35550319876996705,
         "Confianza": 0.15726225773354943,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -30768,6 +31623,11 @@
         "r2": 0.12413772974259352,
         "corr": 0.36171945234029007,
         "Confianza": 0.16001211223414366,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -30962,6 +31822,11 @@
         "r2": 0.16383433817282034,
         "corr": 0.36985500679088235,
         "Confianza": 0.22704506233391344,
+        "Confianza_LOOCV": null,
+        "k_LOOCV": null,
+        "Corr_LOOCV": null,
+        "MAPE_LOOCV": null,
+        "R2_LOOCV": null,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [
@@ -31189,6 +32054,11 @@
         "r2": 0.6608323089373631,
         "corr": 0.6939222867779529,
         "Confianza": 0.42598214425544456,
+        "Confianza_LOOCV": 0,
+        "k_LOOCV": 9,
+        "Corr_LOOCV": -65.2494650658886,
+        "MAPE_LOOCV": 53.69430143514293,
+        "R2_LOOCV": -127.919310036101,
         "Advertencia": null,
         "datos_entrenamiento": {
           "X_original": [

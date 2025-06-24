@@ -623,46 +623,7 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                     modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="exp"))
 
             # Guardar todos los modelos NO descartados (sin filtrar por mape/r2)
-            for m in modelos:
-                if m is not None and not m.get("descartado", False):
-                    # Seleccionar solo columnas relevantes y filas válidas (sin NaN) para graficar
-                    columnas_grafico = list(m["predictores"]) + [objetivo]
-                    # df_original: todos los datos originales válidos para esos campos
-                    df_original_graf = df_original[columnas_grafico].dropna().to_dict(orient="list")
-                    # df_filtrado: solo los datos filtrados válidos para esos campos
-                    df_filtrado_graf = df_filtrado[columnas_grafico].dropna().to_dict(orient="list")
-
-                    modelos_info.append({
-                        "Aeronave": idx,
-                        "Parámetro": objetivo,
-                        "Familia": familia_usada,
-                        "Filtro_aplicado": filtro_aplicado,
-                        "predictores": list(m["predictores"]),
-                        "n_predictores": len(m["predictores"]),
-                        "n_muestras_entrenamiento": m["n"],
-                        "tipo": m["tipo"],
-                        "tipo_transformacion": m["tipo_transformacion"],
-                        "coeficientes_originales": m["coeficientes_originales"],
-                        "intercepto_original": m["intercepto_original"],
-                        "ecuacion_string": m.get("ecuacion_string"),
-                        "ecuacion_latex": m.get("ecuacion_latex"),
-                        "ecuacion_normalizada": m.get("ecuacion_normalizada"),
-                        "ecuacion_normalizada_latex": m.get("ecuacion_normalizada_latex"),
-                        "mape": m["mape"],
-                        "r2": m["r2"],
-                        "corr": m["corr"],
-                        "Confianza": m["Confianza"],
-                        "Advertencia": m.get("warning", None),
-                        "datos_entrenamiento": m["datos_originales"],
-                        "indices_entrenamiento": m["datos_originales"]["X_original"],
-                        "df_filtrado_shape": df_filtrado.shape,
-                        "df_filtrado_columns": list(df_filtrado.columns),
-                        "df_original_shape": df_original.shape,
-                        "df_original_columns": list(df_original.columns),
-                        # Solo los puntos válidos y relevantes para graficar
-                        "df_original": df_original_graf,
-                        "df_filtrado": df_filtrado_graf,
-                    })
+            # (Este bloque ha sido eliminado para evitar duplicados antes de LOOCV)
 
             # Solo pasar a LOOCV los modelos con MAPE <= 7.5% y R2 >= 0.6
             validos = [m for m in modelos if m is not None and not m["descartado"] and m["mape"] <= 7.5 and m["r2"] >= 0.6]
@@ -706,6 +667,47 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
             for m in validos:
                 m.update(validar_con_loocv(df_filtrado, objetivo, m))
                 m["Confianza_promedio"] = (m["Confianza"] + m["Confianza_LOOCV"]) / 2
+            # Guardar todos los modelos NO descartados (sin filtrar por mape/r2), ahora con LOOCV
+            for m in modelos:
+                if m is not None and not m.get("descartado", False):
+                    columnas_grafico = list(m["predictores"]) + [objetivo]
+                    df_original_graf = df_original[columnas_grafico].dropna().to_dict(orient="list")
+                    df_filtrado_graf = df_filtrado[columnas_grafico].dropna().to_dict(orient="list")
+                    modelos_info.append({
+                        "Aeronave": idx,
+                        "Parámetro": objetivo,
+                        "Familia": familia_usada,
+                        "Filtro_aplicado": filtro_aplicado,
+                        "predictores": list(m["predictores"]),
+                        "n_predictores": len(m["predictores"]),
+                        "n_muestras_entrenamiento": m["n"],
+                        "tipo": m["tipo"],
+                        "tipo_transformacion": m["tipo_transformacion"],
+                        "coeficientes_originales": m["coeficientes_originales"],
+                        "intercepto_original": m["intercepto_original"],
+                        "ecuacion_string": m.get("ecuacion_string"),
+                        "ecuacion_latex": m.get("ecuacion_latex"),
+                        "ecuacion_normalizada": m.get("ecuacion_normalizada"),
+                        "ecuacion_normalizada_latex": m.get("ecuacion_normalizada_latex"),
+                        "mape": m["mape"],
+                        "r2": m["r2"],
+                        "corr": m["corr"],
+                        "Confianza": m["Confianza"],
+                        "Confianza_LOOCV": m.get("Confianza_LOOCV"),
+                        "k_LOOCV": m.get("n_LOOCV"),
+                        "Corr_LOOCV": m.get("Corr_LOOCV"),
+                        "MAPE_LOOCV": m.get("MAPE_LOOCV"),
+                        "R2_LOOCV": m.get("R2_LOOCV"),
+                        "Advertencia": m.get("warning", None),
+                        "datos_entrenamiento": m["datos_originales"],
+                        "indices_entrenamiento": m["datos_originales"]["X_original"],
+                        "df_filtrado_shape": df_filtrado.shape,
+                        "df_filtrado_columns": list(df_filtrado.columns),
+                        "df_original_shape": df_original.shape,
+                        "df_original_columns": list(df_original.columns),
+                        "df_original": df_original_graf,
+                        "df_filtrado": df_filtrado_graf,
+                    })
             # Filtrar modelos robustos por LOOCV
             robustos = [m for m in validos if m["MAPE_LOOCV"] <= 15 and m["R2_LOOCV"] >= 0.6]
             if robustos:

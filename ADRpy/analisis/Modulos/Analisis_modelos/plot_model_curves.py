@@ -58,13 +58,17 @@ logger = logging.getLogger(__name__)
 def add_normalized_model_curves(fig: go.Figure, 
                                modelos: List[Dict], 
                                parametro: str,
-                               show_synthetic_curves: bool = True) -> None:
+                               show_synthetic_curves: bool = True,
+                               show_only_real_curves: bool = False,
+                               highlight_model_idx: Optional[int] = None) -> None:
     """
     Añade curvas de modelos normalizadas al gráfico.
     Solo procesa modelos de 1 predictor para gráficos 2D.
     Cada modelo usa su propio rango de datos normalizado a [0, 1].
     Si no hay datos originales, genera un rango sintético para mostrar la ecuación.
     Las curvas sintéticas se muestran con líneas punteadas y etiquetas apropiadas.
+    Si show_only_real_curves=True, solo se grafican curvas con datos originales.
+    Si highlight_model_idx está definido, resalta ese modelo y baja la opacidad de los demás.
     
     Parameters:
     -----------
@@ -75,6 +79,10 @@ def add_normalized_model_curves(fig: go.Figure,
     parametro : str
         Nombre del parámetro objetivo    show_synthetic_curves : bool
         Si mostrar curvas generadas con rangos sintéticos (líneas punteadas)
+    show_only_real_curves : bool
+        Si mostrar solo curvas con datos reales (omitir sintéticas)
+    highlight_model_idx : int
+        Índice del modelo a resaltar (opacidad y grosor de línea)
     """
     
     curves_added = 0
@@ -110,6 +118,10 @@ def add_normalized_model_curves(fig: go.Figure,
         # Si el usuario no quiere mostrar curvas sintéticas y solo hay rango sintético, omitir
         if using_synthetic_range and not show_synthetic_curves:
             omitted_synthetic += 1
+            continue
+        
+        # Si solo se quieren curvas con datos reales y este modelo usa rango sintético, omitir
+        if show_only_real_curves and using_synthetic_range:
             continue
         
         # Generar predicciones en el rango original
@@ -150,7 +162,16 @@ def add_normalized_model_curves(fig: go.Figure,
         
         # Determinar el estilo de línea
         line_style = 'dash' if using_synthetic_range else 'solid'
-        line_width = 2 if using_synthetic_range else 3
+        # Determinar opacidad y ancho de línea para resaltar modelo seleccionado
+        if highlight_model_idx is not None and i == highlight_model_idx:
+            opacity = 1.0
+            line_width = 5
+        elif highlight_model_idx is not None:
+            opacity = 0.3
+            line_width = 2
+        else:
+            opacity = 1.0
+            line_width = 3 if not using_synthetic_range else 2
         
         # Añadir curva del modelo
         fig.add_trace(go.Scatter(
@@ -163,6 +184,7 @@ def add_normalized_model_curves(fig: go.Figure,
                 width=line_width,
                 dash=line_style
             ),
+            opacity=opacity,
             text=hover_text,
             hovertemplate='%{text}<extra></extra>',
             legendgroup=f'model_{i}',

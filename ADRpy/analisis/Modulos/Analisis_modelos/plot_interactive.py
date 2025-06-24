@@ -37,7 +37,8 @@ def create_interactive_plot(
     show_synthetic_curves: bool = True,
     highlight_model_idx: Optional[int] = None,
     detalles_por_celda: Optional[Dict] = None,
-    selected_imputation_methods: Optional[List[str]] = None
+    selected_imputation_methods: Optional[List[str]] = None,
+    show_only_real_curves: bool = False
 ) -> go.Figure:
     """
     Crea un gráfico interactivo para visualizar modelos y datos.
@@ -45,6 +46,8 @@ def create_interactive_plot(
     El eje X se rotula como "X adimensional".
     Además, agrega marcadores para los valores imputados por correlación, similitud y promedio ponderado (final),
     usando los datos de detalles_por_celda si están disponibles.
+    Si show_only_real_curves=True, solo se grafican curvas con datos reales.
+    Si highlight_model_idx está definido, resalta ese modelo y baja la opacidad de los demás.
     """
     fig = go.Figure()
     celda_key = f"{aeronave}|{parametro}"
@@ -221,43 +224,34 @@ def create_interactive_plot(
     # Usar la nueva estructura de datos y filtrado por métodos
     if detalles_por_celda and celda_key in detalles_por_celda:
         from .plot_model_curves import extract_imputed_values_from_details, filter_imputed_points_by_method
-        
-        # Determinar métodos a mostrar (usar todos si no se especifica)
         methods_to_show = selected_imputation_methods or ['final', 'similitud', 'correlacion']
-        
-        # Extraer puntos imputados usando la nueva función
         imputed_points = extract_imputed_values_from_details(
             detalles_por_celda, 
             celda_key, 
             modelos_1_pred
         )
-        
-        # Filtrar por métodos seleccionados
         filtered_points = filter_imputed_points_by_method(imputed_points, methods_to_show)
-        
-        # Agregar cada punto imputado filtrado al gráfico
         for point in filtered_points:
             metodo = point.get('imputation_method', 'unknown')
             x_norm = point.get('x_normalized', 0.5)
             y_value = point.get('y_value', 0)
-            tooltip = point.get('tooltip', '')
+            confidence = point.get('confidence', '')
+            iteration = point.get('iteration', '')
+            warning = point.get('warning', '')
+            tooltip = f"Método: {metodo.capitalize()}<br>Valor Y: {y_value:.3f}<br>Confianza: {confidence}<br>Iteración: {iteration}"
+            if warning:
+                tooltip += f"<br><b>Advertencia:</b> {warning}"
             symbol = point.get('symbol', 'circle')
             size = point.get('size', 10)
-            warning = point.get('warning', '')
-            
-            # Colores por método
             color_map = {
                 'final': 'black',
                 'similitud': 'orange', 
                 'correlacion': 'blue'
             }
             color = color_map.get(metodo, 'gray')
-            
-            # Ajustar símbolo si hay advertencia
             if warning:
                 symbol = 'x'
                 color = 'red'
-            
             fig.add_trace(go.Scatter(
                 x=[x_norm],
                 y=[y_value],
@@ -536,6 +530,16 @@ def create_metrics_summary_table(modelos_filtrados: Dict,
     
     for i, modelo in enumerate(modelos):
         if isinstance(modelo, dict):
+            confianza = modelo.get('Confianza', 0)
+            confianza_loocv = modelo.get('Confianza_LOOCV', 0)
+            # Calcular confianza final como promedio (si ambos existen y son numéricos)
+            if confianza is not None and confianza_loocv is not None:
+                try:
+                    confianza_final = round((float(confianza) + float(confianza_loocv)) / 2, 3)
+                except Exception:
+                    confianza_final = ''
+            else:
+                confianza_final = ''
             row = {
                 'ID': i + 1,
                 'Tipo': modelo.get('tipo', 'N/A'),
@@ -544,8 +548,14 @@ def create_metrics_summary_table(modelos_filtrados: Dict,
                 'MAPE (%)': round(modelo.get('mape', 0), 3),
                 'R²': round(modelo.get('r2', 0), 3),
                 'Correlación': round(modelo.get('corr', 0), 3),
-                'Confianza': round(modelo.get('Confianza', 0), 3),
+                'Confianza': round(confianza, 3),
+                'Confianza_LOOCV': round(confianza_loocv, 3),
+                'Confianza Final': confianza_final,
                 'N° Muestras': modelo.get('n_muestras_entrenamiento', 0),
+                'MAPE_LOOCV': round(modelo.get('MAPE_LOOCV', 0), 3),
+                'R2_LOOCV': round(modelo.get('R2_LOOCV', 0), 3),
+                'Corr_LOOCV': round(modelo.get('Corr_LOOCV', 0), 3),
+                'k_LOOCV': modelo.get('k_LOOCV', ''),
                 'Advertencia': modelo.get('Advertencia', '')
             }
             summary_data.append(row)
