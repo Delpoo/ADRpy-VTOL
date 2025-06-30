@@ -323,7 +323,8 @@ def create_main_layout() -> html.Div:
                         }
                     ),
                     dcc.Tabs(id='plot-tabs', value='main-view', children=[
-                        dcc.Tab(label='Vista Principal', value='main-view'),
+                        dcc.Tab(label='2D', value='main-view'),
+                        dcc.Tab(label='3D', value='3d-view'),
                         dcc.Tab(label='Comparación', value='comparison-view'),
                         dcc.Tab(label='Métricas', value='metrics-view')
                     ]),

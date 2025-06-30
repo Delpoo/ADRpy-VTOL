@@ -645,4 +645,28 @@ def create_metrics_summary_table(modelos_filtrados: Dict,
     
     return pd.DataFrame(summary_data)
 
+def create_interactive_plot_3d(
+    modelos_2_pred: list,
+    aeronave: str,
+    parametro: str,
+    show_training_points: bool = True,
+    show_model_curves: bool = True,
+    highlight_model_idx: Optional[int] = None,
+    detalles_por_celda: Optional[Dict] = None,
+    selected_imputation_methods: Optional[list] = None
+) -> go.Figure:
+    """
+    Visualización 3D de modelos de 2 predictores (lineales o polinómicos).
+    (Stub: implementar en este archivo. Debe usar ecuacion_normalizada_latex y coeficientes normalizados para polinómicos de 2 predictores).
+    """
+    fig = go.Figure()
+    fig.add_annotation(
+        text="[Stub] Visualización 3D no implementada. Implementar en plot_interactive.py",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, xanchor='center', yanchor='middle',
+        showarrow=False,
+        font=dict(size=16, color="red")
+    )
+    return fig
+
 # Aquí van todas las funciones de "alto nivel" que combinan y orquestan los helpers, y que definen la visualización global.

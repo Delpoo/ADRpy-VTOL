@@ -212,11 +212,12 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          Input('hide-plot-legend', 'value'),
          Input('imputation-methods-checklist', 'value'),
          Input('comparison-type', 'value'),
-         Input('selected-model-store', 'data')],  # Usar el store en lugar de selected_rows
+         Input('selected-model-store', 'data'),
+         Input('plot-tabs', 'value')],  # <-- Agregar input de pestaña activa
         [State('models-data-store', 'data')],
         prevent_initial_call=False
     )
-    def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_curves, only_real_curves, hide_legend, imputation_methods, comparison_type, selected_model_data, models_data):
+    def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_curves, only_real_curves, hide_legend, imputation_methods, comparison_type, selected_model_data, plot_tab, models_data):
         import copy
         ctx = dash.callback_context
         
@@ -263,54 +264,59 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
 
         # Determinar modelo seleccionado desde el store
         highlight_idx = None
-        logger.info(f"[DEBUG] selected_model_data: {selected_model_data}")
-        logger.info(f"[DEBUG] modelos_celda (len={len(modelos_celda)}): {[m.get('tipo','?') if isinstance(m,dict) else str(m) for m in modelos_celda]}")
         if selected_model_data and isinstance(selected_model_data, dict):
             stored_aeronave = selected_model_data.get('aeronave')
             stored_parametro = selected_model_data.get('parametro')
             stored_idx = selected_model_data.get('model_idx')
-            logger.info(f"[DEBUG] stored_aeronave={stored_aeronave}, stored_parametro={stored_parametro}, stored_idx={stored_idx}")
-            # Solo aplicar si coincide la aeronave y parámetro actuales
             if (stored_aeronave == aeronave and stored_parametro == parametro and 
                 stored_idx is not None and 0 <= stored_idx < len(modelos_celda)):
                 highlight_idx = stored_idx
-        logger.info(f"[DEBUG] highlight_idx usado en create_interactive_plot: {highlight_idx}")
 
-        # Crear gráfico principal con resaltado
         show_training_points = 'show' in (show_training or [])
         show_model_curves = 'show' in (show_curves or [])
         show_only_real = 'only_real' in (only_real_curves or [])
-        
-        fig = create_interactive_plot(
-            modelos_filtrados,
-            aeronave,
-            parametro,
-            show_training_points=show_training_points,
-            show_model_curves=show_model_curves,
-            show_only_real_curves=show_only_real,
-            highlight_model_idx=highlight_idx,
-            detalles_por_celda=models_data.get('detalles') if models_data else None,
-            selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
-        )
-        logger.info(f"[DEBUG] Llamada a create_interactive_plot con highlight_model_idx={highlight_idx}")
-        
-        # Determinar si preservar zoom basado en el trigger
+
+        # --- Lógica de pestañas 2D/3D ---
+        if plot_tab == '3d-view':
+            # Filtrar solo modelos de 2 predictores (lineales o polinómicos)
+            modelos_2_pred = [m for m in modelos_celda if isinstance(m, dict) and m.get('n_predictores', 0) == 2 and (('lineal' in m.get('tipo', '').lower()) or ('polin' in m.get('tipo', '').lower()))]
+            # Llamar helper 3D (debe implementarse en plot_interactive.py)
+            from .plot_interactive import create_interactive_plot_3d
+            fig = create_interactive_plot_3d(
+                modelos_2_pred,
+                aeronave,
+                parametro,
+                show_training_points=show_training_points,
+                show_model_curves=show_model_curves,
+                highlight_model_idx=highlight_idx,
+                detalles_por_celda=models_data.get('detalles') if models_data else None,
+                selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
+            )
+        else:
+            # 2D (por defecto)
+            fig = create_interactive_plot(
+                modelos_filtrados,
+                aeronave,
+                parametro,
+                show_training_points=show_training_points,
+                show_model_curves=show_model_curves,
+                show_only_real_curves=show_only_real,
+                highlight_model_idx=highlight_idx,
+                detalles_por_celda=models_data.get('detalles') if models_data else None,
+                selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
+            )
+
         preserve_zoom = True
         if ctx.triggered:
             triggered_ids = [t['prop_id'].split('.')[0] for t in ctx.triggered]
             trigger_info = {'triggered_ids': triggered_ids}
             current_selection = {'aeronave': aeronave, 'parametro': parametro}
             preserve_zoom = should_preserve_zoom(trigger_info, current_selection)
-        
-        # Aplicar configuración estable
         fig = apply_stable_configuration(fig, aeronave, parametro, preserve_zoom)
-        
-        # Configurar layout adicional
         fig.update_layout(
             showlegend=('hide' not in (hide_legend or []))
         )
-
-        # Crear tabla resumen con información de selección
+        # Tabla resumen igual para ambas vistas
         df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
         summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
         return fig, summary_table
