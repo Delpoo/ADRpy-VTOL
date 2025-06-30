@@ -76,6 +76,14 @@ def create_interactive_plot(
         predictor = modelo.get('predictores', [None])[0]
         if not predictor:
             continue
+            
+        # Determinar resaltado y opacidad para el modelo actual
+        is_highlighted = highlight_model_idx is not None and i == highlight_model_idx
+        is_dimmed = highlight_model_idx is not None and i != highlight_model_idx
+        
+        marker_opacity = 1.0 if is_highlighted else (0.4 if is_dimmed else 0.6)
+        marker_size = 8 if is_highlighted else 6
+        
         df_original = get_model_original_data(modelo)
         df_filtrado = get_model_training_data(modelo)
         # Calcular min y max SOLO de ese predictor usando df_original
@@ -100,6 +108,7 @@ def create_interactive_plot(
             x_orig_list = _to_list_safe(x_orig)
             x_orig_norm_list = _to_list_safe(x_orig_norm)
             y_orig_list = _to_list_safe(y_orig)
+            
             fig.add_trace(go.Scatter(
                 x=x_orig_norm_list,
                 y=y_orig_list,
@@ -107,16 +116,28 @@ def create_interactive_plot(
                 name=f'Datos orig. - {predictor} ({modelo.get("tipo", "unknown")})',
                 marker=dict(
                     color=COLORS['model_lines'][i % len(COLORS['model_lines'])],
-                    size=6,
-                    opacity=0.6,
-                    symbol='circle'
+                    size=marker_size,
+                    opacity=marker_opacity,
+                    symbol='circle',
+                    line=dict(color='darkgray', width=1)  # Borde para mejor visibilidad
                 ),
+                # Información personalizada para identificar el modelo en callbacks
+                customdata=[i] * len(x_orig_norm_list),
                 text=[
                     f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y: {yv:.3f}" for xv, xn, yv in zip(x_orig_list, x_orig_norm_list, y_orig_list)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
-                showlegend=True
+                showlegend=True,
+                # Información adicional para el callback
+                meta=dict(
+                    model_idx=i,
+                    model_type=modelo.get("tipo", "unknown"),
+                    predictor=predictor,
+                    aeronave=aeronave,
+                    parametro=parametro,
+                    data_type='original'
+                )
             ))
         elif df_original is None or df_original.empty or x_min is None or x_max is None:
             # Mostrar advertencia si no hay datos originales válidos para este predictor
@@ -142,6 +163,10 @@ def create_interactive_plot(
             x_train_list = _to_list_safe(x_train)
             x_train_norm_list = _to_list_safe(x_train_norm)
             y_train_list = _to_list_safe(y_train)
+            # Determinar resaltado y opacidad para el modelo actual
+            training_opacity = 1.0 if is_highlighted else (0.5 if is_dimmed else 0.9)
+            training_size = 10 if is_highlighted else 8
+            
             fig.add_trace(go.Scatter(
                 x=x_train_norm_list,
                 y=y_train_list,
@@ -149,17 +174,28 @@ def create_interactive_plot(
                 name=f'Entren. - {predictor} ({modelo.get("tipo", "unknown")})',
                 marker=dict(
                     color=COLORS['model_lines'][i % len(COLORS['model_lines'])],
-                    size=8,
-                    opacity=0.9,
+                    size=training_size,
+                    opacity=training_opacity,
                     symbol='diamond',
                     line=dict(color='black', width=1)
                 ),
+                # Información personalizada para identificar el modelo en callbacks
+                customdata=[i] * len(x_train_norm_list),
                 text=[
                     f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y: {yv:.3f}" for xv, xn, yv in zip(x_train_list, x_train_norm_list, y_train_list)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
-                showlegend=True
+                showlegend=True,
+                # Información adicional para el callback
+                meta=dict(
+                    model_idx=i,
+                    model_type=modelo.get("tipo", "unknown"),
+                    predictor=predictor,
+                    aeronave=aeronave,
+                    parametro=parametro,
+                    data_type='training'
+                )
             ))
         # --- CURVA DEL MODELO ---
         # Si no hay datos originales válidos, usar rango sintético SOLO para la curva
@@ -190,6 +226,9 @@ def create_interactive_plot(
             # Si la curva es sintética, usar línea punteada y advertencia en hover
             line_style = 'dash' if using_synthetic_range else 'solid'
             hover_extra = "<br><b>ADVERTENCIA:</b> Curva generada con valores sintéticos por falta de datos originales" if using_synthetic_range else ""
+            # Información adicional del modelo para hover
+            model_info = create_model_hover_info(modelo)
+            
             fig.add_trace(go.Scatter(
                 x=x_range_norm,
                 y=predictions,
@@ -201,12 +240,24 @@ def create_interactive_plot(
                     dash=line_style
                 ),
                 opacity=opacity,
+                # Información personalizada para identificar el modelo en callbacks
+                customdata=[i] * len(predictions),  # Índice del modelo para identificarlo
                 text=[
-                    f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y: {yv:.3f}{hover_extra}" for xv, xn, yv in zip(x_range_orig, x_range_norm, predictions)
+                    f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y: {yv:.3f}{hover_extra}<br>{model_info}" for xv, xn, yv in zip(x_range_orig, x_range_norm, predictions)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
-                showlegend=True
+                showlegend=True,
+                # Configuración para hacer la línea más clickeable
+                connectgaps=True,
+                # Información adicional para el callback
+                meta=dict(
+                    model_idx=i,
+                    model_type=modelo.get("tipo", "unknown"),
+                    predictor=predictor,
+                    aeronave=aeronave,
+                    parametro=parametro
+                )
             ))
             # Si la curva es sintética, agregar advertencia visible
             if using_synthetic_range:
@@ -277,9 +328,41 @@ def create_interactive_plot(
             yanchor="top",
             y=0.99,
             xanchor="left",
-            x=0.01
+            x=0.01,
+            bgcolor="rgba(255,255,255,0.8)",
+            bordercolor="rgba(0,0,0,0.1)",
+            borderwidth=1
         ),
         template='plotly_white',
+        # Configuración clave para mantener el zoom y la interactividad
+        uirevision=f"{aeronave}_{parametro}",  # Mantener estado de UI para la misma combinación
+        clickmode='event+select',
+        dragmode='zoom',
+        # Configuración del zoom y pan
+        xaxis=dict(
+            fixedrange=False,  # Permitir zoom en X
+            autorange=True,
+            gridcolor='lightgray',
+            gridwidth=1,
+            zeroline=True,
+            zerolinecolor='gray',
+            zerolinewidth=1
+        ),
+        yaxis=dict(
+            fixedrange=False,  # Permitir zoom en Y
+            autorange=True,
+            gridcolor='lightgray',
+            gridwidth=1,
+            zeroline=True,
+            zerolinecolor='gray',
+            zerolinewidth=1
+        ),
+        # Mejorar la configuración del plot
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        # Configuración para mejor responsividad
+        margin=dict(l=60, r=20, t=60, b=60),
+        autosize=True
     )
     return fig
 

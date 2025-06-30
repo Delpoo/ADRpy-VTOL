@@ -378,6 +378,21 @@ def entrenar_modelo(
         r2 = r2_score(y_original_metrics, pred_original)
         corr = 0.5 * r2 + 0.5 * (1 - mape / 15)
         confianza = max(0, float(corr * penalizacion_por_k(len(df_train))))
+        # Calcular pesos de predictores originales para polinómicos y lineales (normalizados)
+        pesos_predictores = []
+        if poly and pf is not None and hasattr(pf, 'powers_'):
+            powers = pf.powers_  # shape: (n_terms, n_predictores)
+            coef_arr = np.array(coef_original)
+            for i, pred in enumerate(predictores):
+                mask = powers[:, i] > 0
+                peso = float(np.sum(np.abs(coef_arr[mask])))
+                pesos_predictores.append(peso)
+        else:
+            pesos_predictores = [float(abs(c)) for c in coef_original]
+        suma_pesos = sum(pesos_predictores)
+        if suma_pesos > 0:
+            pesos_predictores = [p / suma_pesos for p in pesos_predictores]
+
         # Construir diccionario de retorno unificado
         resultado = {
             "descartado": False,
@@ -391,6 +406,7 @@ def entrenar_modelo(
             "datos_originales": datos_originales,
             "coeficientes_originales": coef_original,
             "intercepto_original": intercepto_original,
+            "Peso de predictores": pesos_predictores,
             # Ecuaciones
             "ecuacion_string": ecuacion_string,
             "ecuacion_latex": ecuacion_latex,
@@ -557,6 +573,8 @@ def imputar_valores_celda(df_resultado, df_filtrado, objetivo, info, idx):
         "Confianza": info["Confianza"],
         "Tipo Modelo": info["tipo"],
         "Predictores": ",".join(info["predictores"]),
+        "Coeficientes": list(info.get("coeficientes_originales", [])),
+        "Peso de predictores": list(info.get("Peso de predictores", [])),
         "Aeronaves entrenamiento": list(df_train.index),
         "k": info["n"],
         "Penalizacion_k": penalizacion_por_k(info["n"]),
@@ -684,6 +702,7 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                         "tipo": m["tipo"],
                         "tipo_transformacion": m["tipo_transformacion"],
                         "coeficientes_originales": m["coeficientes_originales"],
+                        "Peso de predictores": m.get("Peso de predictores", []),
                         "intercepto_original": m["intercepto_original"],
                         "ecuacion_string": m.get("ecuacion_string"),
                         "ecuacion_latex": m.get("ecuacion_latex"),

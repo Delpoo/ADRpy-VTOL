@@ -111,6 +111,11 @@ print("Parameters available in df_procesado before selection:")
 print(parameters_available)
 
 # Preselect parameters of interest (can be customized)
+#Establecer los parametros que quiero que sean evaluados para la funcon de similitud,
+#dejar afuera aquellos parametros que no son significativos o que puede generar problemas
+#con diferencias mayores al 20% y dejar afuera a un posible condidato sin enverdad ser un
+#elemento significativo a la hora de representar a una aeronave, esta lista solo afecta a la
+#creación del df_filtrado para la funcion de imputacion por similitud.
 parametros_preseleccionados = [
     "Velocidad a la que se realiza el crucero (KTAS)",
     "Techo de servicio máximo",
@@ -122,24 +127,18 @@ parametros_preseleccionados = [
     "Autonomía de la aeronave",
     "Velocidad máxima (KIAS)",
     "Velocidad de pérdida (KCAS)",
-    "envergadura",
-    "Cuerda",
-    "payload",
-    "Empty weight"
-]
-"""
-parametros_preseleccionados = [
-    "MTOW",
-    "Payload",
-    "Potencia",
     "Envergadura",
-    "Alcance",
-    "Velocidad crucero",
+    "Cuerda",
+    "Payload",
+    "Ancho del fuselaje",
+#----------------------------------------------------------#
+    "Potencia HP",
     "Cantidad de motores",
-    "Ancho de fuselaje",
     "Rango de comunicación",
-]
-"""
+    "Misión",
+    "Despegue"
+    ]
+
 # Filter preselected parameters to keep only those present in the data
 parametros_preseleccionados = [p for p in parametros_preseleccionados if p in parameters_available]
 
@@ -185,8 +184,7 @@ df_parametros = df_procesado.drop(columns=filas_familia)
 
 
 df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel, modelos_por_celda, detalles_por_celda = bucle_imputacion_similitud_correlacion(
-    df_parametros=df_parametros,
-    df_atributos=df_atributos,
+    df_filtrado=df_filtrado,
     parametros_preseleccionados=parametros_preseleccionados,
     bloques_rasgos=bloques_rasgos,
     capas_familia=capas_familia,

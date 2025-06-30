@@ -1,5 +1,8 @@
 import pandas as pd
-from .imputacion_similitud_flexible import *
+import numpy as np
+import json
+# from .imputacion_similitud_flexible import *  # COMENTADO: Reemplazado por nueva implementación
+from .imputacion_similitud_nueva import imputacion_por_similitud
 from .html_utils import convertir_a_html
 from .data_processing import generar_resumen_faltantes
 from .imputacion_correlacion import imputaciones_correlacion
@@ -15,8 +18,7 @@ def is_missing(val):
     return False
 
 def bucle_imputacion_similitud_correlacion(
-    df_parametros,
-    df_atributos,
+    df_filtrado,
     parametros_preseleccionados,
     bloques_rasgos,
     capas_familia,
@@ -68,21 +70,17 @@ def bucle_imputacion_similitud_correlacion(
         )
 
         # Crear copias independientes para cada método
-        df_similitud = df_procesado_base.copy()
-        df_correlacion = df_procesado_base.copy()
-
-        # Imputación por similitud (no actualiza todavía)
+        df_similitud = df_filtrado.copy()
+        df_correlacion = df_procesado_base.copy()        # Imputación por similitud (NUEVA IMPLEMENTACIÓN - filtrado directo por familias)
         print("\n" + "-" * 80)
-        print(f"\033[1m*** IMPUTACIÓN POR SIMILITUD - ITERACIÓN {iteracion} ***\033[0m")
+        print(f"\033[1m*** IMPUTACIÓN POR SIMILITUD NUEVA - ITERACIÓN {iteracion} ***\033[0m")
         print("-" * 80)
 
-        df_similitud_resultado, reporte_similitud = imputacion_por_similitud_general(
-            df_parametros=df_parametros,
-            df_atributos=df_atributos,
-            parametros_preseleccionados=parametros_preseleccionados,
-            bloques_rasgos=bloques_rasgos,
-            capas_familia=capas_familia,
-            df_base=df_similitud
+        df_similitud_resultado, reporte_similitud = imputacion_por_similitud(
+            df_filtrado=df_similitud,
+            df_procesado_base=df_procesado_base,  # NUEVO: pasar el DataFrame completo
+            verbose=True,
+            debug=True
         )
 
         if reporte_similitud and len(reporte_similitud) > 0:
@@ -256,24 +254,57 @@ def bucle_imputacion_similitud_correlacion(
             # Calcular X_visualizacion para correlacion SIEMPRE que correlacion exista y haya predictor relevante
             if dict_correlacion is not None and predictor_relevante:
                 try:
-                    x_correlacion = float(df_parametros.at[aeronave, predictor_relevante])
+                    predictores_corr = dict_correlacion.get("Predictores")
+                    coeficientes = dict_correlacion.get("Coeficientes")
+                    pesos_predictores = dict_correlacion.get("Peso de predictores")
+                    if predictores_corr and pesos_predictores and isinstance(pesos_predictores, (list, tuple)) and len(pesos_predictores) == len(predictores_corr):
+                        valores_predictores = []
+                        for pred in predictores_corr:
+                            try:
+                                valores_predictores.append(float(df_procesado_base.at[aeronave, pred]))
+                            except Exception:
+                                valores_predictores.append(np.nan)
+                        pesos_predictores = np.array(pesos_predictores, dtype=float)
+                        valores_predictores = np.array(valores_predictores, dtype=float)
+                        suma_pesos = pesos_predictores.sum()
+                        if not np.any(np.isnan(valores_predictores)) and suma_pesos > 0:
+                            pesos_normalizados = pesos_predictores / suma_pesos
+                            x_correlacion = float(np.dot(pesos_normalizados, valores_predictores))
+                        else:
+                            x_correlacion = None
+                    elif predictores_corr and coeficientes and isinstance(coeficientes, (list, tuple)) and len(coeficientes) == len(predictores_corr):
+                        valores_predictores = []
+                        for pred in predictores_corr:
+                            try:
+                                valores_predictores.append(float(df_procesado_base.at[aeronave, pred]))
+                            except Exception:
+                                valores_predictores.append(np.nan)
+                        coeficientes = np.array(coeficientes, dtype=float)
+                        valores_predictores = np.array(valores_predictores, dtype=float)
+                        if not np.any(np.isnan(valores_predictores)) and coeficientes.sum() != 0:
+                            x_correlacion = float(np.dot(coeficientes, valores_predictores) / coeficientes.sum())
+                        else:
+                            x_correlacion = None
+                    else:
+                        x_correlacion = float(df_procesado_base.at[aeronave, predictor_relevante])
                 except Exception:
                     x_correlacion = None
-                dict_correlacion["X_visualizacion"] = x_correlacion
-            # Calcular X_visualizacion para final
+                dict_correlacion["X_visualizacion"] = x_correlacion            # Calcular X_visualizacion para final
             x_s = dict_similitud.get("X_visualizacion") if dict_similitud is not None else None
             x_c = dict_correlacion.get("X_visualizacion") if dict_correlacion is not None else None
             conf_s = dict_similitud.get("Confianza", 0) if dict_similitud is not None else 0
             conf_c = dict_correlacion.get("Confianza", 0) if dict_correlacion is not None else 0
-            if x_s is not None and x_c is not None and (conf_s + conf_c) > 0:
-                x_final = float((x_s * conf_s + x_c * conf_c) / (conf_s + conf_c))
-                detalles_iteracion[-1]["final"]["X_visualizacion"] = x_final
-            elif x_s is not None:
-                detalles_iteracion[-1]["final"]["X_visualizacion"] = x_s
-            elif x_c is not None:
-                detalles_iteracion[-1]["final"]["X_visualizacion"] = x_c
-            else:
-                if detalles_iteracion[-1]["final"] is not None:
+            
+            # Solo procesar X_visualizacion si hay elementos en detalles_iteracion
+            if len(detalles_iteracion) > 0 and detalles_iteracion[-1].get("final") is not None:
+                if x_s is not None and x_c is not None and (conf_s + conf_c) > 0:
+                    x_final = float((x_s * conf_s + x_c * conf_c) / (conf_s + conf_c))
+                    detalles_iteracion[-1]["final"]["X_visualizacion"] = x_final
+                elif x_s is not None:
+                    detalles_iteracion[-1]["final"]["X_visualizacion"] = x_s
+                elif x_c is not None:
+                    detalles_iteracion[-1]["final"]["X_visualizacion"] = x_c
+                else:
                     detalles_iteracion[-1]["final"]["X_visualizacion"] = None
         # Aplicar las imputaciones finales al DataFrame base
         for imp in imputaciones_iteracion:
@@ -282,6 +313,9 @@ def bucle_imputacion_similitud_correlacion(
             valor = imp["Valor imputado"]
             metodo = imp["Método predictivo"]
             df_procesado_base.at[aeronave, parametro] = valor
+            # Solo imputar en df_filtrado si existen la fila y columna
+            if (aeronave in df_filtrado.index) and (parametro in df_filtrado.columns):
+                df_filtrado.at[aeronave, parametro] = valor
             resumen_imputaciones.append(imp)
             print(
                 f"Imputación final aplicada: {parametro} - {aeronave} = {valor} ({metodo})"
@@ -363,13 +397,21 @@ def bucle_imputacion_similitud_correlacion(
     print(f"[DEBUG] detalles_por_celda FINAL: {len(detalles_por_celda)} claves")
 
     # Al final del bucle, exportar modelos_por_celda y detalles_por_celda a JSON
-    import json
-    output_path = "ADRpy/analisis/Results/modelos_completos_por_celda.json"
-    export_dict = {
-        "modelos_por_celda": modelos_por_celda,
-        "detalles_por_celda": detalles_por_celda
-    }
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(export_dict, f, ensure_ascii=False, indent=2)
+    import json    # Crear directorio Results si no existe y exportar JSON
+    try:
+        import os
+        results_dir = os.path.join(os.path.dirname(__file__), '../Results')
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+        output_path = os.path.join(results_dir, 'modelos_completos_por_celda.json')
+        export_dict = {
+            "modelos_por_celda": modelos_por_celda,
+            "detalles_por_celda": detalles_por_celda
+        }
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(export_dict, f, ensure_ascii=False, indent=2)
+        print(f"[DEBUG] Archivo JSON exportado a: {output_path}")
+    except Exception as e:
+        print(f"[WARNING] No se pudo exportar el archivo JSON: {e}")
 
     return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel, modelos_por_celda, detalles_por_celda

@@ -16,6 +16,7 @@ import dash
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
+import pandas as pd
 
 
 def create_aeronave_dropdown(aeronaves: List[str], 
@@ -301,7 +302,26 @@ def create_main_layout() -> html.Div:
                 }),
                 # Gráfico principal (centro, expandible)
                 html.Div(id='main-plot-container', children=[
-                    dcc.Graph(id='main-plot', style={'height': '70vh', 'width': '100%'}),
+                    dcc.Graph(
+                        id='main-plot', 
+                        style={'height': '70vh', 'width': '100%'},
+                        config={
+                            'displayModeBar': True,
+                            'displaylogo': False,
+                            'modeBarButtonsToRemove': ['select2d', 'lasso2d'],
+                            'toImageButtonOptions': {
+                                'format': 'png',
+                                'filename': 'modelo_analisis',
+                                'height': 600,
+                                'width': 1000,
+                                'scale': 1
+                            },
+                            'scrollZoom': True,
+                            'doubleClick': 'reset+autosize',
+                            'responsive': True,
+                            'showTips': True
+                        }
+                    ),
                     dcc.Tabs(id='plot-tabs', value='main-view', children=[
                         dcc.Tab(label='Vista Principal', value='main-view'),
                         dcc.Tab(label='Comparación', value='comparison-view'),
@@ -351,18 +371,21 @@ def create_main_layout() -> html.Div:
         }),
         dcc.Store(id='models-data-store'),
         dcc.Store(id='filtered-models-store'),
-        dcc.Store(id='unique-values-store')
+        dcc.Store(id='unique-values-store'),
+        dcc.Store(id='selected-model-store', data=None)  # Store para modelo seleccionado
     ])
 
 
-def create_summary_table(df_summary: 'pd.DataFrame') -> dash_table.DataTable:
+def create_summary_table(df_summary: 'pd.DataFrame', selected_row_idx: Optional[int] = None):
     """
-    Crea tabla de resumen de modelos.
+    Crea tabla de resumen de modelos con resaltado opcional.
     
     Parameters:
     -----------
     df_summary : pd.DataFrame
         DataFrame con resumen de modelos
+    selected_row_idx : Optional[int]
+        Índice de la fila seleccionada para resaltar
         
     Returns:
     --------
@@ -371,11 +394,34 @@ def create_summary_table(df_summary: 'pd.DataFrame') -> dash_table.DataTable:
     """
     if df_summary.empty:
         return html.P("No hay datos para mostrar.")
+
+    # Estilo condicional para resaltar fila seleccionada
+    style_data_conditional = [
+        {
+            'if': {'row_index': 'odd'},
+            'backgroundColor': 'rgb(248, 248, 248)'
+        },
+        {
+            'if': {'state': 'selected'},
+            'backgroundColor': '#ffe082',  # Amarillo suave para fila seleccionada
+            'color': 'black',
+        }
+    ]
     
+    # Agregar resaltado específico si hay una fila seleccionada
+    if selected_row_idx is not None:
+        style_data_conditional.append({
+            'if': {'row_index': selected_row_idx},
+            'backgroundColor': '#ffb74d',  # Naranja más fuerte para fila activamente seleccionada
+            'color': 'black',
+            'fontWeight': 'bold'
+        })
+
     return dash_table.DataTable(
         id='summary-table',
         data=df_summary.to_dict('records'),
-        columns=[{"name": col, "id": col} for col in df_summary.columns],
+        columns=[{"name": col, "id": col} for col in df_summary.columns if col != '_selected_'],
+        row_selectable='single',  # Habilita selección de filas
         style_cell={
             'textAlign': 'left',
             'padding': '10px',
@@ -386,21 +432,17 @@ def create_summary_table(df_summary: 'pd.DataFrame') -> dash_table.DataTable:
             'color': 'white',
             'fontWeight': 'bold'
         },
-        style_data_conditional=[
-            {
-                'if': {'row_index': 'odd'},
-                'backgroundColor': 'rgb(248, 248, 248)'
-            }
-        ],
+        style_data_conditional=style_data_conditional,
         sort_action="native",
         filter_action="native",
         page_action="native",
         page_current=0,
-        page_size=10
+        page_size=10,
+        selected_rows=[selected_row_idx] if selected_row_idx is not None else []
     )
 
 
-def format_model_info(modelo: Dict) -> html.Div:
+def format_model_info(modelo: Dict):
     """
     Formatea información de un modelo para mostrar en el panel.
     
