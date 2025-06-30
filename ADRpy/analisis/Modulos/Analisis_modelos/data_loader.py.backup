@@ -157,9 +157,7 @@ def filter_models(modelos_por_celda: Dict,
                  predictores: Optional[List[str]] = None,
                  only_real_curves: bool = False,
                  comparison_type: str = 'by_type',
-                 mejores: bool = False,
-                 require_loocv: bool = True,
-                 exclude_2pred_from_2d: bool = False) -> Dict:
+                 mejores: bool = False) -> Dict:
     """
     Filtra los modelos según los criterios especificados y el modo de comparación.
     Mejor modelo: mayor confianza promedio (entrenamiento + validación, usando Confianza y Confianza_LOOCV), solo si tiene validación.
@@ -170,11 +168,6 @@ def filter_models(modelos_por_celda: Dict,
         - 'by_predictors': Mejor modelo por cada combinación única de predictores
     only_real_curves:
         - Si True, solo modelos con datos reales en y_original
-    require_loocv:
-        - Si True, solo incluye modelos con validación LOOCV (default)
-        - Si False, incluye todos los modelos
-    exclude_2pred_from_2d:
-        - Si True, excluye modelos con 2 predictores (para vista 2D)
     """
     filtered_models = {}
     target_key = None
@@ -205,15 +198,8 @@ def filter_models(modelos_por_celda: Dict,
                 y_original = datos_entrenamiento.get('y_original')
                 if not y_original or (isinstance(y_original, list) and len([y for y in y_original if y is not None]) == 0):
                     continue
-            
-            # Filtrar modelos con 2 predictores si se solicita (para vista 2D)
-            if exclude_2pred_from_2d:
-                n_preds = modelo.get('n_predictores', 0)
-                if n_preds == 2:
-                    continue
-            
-            # Solo modelos con validación (Confianza_LOOCV no None) si se requiere
-            if require_loocv and modelo.get('Confianza_LOOCV') is None:
+            # Solo modelos con validación (Confianza_LOOCV no None)
+            if modelo.get('Confianza_LOOCV') is None:
                 continue
             filtered_models_celda.append(modelo)
         # Modos de comparación

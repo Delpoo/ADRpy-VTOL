@@ -60,13 +60,20 @@ from .ui_components import (
     create_visualization_options,
     create_summary_table,
     format_model_info,
-    create_predictor_dropdown
+    create_predictor_dropdown,
+    create_imputation_methods_checklist,
+    create_comparison_type_radioitems
 )
 
 from .plot_stability import (
     get_stable_plot_config,
     apply_stable_configuration,
     should_preserve_zoom
+)
+
+from .plot_3d import (
+    create_3d_plot,
+    filter_models_for_3d
 )
 
 # Configurar logging
@@ -162,11 +169,13 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         parametros = get_parametros_for_aeronave(modelos_por_celda, aeronave_selected)
         return create_parametro_dropdown(parametros)
     
-    # Callback para inicializar controles (sin cambios)
+    # Callback para inicializar controles principales
     @app.callback(
         [Output('aeronave-dropdown-container', 'children'),
          Output('tipo-modelo-container', 'children'),
          Output('visualization-options-container', 'children'),
+         Output('imputation-methods-container', 'children'),
+         Output('comparison-type-container', 'children'),
          Output('models-data-store', 'data'),
          Output('unique-values-store', 'data')],
         [Input('update-button', 'id')]
@@ -176,6 +185,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             create_aeronave_dropdown(unique_values['aeronaves']),
             create_tipo_modelo_checklist(unique_values['tipos_modelo']),
             create_visualization_options(),
+            create_imputation_methods_checklist(),
+            create_comparison_type_radioitems(),
             {'modelos': modelos_por_celda, 'detalles': detalles_por_celda},
             unique_values
         )
@@ -197,19 +208,150 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         for m in modelos:
             if isinstance(m, dict):
                 all_preds.update(m.get('predictores', []))
-        return create_predictor_dropdown(sorted(all_preds))    # Callback principal: actualiza gráfica y tabla resumen según TODOS los filtros
+        return create_predictor_dropdown(sorted(all_preds))
+
+    # Callback para el panel de información usando los gráficos separados
     @app.callback(
-        [Output('main-plot', 'figure'),
-         Output('summary-table-container', 'children')],
-        [Input('update-button', 'n_clicks'),
+        Output('model-info-content', 'children'),
+        [Input('plot-2d', 'hoverData'),
+         Input('plot-2d', 'clickData'),
+         Input('plot-3d', 'hoverData'),
+         Input('plot-3d', 'clickData'),
+         Input('unified-summary-table-container', 'children'),  # Para detectar cambios en tabla
          Input('aeronave-dropdown', 'value'),
+         Input('parametro-dropdown', 'value')],
+        [State('filtered-models-2d-store', 'data'),
+         State('filtered-models-3d-store', 'data'),
+         State('active-view-store', 'data'),
+         State('selected-model-store', 'data')],
+        prevent_initial_call=False
+    )
+    def update_info_panel(hover_2d, click_2d, hover_3d, click_3d, table_children, 
+                          aeronave, parametro, modelos_2d, modelos_3d, active_view, selected_model_data):
+        """
+        Actualiza el panel de información basado en interacciones con gráficos 2D/3D o tabla.
+        """
+        if not aeronave or not parametro:
+            return html.P("Seleccione aeronave y parámetro para ver información del modelo.")
+
+        selected_model = None
+        celda_key = f"{aeronave}|{parametro}"
+        
+        # Obtener modelos según la vista activa
+        if active_view == '3d-view':
+            modelos_activos = modelos_3d.get(celda_key, []) if modelos_3d else []
+        else:
+            modelos_activos = modelos_2d.get(celda_key, []) if modelos_2d else []
+
+        # Prioridad 1: Modelo seleccionado en el store
+        if selected_model_data and isinstance(selected_model_data, dict):
+            stored_aeronave = selected_model_data.get('aeronave')
+            stored_parametro = selected_model_data.get('parametro')
+            stored_idx = selected_model_data.get('model_idx')
+            
+            if (stored_aeronave == aeronave and stored_parametro == parametro and 
+                stored_idx is not None and 0 <= stored_idx < len(modelos_activos)):
+                selected_model = modelos_activos[stored_idx]
+
+        # Prioridad 2: Click en gráficos
+        if not selected_model:
+            if active_view == '3d-view' and click_3d and 'points' in click_3d and click_3d['points']:
+                idx = click_3d['points'][0].get('curveNumber')
+                if idx is not None and idx < len(modelos_activos):
+                    selected_model = modelos_activos[idx]
+            elif active_view == '2d-view' and click_2d and 'points' in click_2d and click_2d['points']:
+                idx = click_2d['points'][0].get('curveNumber')
+                if idx is not None and idx < len(modelos_activos):
+                    selected_model = modelos_activos[idx]
+
+        # Prioridad 3: Hover en gráficos
+        if not selected_model:
+            if active_view == '3d-view' and hover_3d and 'points' in hover_3d and hover_3d['points']:
+                idx = hover_3d['points'][0].get('curveNumber')
+                if idx is not None and idx < len(modelos_activos):
+                    selected_model = modelos_activos[idx]
+            elif active_view == '2d-view' and hover_2d and 'points' in hover_2d and hover_2d['points']:
+                idx = hover_2d['points'][0].get('curveNumber')
+                if idx is not None and idx < len(modelos_activos):
+                    selected_model = modelos_activos[idx]
+
+        # Si no hay selección, mostrar el mejor modelo por confianza promedio
+        if not selected_model and modelos_activos:
+            def confianza_promedio(m):
+                if not isinstance(m, dict):
+                    return 0
+                c1 = m.get('Confianza', 0) or 0
+                c2 = m.get('Confianza_LOOCV', 0) or 0
+                return (c1 + c2) / 2
+            selected_model = max(modelos_activos, key=confianza_promedio)
+
+        if selected_model:
+            return format_model_info(selected_model)
+        return html.P("No hay información disponible para el modelo seleccionado.")
+
+    # ===== CALLBACK PRINCIPAL: ALTERNANCIA DE VISTAS =====
+    @app.callback(
+        [Output('2d-plot-container', 'style'),
+         Output('3d-plot-container', 'style'),
+         Output('active-view-store', 'data'),
+         Output('active-view-indicator', 'children')],
+        [Input('view-tabs', 'value')],
+        prevent_initial_call=False
+    )
+    def toggle_view_containers(active_tab):
+        """
+        Controla la alternancia entre vistas 2D y 3D.
+        Solo una vista es visible a la vez.
+        """
+        # Estilos base para contenedores
+        hidden_style = {'display': 'none'}
+        visible_style = {'display': 'block'}
+        
+        # Nombres de vista para indicador
+        view_names = {
+            '2d-view': '📊 Vista 2D (1 Predictor)',
+            '3d-view': '🧊 Vista 3D (2 Predictores)',
+            'comparison-view': '📈 Comparación',
+            'metrics-view': '📋 Métricas'
+        }
+        
+        if active_tab == '2d-view':
+            return (
+                visible_style,    # 2D visible
+                hidden_style,     # 3D oculto
+                '2d-view',        # Store vista activa
+                view_names['2d-view']  # Indicador
+            )
+        elif active_tab == '3d-view':
+            return (
+                hidden_style,     # 2D oculto
+                visible_style,    # 3D visible
+                '3d-view',        # Store vista activa
+                view_names['3d-view']  # Indicador
+            )
+        else:  # comparison-view, metrics-view - por defecto mostrar 2D
+            return (
+                visible_style,    # 2D visible
+                hidden_style,     # 3D oculto
+                '2d-view',        # Store vista activa por defecto
+                view_names.get('2d-view', 'Vista 2D')  # Indicador por defecto
+            )
+
+    # ===== CALLBACK PRINCIPAL: FILTRADO INTELIGENTE Y ACTUALIZACIÓN DE MODELOS =====
+    @app.callback(
+        [Output('filtered-models-2d-store', 'data'),
+         Output('filtered-models-3d-store', 'data'),
+         Output('models-2d-count', 'children'),
+         Output('models-3d-count', 'children'),
+         Output('total-models-count', 'children'),
+         Output('filter-state-store', 'data')],
+        [Input('aeronave-dropdown', 'value'),
          Input('parametro-dropdown', 'value'),
-         Input('predictor-dropdown', 'value'),
          Input('tipo-modelo-checklist', 'value'),
+         Input('predictor-dropdown', 'value'),
          Input('show-training-points', 'value'),
          Input('show-model-curves', 'value'),
          Input('show-only-real-curves', 'value'),
-         Input('hide-plot-legend', 'value'),
          Input('imputation-methods-checklist', 'value'),
          Input('comparison-type', 'value'),
          Input('selected-model-store', 'data'),
@@ -233,36 +375,118 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         logger.info(f"[DEBUG] selected_model_data recibido: {selected_model_data}")
         
         if not aeronave or not parametro or not models_data:
+            return {}, {}, "0", "0", "0", {}
+        
+        # Estado actual de filtros
+        filter_state = {
+            'aeronave': aeronave,
+            'parametro': parametro,
+            'tipos_modelo': tipos_modelo or [],
+            'predictor': predictor,
+            'active_view': active_view,
+            'show_training': show_training,
+            'show_curves': show_curves,
+            'only_real_curves': only_real_curves,
+            'imputation_methods': imputation_methods or ['final', 'similitud', 'correlacion'],
+            'comparison_type': comparison_type
+        }
+        
+        # Filtro de predictores (específico de vista)
+        if predictor == '__all__' or not predictor:
+            predictores = None
+        else:
+            predictores = [predictor]
+        
+        try:
+            # === FILTRADO PARA VISTA 2D ===
+            modelos_2d = filter_models(
+                models_data['modelos'],
+                aeronave=aeronave,
+                parametro=parametro,
+                tipos_modelo=tipos_modelo,
+                predictores=predictores if active_view == '2d-view' else None,  # Solo aplicar si vista activa
+                comparison_type=comparison_type,
+                exclude_2pred_from_2d=True,  # Excluir modelos de 2 predictores
+                require_loocv=True  # Requerir LOOCV > 0
+            )
+            
+            # === FILTRADO PARA VISTA 3D ===
+            modelos_3d_temp = filter_models(
+                models_data['modelos'],
+                aeronave=aeronave,
+                parametro=parametro,
+                tipos_modelo=tipos_modelo,
+                predictores=predictores if active_view == '3d-view' else None,  # Solo aplicar si vista activa
+                comparison_type=comparison_type,
+                exclude_2pred_from_2d=False,  # No excluir
+                require_loocv=False  # No requerir LOOCV
+            )
+            
+            # Filtrar solo modelos de 2 predictores para 3D
+            celda_key = f"{aeronave}|{parametro}"
+            if isinstance(modelos_3d_temp, dict) and celda_key in modelos_3d_temp:
+                modelos_lista_3d = modelos_3d_temp[celda_key]
+                modelos_3d_filtrados = [
+                    m for m in modelos_lista_3d 
+                    if isinstance(m, dict) and len(m.get('predictores', [])) == 2
+                ]
+                modelos_3d = {celda_key: modelos_3d_filtrados}
+            else:
+                modelos_3d = {}
+            
+            # Contar modelos
+            count_2d = len(modelos_2d.get(celda_key, [])) if isinstance(modelos_2d, dict) else 0
+            count_3d = len(modelos_3d.get(celda_key, [])) if isinstance(modelos_3d, dict) else 0
+            count_total = count_2d + count_3d
+            
+            logger.info(f"[FILTRADO] 2D: {count_2d}, 3D: {count_3d}, Total: {count_total}")
+            
+            return (
+                modelos_2d,
+                modelos_3d,
+                str(count_2d),
+                str(count_3d),
+                str(count_total),
+                filter_state
+            )
+            
+        except Exception as e:
+            logger.error(f"Error en filtrado de modelos: {e}")
+            return {}, {}, "Error", "Error", "Error", filter_state
+
+    # ===== CALLBACK: ACTUALIZACIÓN GRÁFICO 2D =====
+    @app.callback(
+        Output('plot-2d', 'figure'),
+        [Input('filtered-models-2d-store', 'data'),
+         Input('selected-model-store', 'data'),
+         Input('show-training-points', 'value'),
+         Input('show-model-curves', 'value'),
+         Input('show-only-real-curves', 'value'),
+         Input('hide-plot-legend', 'value'),
+         Input('imputation-methods-checklist', 'value')],
+        [State('aeronave-dropdown', 'value'),
+         State('parametro-dropdown', 'value'),
+         State('models-data-store', 'data')],
+        prevent_initial_call=False
+    )
+    def update_2d_plot(modelos_2d, selected_model_data, show_training, show_curves, 
+                       only_real_curves, hide_legend, imputation_methods,
+                       aeronave, parametro, models_data):
+        """
+        Actualiza el gráfico 2D usando los modelos filtrados del store.
+        """
+        if not aeronave or not parametro or not modelos_2d:
             empty_fig = go.Figure()
             empty_fig.add_annotation(
-                text="Seleccione aeronave y parámetro",
+                text="Seleccione aeronave y parámetro para ver la vista 2D",
                 xref="paper", yref="paper",
                 x=0.5, y=0.5, xanchor='center', yanchor='middle',
                 showarrow=False,
                 font=dict(size=16, color="gray")
             )
-            return empty_fig, html.P("Sin datos")
+            return empty_fig
 
-        # Filtro de predictores
-        if predictor == '__all__':
-            predictores = None
-        elif predictor:
-            predictores = [predictor]
-        else:
-            predictores = None
-
-        modelos_filtrados = filter_models(
-            models_data['modelos'],
-            aeronave=aeronave,
-            parametro=parametro,
-            tipos_modelo=tipos_modelo,
-            predictores=predictores,
-            comparison_type=comparison_type
-        )
-        celda_key = f"{aeronave}|{parametro}"
-        modelos_celda = modelos_filtrados.get(celda_key, [])
-
-        # Determinar modelo seleccionado desde el store
+        # Determinar modelo resaltado
         highlight_idx = None
         if selected_model_data and isinstance(selected_model_data, dict):
             stored_aeronave = selected_model_data.get('aeronave')
@@ -323,186 +547,169 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
 
     # Callback para el panel de información: hover/click, tabla seleccionada y filtros
     @app.callback(
-        Output('model-info-content', 'children'),
-        [Input('main-plot', 'hoverData'),
-         Input('main-plot', 'clickData'),
-         Input('summary-table', 'selected_rows'),  # Agregar selección de tabla
-         Input('aeronave-dropdown', 'value'),
-         Input('parametro-dropdown', 'value'),
-         Input('predictor-dropdown', 'value'),
-         Input('tipo-modelo-checklist', 'value'),
-         Input('comparison-type', 'value'),         Input('models-data-store', 'data')]
-    )
-    def update_info_panel(hoverData, clickData, selected_rows, aeronave, parametro, predictor, tipos_modelo, comparison_type, models_data):
-        if not aeronave or not parametro or not models_data:
-            return html.P("Seleccione una combinación válida para ver información del modelo.")
-        
-        # Aplicar los mismos filtros que en el callback principal
-        if predictor == '__all__':
-            predictores = None
-        elif predictor:
-            predictores = [predictor]
-        else:
-            predictores = None
-
-        modelos_filtrados = filter_models(
-            models_data['modelos'],
-            aeronave=aeronave,
-            parametro=parametro,
-            tipos_modelo=tipos_modelo,
-            predictores=predictores,
-            comparison_type=comparison_type
-        )
-        
-        celda_key = f"{aeronave}|{parametro}"
-        modelos_celda = modelos_filtrados.get(celda_key, [])
-        logger.info(f"[DEBUG] modelos_celda (len={len(modelos_celda)}): {[m.get('tipo','?') if isinstance(m,dict) else str(m) for m in modelos_celda]}")
-
-        selected_model = None
-        
-        # Prioridad 1: Selección de tabla de resumen
-        if selected_rows and len(selected_rows) > 0 and modelos_celda:
-            selected_row_idx = selected_rows[0]
-            if 0 <= selected_row_idx < len(modelos_celda):
-                selected_model = modelos_celda[selected_row_idx]
-        
-        # Prioridad 2: Click en gráfica
-        elif clickData and 'points' in clickData and clickData['points']:
-            idx = clickData['points'][0].get('curveNumber')
-            if idx is not None and idx < len(modelos_celda):
-                selected_model = modelos_celda[idx]
-          # Prioridad 3: Hover en gráfica
-        elif hoverData and 'points' in hoverData and hoverData['points']:
-            idx = hoverData['points'][0].get('curveNumber')
-            if idx is not None and idx < len(modelos_celda):
-                selected_model = modelos_celda[idx]
-          # Si no hay selección, mostrar el mejor modelo por confianza promedio
-        if not selected_model and modelos_celda:
-            def confianza_promedio(m):
-                if not isinstance(m, dict):
-                    return 0
-                c1 = m.get('Confianza', 0)
-                c2 = m.get('Confianza_LOOCV', 0)
-                # Manejar valores None de manera robusta
-                if c1 is None:
-                    c1 = 0
-                if c2 is None:
-                    c2 = 0
-                return (c1 + c2) / 2
-            selected_model = max(modelos_celda, key=confianza_promedio)
-        
-        if selected_model:
-            return format_model_info(selected_model)
-        return html.P("No hay información disponible para el modelo seleccionado.")
-      # Callback adicional: sincronizar selección de tabla con resaltado en gráfica
-    @app.callback(
-        Output('selected-model-store', 'data'),
-        [Input('summary-table', 'selected_rows'),
-         Input('main-plot', 'clickData')],
+        Output('plot-3d', 'figure'),
+        [Input('filtered-models-3d-store', 'data'),
+         Input('selected-model-store', 'data'),
+         Input('show-training-points', 'value'),
+         Input('show-model-curves', 'value')],
         [State('aeronave-dropdown', 'value'),
          State('parametro-dropdown', 'value'),
-         State('predictor-dropdown', 'value'),
-         State('tipo-modelo-checklist', 'value'),
-         State('comparison-type', 'value'),
-         State('models-data-store', 'data'),
-         State('selected-model-store', 'data')]
+         State('active-view-store', 'data')],
+        prevent_initial_call=False
     )
-    def sync_model_selection(selected_rows, clickData, aeronave, parametro, predictor, tipos_modelo, comparison_type, models_data, prev_store):
-        """Sincroniza la selección entre tabla y gráfica"""
-        if not aeronave or not parametro or not models_data:
-            return prev_store
-        
-        ctx = dash.callback_context
-        if not ctx.triggered:
-            return prev_store
-        
-        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        logger.info(f"[DEBUG] sync_model_selection: trigger_id={trigger_id}, selected_rows={selected_rows}, clickData={clickData}")
-        
-        if predictor == '__all__':
-            predictores = None
-        elif predictor:
-            predictores = [predictor]
-        else:
-            predictores = None
+    def update_3d_plot(modelos_3d, selected_model_data, show_training, show_curves,
+                       aeronave, parametro, active_view):
+        """
+        Actualiza el gráfico 3D usando los modelos filtrados del store.
+        """
+        if not aeronave or not parametro or not modelos_3d:
+            empty_fig = go.Figure()
+            empty_fig.add_annotation(
+                text="Seleccione aeronave y parámetro para ver la vista 3D",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False,
+                font=dict(size=16, color="gray")
+            )
+            return empty_fig
 
-        modelos_filtrados = filter_models(
-            models_data['modelos'],
-            aeronave=aeronave,
-            parametro=parametro,
-            tipos_modelo=tipos_modelo,
-            predictores=predictores,
-            comparison_type=comparison_type
-        )
+        # Obtener lista de modelos 3D
         celda_key = f"{aeronave}|{parametro}"
-        modelos_celda = modelos_filtrados.get(celda_key, [])
-        logger.info(f"[DEBUG] modelos_celda (len={len(modelos_celda)}): {[m.get('tipo','?') if isinstance(m,dict) else str(m) for m in modelos_celda]}")
+        modelos_lista_3d = modelos_3d.get(celda_key, [])
+        
+        if not modelos_lista_3d:
+            empty_fig = go.Figure()
+            empty_fig.add_annotation(
+                text=f"No hay modelos de 2 predictores para {aeronave} - {parametro}",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                showarrow=False,
+                font=dict(size=16, color="orange")
+            )
+            return empty_fig
 
-        selected_idx = None
-        if trigger_id == 'summary-table' and selected_rows:
-            selected_idx = selected_rows[0]
-        elif trigger_id == 'main-plot' and clickData:
-            if clickData and 'points' in clickData and clickData['points']:
-                point = clickData['points'][0]
-                logger.info(f"[DEBUG] Click point data: {point}")
-                
-                # Intentar obtener el índice del modelo desde customdata
-                if 'customdata' in point and point['customdata'] is not None:
-                    selected_idx = point['customdata']
-                    logger.info(f"[DEBUG] Modelo seleccionado por customdata: {selected_idx}")
-                # Fallback: usar curveNumber si customdata no está disponible
-                elif 'curveNumber' in point:
-                    # Calcular el índice del modelo basado en curveNumber
-                    # Cada modelo puede tener hasta 3 trazas (puntos originales, entrenamiento, curva)
-                    curve_number = point['curveNumber']
-                    logger.info(f"[DEBUG] curveNumber: {curve_number}, modelos disponibles: {len(modelos_celda)}")
-                    
-                    # Mapear curveNumber a índice de modelo
-                    # Asumiendo que las trazas se agregan en orden: orig, train, curve para cada modelo
-                    if curve_number < len(modelos_celda) * 3:  # Máximo 3 trazas por modelo
-                        selected_idx = curve_number // 3
-                        if selected_idx >= len(modelos_celda):
-                            selected_idx = len(modelos_celda) - 1
-                    logger.info(f"[DEBUG] Modelo inferido por curveNumber: {selected_idx}")
-                
-                # Validar que el índice esté dentro del rango
-                if selected_idx is not None and (selected_idx < 0 or selected_idx >= len(modelos_celda)):
-                    logger.warning(f"[DEBUG] Índice fuera de rango: {selected_idx}, ajustando...")
-                    selected_idx = None
-        else:
-            # Si no hay trigger válido, mantener selección previa
-            if prev_store and prev_store.get('aeronave') == aeronave and prev_store.get('parametro') == parametro:
-                selected_idx = prev_store.get('model_idx')
-
-        logger.info(f"[DEBUG] selected_idx calculado: {selected_idx}")
-        return {
-            'aeronave': aeronave,
-            'parametro': parametro,
-            'model_idx': selected_idx
-        }
-      # Callback para actualizar selected_rows cuando cambia el store
-    @app.callback(
-        Output('summary-table', 'selected_rows'),
-        [Input('selected-model-store', 'data'),
-         Input('aeronave-dropdown', 'value'),
-         Input('parametro-dropdown', 'value')],
-        prevent_initial_call=True
-    )
-    def update_table_selection(selected_model_data, aeronave, parametro):
-        """Actualiza la selección de la tabla basada en el store"""
-        if not selected_model_data or not aeronave or not parametro:
-            return []
+        # Determinar modelo resaltado para 3D
+        highlight_idx = None
+        if selected_model_data and isinstance(selected_model_data, dict):
+            stored_aeronave = selected_model_data.get('aeronave')
+            stored_parametro = selected_model_data.get('parametro')
+            stored_idx = selected_model_data.get('model_idx')
             
-        stored_aeronave = selected_model_data.get('aeronave')
-        stored_parametro = selected_model_data.get('parametro')
-        stored_idx = selected_model_data.get('model_idx')
+            if (stored_aeronave == aeronave and stored_parametro == parametro and 
+                stored_idx is not None and 0 <= stored_idx < len(modelos_lista_3d)):
+                highlight_idx = stored_idx
+
+        # Crear gráfico 3D
+        show_training_points = 'show' in (show_training or [])
+        show_model_surface = 'show' in (show_curves or [])
         
-        # Solo aplicar si coincide la aeronave y parámetro actuales
-        if (stored_aeronave == aeronave and stored_parametro == parametro and 
-            stored_idx is not None):
-            return [stored_idx]
+        fig_3d = create_3d_plot(
+            modelos_lista_3d,
+            aeronave,
+            parametro,
+            show_training_points=show_training_points,
+            show_model_surface=show_model_surface,
+            highlight_model_idx=highlight_idx
+        )
         
-        return []
+        return fig_3d
+
+    # ===== CALLBACK: TABLA DE RESUMEN UNIFICADA =====
+    @app.callback(
+        Output('unified-summary-table-container', 'children'),
+        [Input('filtered-models-2d-store', 'data'),
+         Input('filtered-models-3d-store', 'data'),
+         Input('summary-filter', 'value'),
+         Input('selected-model-store', 'data')],
+        [State('aeronave-dropdown', 'value'),
+         State('parametro-dropdown', 'value'),
+         State('active-view-store', 'data')],
+        prevent_initial_call=False
+    )
+    def update_unified_summary_table(modelos_2d, modelos_3d, summary_filter, 
+                                   selected_model_data, aeronave, parametro, active_view):
+        """
+        Actualiza la tabla de resumen unificada mostrando modelos 2D y/o 3D según el filtro.
+        """
+        if not aeronave or not parametro:
+            return html.P("Seleccione aeronave y parámetro para ver el resumen.")
+
+        celda_key = f"{aeronave}|{parametro}"
+        
+        # Obtener modelos según el filtro
+        modelos_para_tabla = []
+        
+        if summary_filter == 'all':
+            # Mostrar todos los modelos (2D + 3D)
+            modelos_2d_lista = modelos_2d.get(celda_key, []) if modelos_2d else []
+            modelos_3d_lista = modelos_3d.get(celda_key, []) if modelos_3d else []
+            
+            # Agregar etiquetas para distinguir
+            for modelo in modelos_2d_lista:
+                if isinstance(modelo, dict):
+                    modelo_copia = modelo.copy()
+                    modelo_copia['vista_origen'] = '2D'
+                    modelos_para_tabla.append(modelo_copia)
+            
+            for modelo in modelos_3d_lista:
+                if isinstance(modelo, dict):
+                    modelo_copia = modelo.copy()
+                    modelo_copia['vista_origen'] = '3D'
+                    modelos_para_tabla.append(modelo_copia)
+                    
+        elif summary_filter == '2d':
+            # Solo modelos 2D
+            modelos_2d_lista = modelos_2d.get(celda_key, []) if modelos_2d else []
+            for modelo in modelos_2d_lista:
+                if isinstance(modelo, dict):
+                    modelo_copia = modelo.copy()
+                    modelo_copia['vista_origen'] = '2D'
+                    modelos_para_tabla.append(modelo_copia)
+                    
+        elif summary_filter == '3d':
+            # Solo modelos 3D
+            modelos_3d_lista = modelos_3d.get(celda_key, []) if modelos_3d else []
+            for modelo in modelos_3d_lista:
+                if isinstance(modelo, dict):
+                    modelo_copia = modelo.copy()
+                    modelo_copia['vista_origen'] = '3D'
+                    modelos_para_tabla.append(modelo_copia)
+                    
+        elif summary_filter == 'active':
+            # Solo vista activa
+            if active_view == '3d-view':
+                modelos_3d_lista = modelos_3d.get(celda_key, []) if modelos_3d else []
+                for modelo in modelos_3d_lista:
+                    if isinstance(modelo, dict):
+                        modelo_copia = modelo.copy()
+                        modelo_copia['vista_origen'] = '3D'
+                        modelos_para_tabla.append(modelo_copia)
+            else:
+                modelos_2d_lista = modelos_2d.get(celda_key, []) if modelos_2d else []
+                for modelo in modelos_2d_lista:
+                    if isinstance(modelo, dict):
+                        modelo_copia = modelo.copy()
+                        modelo_copia['vista_origen'] = '2D'
+                        modelos_para_tabla.append(modelo_copia)
+
+        if not modelos_para_tabla:
+            return html.P("No hay modelos disponibles para mostrar.")
+
+        # Crear DataFrame para la tabla
+        df_summary = create_metrics_summary_table({celda_key: modelos_para_tabla}, aeronave, parametro)
+        
+        # Determinar fila seleccionada
+        selected_row_idx = None
+        if selected_model_data and isinstance(selected_model_data, dict):
+            stored_aeronave = selected_model_data.get('aeronave')
+            stored_parametro = selected_model_data.get('parametro')
+            stored_idx = selected_model_data.get('model_idx')
+            
+            if (stored_aeronave == aeronave and stored_parametro == parametro and 
+                stored_idx is not None and 0 <= stored_idx < len(modelos_para_tabla)):
+                selected_row_idx = stored_idx
+
+        return create_summary_table(df_summary, selected_row_idx)
 
     # Ejecutar aplicación
     print(f"Iniciando aplicación Dash en http://localhost:{port}")

@@ -361,19 +361,81 @@ def create_main_layout() -> html.Div:
                 'minHeight': '650px'
             }),
         ], style={'position': 'relative', 'width': '100%'}),
+        
+        # Panel de resumen unificado (2D + 3D)
         html.Div([
-            html.H3("Resumen de Modelos"),
-            html.Div(id='summary-table-container')
+            html.H3("📊 Resumen Unificado de Modelos (2D + 3D)", 
+                   style={'marginBottom': '15px', 'color': '#007bff'}),
+            
+            # Indicadores de estado
+            html.Div([
+                html.Div([
+                    html.Span("🎯 Vista Activa: ", style={'fontWeight': 'bold'}),
+                    html.Span(id='active-view-indicator', 
+                             style={'color': '#007bff', 'fontWeight': 'bold', 'fontSize': '16px'})
+                ], style={'display': 'inline-block', 'marginRight': '30px'}),
+                
+                html.Div([
+                    html.Span("📈 Modelos 2D: ", style={'fontWeight': 'bold'}),
+                    html.Span(id='models-2d-count', 
+                             style={'color': '#28a745', 'fontWeight': 'bold'})
+                ], style={'display': 'inline-block', 'marginRight': '30px'}),
+                
+                html.Div([
+                    html.Span("🧊 Modelos 3D: ", style={'fontWeight': 'bold'}),
+                    html.Span(id='models-3d-count', 
+                             style={'color': '#17a2b8', 'fontWeight': 'bold'})
+                ], style={'display': 'inline-block', 'marginRight': '30px'}),
+                
+                html.Div([
+                    html.Span("📊 Total Visible: ", style={'fontWeight': 'bold'}),
+                    html.Span(id='total-models-count', 
+                             style={'color': '#dc3545', 'fontWeight': 'bold'})
+                ], style={'display': 'inline-block'})
+                
+            ], style={
+                'marginBottom': '15px', 
+                'padding': '12px', 
+                'backgroundColor': '#e9ecef', 
+                'borderRadius': '5px',
+                'borderLeft': '4px solid #007bff'
+            }),
+            
+            # Controles de filtrado del resumen
+            html.Div([
+                html.Label("🔍 Filtrar tabla por vista:", 
+                          style={'fontWeight': 'bold', 'marginRight': '10px'}),
+                dcc.RadioItems(
+                    id='summary-filter',
+                    options=[
+                        {'label': '📊 Mostrar Todos', 'value': 'all'},
+                        {'label': '📈 Solo 2D', 'value': '2d'},
+                        {'label': '🧊 Solo 3D', 'value': '3d'},
+                        {'label': '🎯 Solo Vista Activa', 'value': 'active'}
+                    ],
+                    value='all',
+                    inline=True,
+                    style={'marginTop': '5px'}
+                )
+            ], style={'marginBottom': '15px'}),
+            
+            # Contenedor de la tabla
+            html.Div(id='unified-summary-table-container')
         ], style={
             'margin': '20px',
             'padding': '20px',
             'backgroundColor': '#f8f9fa',
             'borderRadius': '5px'
         }),
+        
+        # Stores para manejo de estado
         dcc.Store(id='models-data-store'),
-        dcc.Store(id='filtered-models-store'),
+        dcc.Store(id='filtered-models-2d-store'),  # Modelos filtrados para 2D
+        dcc.Store(id='filtered-models-3d-store'),  # Modelos filtrados para 3D
         dcc.Store(id='unique-values-store'),
-        dcc.Store(id='selected-model-store', data=None)  # Store para modelo seleccionado
+        dcc.Store(id='selected-model-store', data=None),  # Modelo seleccionado
+        dcc.Store(id='active-view-store', data='2d-view'),  # Vista activa
+        dcc.Store(id='filter-state-store', data={})  # Estado de filtros
     ])
 
 
@@ -611,3 +673,33 @@ def create_filter_controls() -> html.Div:
         'overflowY': 'auto',
         'height': 'fit-content'
     })
+
+def create_comparison_type_radioitems(selected: Optional[str] = None) -> dcc.RadioItems:
+    """
+    Crea radio items para selección de tipo de comparación.
+    
+    Parameters:
+    -----------
+    selected : Optional[str]
+        Tipo seleccionado por defecto
+        
+    Returns:
+    --------
+    dcc.RadioItems
+        Componente radio items de Dash
+    """
+    default_selected = selected or 'all'
+    
+    options = [
+        {'label': 'Todas las comparaciones', 'value': 'all'},
+        {'label': 'Solo originales vs predichos', 'value': 'original_vs_predicted'},
+        {'label': 'Solo LOOCV', 'value': 'loocv'}
+    ]
+    
+    return dcc.RadioItems(
+        id='comparison-type',
+        options=options,
+        value=default_selected,
+        style={'marginBottom': '10px'},
+        inputStyle={"marginRight": "5px"}
+    )
