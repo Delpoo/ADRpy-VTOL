@@ -80,14 +80,16 @@ def generate_metrics_dashboard(
         kpi_box(total_modelos_filtrados, "Modelos filtrados", '#6f42c1', "Cantidad de modelos que cumplen los filtros activos en la interfaz (tipo, predictores, etc)."),
         kpi_box(total_modelos_no_mostrados, "Modelos no mostrados", '#dc3545', "Modelos presentes en el JSON pero que no se visualizan por inconsistencias, errores o falta de datos requeridos."),
         kpi_box(total_modelos_mostrados, "Modelos mostrados", '#ff9800', "Modelos que efectivamente se visualizan en la gráfica principal para la celda seleccionada."),
-    ], style={'display': 'flex', 'flexWrap': 'wrap', 'marginBottom': '18px'})
+    ], style={'display': 'flex', 'flexWrap': 'wrap', 'marginBottom': '18px', 'justifyContent': 'center', 'width': '100%'})
 
     # Visualización: Modelos por celda (heatmap compacto)
+    print("[DEBUG] Generando heatmap de modelos por celda...")
     modelos_por_celda_count = {k: len(v) for k, v in modelos_por_celda.items()}
+    print(f"[DEBUG] modelos_por_celda_count: {modelos_por_celda_count}")
     df_celdas = pd.DataFrame([
         {'Celda': k, 'Cantidad': v} for k, v in modelos_por_celda_count.items()
     ])
-    # Si hay muchas celdas, mostrar un heatmap compacto y scroll horizontal
+    print(f"[DEBUG] df_celdas shape: {df_celdas.shape}")
     heatmap_celdas = None
     if not df_celdas.empty:
         # Separar aeronave y parámetro si es posible
@@ -96,11 +98,16 @@ def generate_metrics_dashboard(
         else:
             df_celdas['Aeronave'] = df_celdas['Celda']
             df_celdas['Parámetro'] = ''
+        print(f"[DEBUG] df_celdas columns: {df_celdas.columns}")
+        print(f"[DEBUG] df_celdas head:\n{df_celdas.head()}")
         # Pivot para heatmap
         pivot = df_celdas.pivot_table(index='Aeronave', columns='Parámetro', values='Cantidad', fill_value=0)
+        print(f"[DEBUG] pivot shape: {pivot.shape}")
+        print(f"[DEBUG] pivot head:\n{pivot.head()}")
         import plotly.graph_objects as go
+        # Ajuste 100% ancho, alto igual al ancho (1:1), navegación óptima
         heatmap_fig = go.Figure(
-            data=go.Heatmap(
+            data=[go.Heatmap(
                 z=pivot.values,
                 x=pivot.columns,
                 y=pivot.index,
@@ -108,34 +115,76 @@ def generate_metrics_dashboard(
                 colorbar=dict(title='Modelos'),
                 hoverongaps=False,
                 hovertemplate='Aeronave: %{y}<br>Parámetro: %{x}<br>Cantidad: %{z}<extra></extra>'
-            ),
+            )],
             layout=go.Layout(
                 title='Cantidad de modelos por celda',
                 title_x=0.5,
                 autosize=True,
+                width=None,
+                height=None,
                 plot_bgcolor='white',
                 paper_bgcolor='white',
                 margin=dict(l=0, r=0, t=40, b=0),
-                height=320 if len(pivot) < 20 else min(600, 12*len(pivot)),
+                xaxis=dict(tickangle=45, automargin=True),
+                yaxis=dict(automargin=True)
             )
         )
-        heatmap_celdas = dcc.Graph(
-            id='heatmap-modelos',
-            figure=heatmap_fig,
-            style={'height': '340px', 'width': '100%', 'overflowX': 'auto', 'marginBottom': '18px', 'background': 'white'},
-            config={'responsive': True}
+        print(f"[DEBUG] heatmap_fig data: {heatmap_fig.data}")
+        heatmap_celdas = html.Div(
+            dcc.Graph(
+                id='heatmap-modelos',
+                figure=heatmap_fig,
+                style={
+                    'width': '100%',
+                    'aspectRatio': '1',
+                    'minWidth': '400px',
+                    'minHeight': '400px',
+                    'maxWidth': '100%',
+                    'maxHeight': '100vw',
+                },
+                config={
+                    'responsive': True,
+                    'scrollZoom': True,
+                    'displayModeBar': 'hover',
+                    'displaylogo': False,
+                    # Asegura que los botones estándar estén presentes
+                    'modeBarButtonsToRemove': [],
+                    'modeBarButtonsToAdd': ['zoom2d', 'pan2d', 'resetScale2d', 'resetViewMapbox'],
+                }
+            ),
+            style={
+                'overflowX': 'auto',
+                'overflowY': 'auto',
+                'width': '100%',
+                'maxWidth': '100%',
+                'background': 'white',
+                'border': '1px solid #eee',
+                'marginBottom': '18px',
+                'display': 'flex',
+                'justifyContent': 'center',
+                'alignItems': 'center',
+            }
         )
+        print(f"[DEBUG] heatmap_celdas creado: {heatmap_celdas}")
+    else:
+        print("[DEBUG] df_celdas está vacío, no se genera heatmap.")
 
 
     # Panel principal
     children = [
         html.H3("Dashboard de Métricas Globales", style={"marginBottom": "10px", 'fontSize': '1.3em', 'textAlign': 'center'}),
-        html.Div(kpis, style={'display': 'flex', 'justifyContent': 'center', 'width': '100%'}),
+        kpis,
         html.Hr(style={'margin': '10px 0 18px 0'}),
     ]
     # Nueva fila: heatmap arriba, luego fila con tipo de modelo (65%) y predictores (35%)
-    if heatmap_celdas:
-        children.append(html.Div(heatmap_celdas, style={'marginBottom': '18px', 'height': '380px', 'minHeight': '260px', 'display': 'flex', 'justifyContent': 'center', 'alignItems': 'center', 'width': '100%'}))
+    if heatmap_celdas is not None:
+        print("[DEBUG] heatmap_celdas se inserta en el dashboard (forzado)")
+        children.append(html.Div([
+            # html.Div("[DEBUG] Heatmap insertado", style={'color': 'red', 'fontWeight': 'bold', 'marginBottom': '8px'}),
+            heatmap_celdas
+        ], style={'marginBottom': '18px', 'height': '900px', 'minHeight': '600px', 'display': 'flex', 'flexDirection': 'column', 'justifyContent': 'center', 'alignItems': 'center', 'width': '100%', 'background': 'white', 'border': '1px solid #eee'}))
+    else:
+        print("[DEBUG] heatmap_celdas es None, NO se inserta en el dashboard")
     # Fila con dos gráficos más altos y proporción 65/35
     row_graphs = []
     if fig_tipo:
@@ -189,9 +238,10 @@ def generate_metrics_dashboard(
             'width': '100%',
             'maxWidth': '1200px',
             'margin': '0 auto',
-            'display': 'flex',
-            'flexDirection': 'column',
-            'alignItems': 'center',
-            'justifyContent': 'center'
+            'display': 'block',  # Cambiado de flex a block
+            # 'flexDirection': 'column',
+            # 'alignItems': 'center',
+            # 'justifyContent': 'center'
+            # Eliminadas restricciones de flexbox que pueden colapsar hijos
         }
     )
