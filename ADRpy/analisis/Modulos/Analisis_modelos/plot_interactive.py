@@ -76,42 +76,59 @@ def create_interactive_plot(
         predictor = modelo.get('predictores', [None])[0]
         if not predictor:
             continue
-            
         # Determinar resaltado y opacidad para el modelo actual
         is_highlighted = highlight_model_idx is not None and i == highlight_model_idx
         is_dimmed = highlight_model_idx is not None and i != highlight_model_idx
-        
         marker_opacity = 1.0 if is_highlighted else (0.4 if is_dimmed else 0.6)
         marker_size = 8 if is_highlighted else 6
-        
         df_original = get_model_original_data(modelo)
         df_filtrado = get_model_training_data(modelo)
         # Calcular min y max SOLO de ese predictor usando df_original
         x_min, x_max = None, None
+        y_min, y_max = None, None
         x_data = None
-        if df_original is not None and not df_original.empty and predictor in df_original.columns:
+        y_data = None
+        if df_original is not None and not df_original.empty and predictor in df_original.columns and parametro in df_original.columns:
             x_data = df_original[predictor].dropna()
+            y_data = df_original[parametro].dropna()
             if len(x_data) > 0:
                 x_min = x_data.min()
                 x_max = x_data.max()
+            if len(y_data) > 0:
+                y_min = y_data.min()
+                y_max = y_data.max()
         # --- PUNTOS ORIGINALES ---
-        # Nunca usar rangos sintéticos para puntos reales
-        if df_original is not None and not df_original.empty and predictor in df_original.columns and parametro in df_original.columns and x_min is not None and x_max is not None:
+        if df_original is not None and not df_original.empty and predictor in df_original.columns and parametro in df_original.columns and x_min is not None and x_max is not None and y_min is not None and y_max is not None:
             mask = df_original[predictor].notna() & df_original[parametro].notna()
             x_orig = df_original.loc[mask, predictor]
             y_orig = df_original.loc[mask, parametro]
+            # Asegurar que sean Series de 1D y no DataFrame
+            if isinstance(x_orig, pd.DataFrame):
+                x_orig = x_orig.squeeze()
+                if isinstance(x_orig, pd.DataFrame):
+                    x_orig = x_orig.iloc[:,0]
+            if not isinstance(x_orig, pd.Series):
+                x_orig = pd.Series(x_orig)
+            if isinstance(y_orig, pd.DataFrame):
+                y_orig = y_orig.squeeze()
+                if isinstance(y_orig, pd.DataFrame):
+                    y_orig = y_orig.iloc[:,0]
+            if not isinstance(y_orig, pd.Series):
+                y_orig = pd.Series(y_orig)
             if x_max != x_min:
                 x_orig_norm = (x_orig - x_min) / (x_max - x_min)
             else:
-                # Si todos los valores de X son iguales, normalizar a 0.5
-                x_orig_norm = pd.Series([0.5] * len(x_orig), index=x_orig.index)
+                x_orig_norm = pd.Series([0.5] * len(x_orig), index=x_orig.index if hasattr(x_orig, 'index') else None)
+            if y_max != y_min:
+                y_orig_norm = (y_orig - y_min) / (y_max - y_min)
+            else:
+                y_orig_norm = pd.Series([0.5] * len(y_orig), index=y_orig.index if hasattr(y_orig, 'index') else None)
             x_orig_list = _to_list_safe(x_orig)
             x_orig_norm_list = _to_list_safe(x_orig_norm)
-            y_orig_list = _to_list_safe(y_orig)
-            
+            y_orig_norm_list = _to_list_safe(y_orig_norm)
             fig.add_trace(go.Scatter(
                 x=x_orig_norm_list,
-                y=y_orig_list,
+                y=y_orig_norm_list,
                 mode='markers',
                 name=f'Datos orig. - {predictor} ({modelo.get("tipo", "unknown")})',
                 marker=dict(
@@ -124,7 +141,7 @@ def create_interactive_plot(
                 # Información personalizada para identificar el modelo en callbacks
                 customdata=[i] * len(x_orig_norm_list),
                 text=[
-                    f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y: {yv:.3f}" for xv, xn, yv in zip(x_orig_list, x_orig_norm_list, y_orig_list)
+                    f"Aeronave: {aeronave}<br>Parámetro: {parametro}<br>Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y normalizado: {yn:.3f}" for xv, xn, yn in zip(x_orig_list, x_orig_norm_list, y_orig_norm_list)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
@@ -152,7 +169,7 @@ def create_interactive_plot(
                 borderwidth=1
             )
         # --- PUNTOS DE ENTRENAMIENTO ---
-        if show_training_points and df_filtrado is not None and not df_filtrado.empty and predictor in df_filtrado.columns and parametro in df_filtrado.columns and x_min is not None and x_max is not None:
+        if show_training_points and df_filtrado is not None and not df_filtrado.empty and predictor in df_filtrado.columns and parametro in df_filtrado.columns and x_min is not None and x_max is not None and y_min is not None and y_max is not None:
             mask = df_filtrado[predictor].notna() & df_filtrado[parametro].notna()
             x_train = df_filtrado.loc[mask, predictor]
             y_train = df_filtrado.loc[mask, parametro]
@@ -160,16 +177,19 @@ def create_interactive_plot(
                 x_train_norm = (x_train - x_min) / (x_max - x_min)
             else:
                 x_train_norm = pd.Series([0.5] * len(x_train), index=x_train.index)
+            if y_max != y_min:
+                y_train_norm = (y_train - y_min) / (y_max - y_min)
+            else:
+                y_train_norm = pd.Series([0.5] * len(y_train), index=y_train.index if hasattr(y_train, 'index') else None)
             x_train_list = _to_list_safe(x_train)
             x_train_norm_list = _to_list_safe(x_train_norm)
-            y_train_list = _to_list_safe(y_train)
+            y_train_norm_list = _to_list_safe(y_train_norm)
             # Determinar resaltado y opacidad para el modelo actual
             training_opacity = 1.0 if is_highlighted else (0.5 if is_dimmed else 0.9)
             training_size = 10 if is_highlighted else 8
-            
             fig.add_trace(go.Scatter(
                 x=x_train_norm_list,
-                y=y_train_list,
+                y=y_train_norm_list,
                 mode='markers',
                 name=f'Entren. - {predictor} ({modelo.get("tipo", "unknown")})',
                 marker=dict(
@@ -182,7 +202,7 @@ def create_interactive_plot(
                 # Información personalizada para identificar el modelo en callbacks
                 customdata=[i] * len(x_train_norm_list),
                 text=[
-                    f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y: {yv:.3f}" for xv, xn, yv in zip(x_train_list, x_train_norm_list, y_train_list)
+                    f"Aeronave: {aeronave}<br>Parámetro: {parametro}<br>Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y normalizado: {yn:.3f}" for xv, xn, yn in zip(x_train_list, x_train_norm_list, y_train_norm_list)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
@@ -219,19 +239,21 @@ def create_interactive_plot(
             predictions = get_model_predictions_safe(modelo, x_range_orig)
             if predictions is None:
                 continue
+            # Normalizar predicciones
+            if y_min is not None and y_max is not None and y_max != y_min:
+                predictions_norm = (predictions - y_min) / (y_max - y_min)
+            else:
+                predictions_norm = np.full_like(predictions, 0.5)
             color_idx = i % len(COLORS['model_lines'])
             model_color = COLORS['selected_model'] if (highlight_model_idx is not None and i == highlight_model_idx) else COLORS['model_lines'][color_idx]
             line_width = 5 if (highlight_model_idx is not None and i == highlight_model_idx) else 2
             opacity = 1.0 if (highlight_model_idx is not None and i == highlight_model_idx) else (0.3 if highlight_model_idx is not None else 1.0)
-            # Si la curva es sintética, usar línea punteada y advertencia en hover
             line_style = 'dash' if using_synthetic_range else 'solid'
             hover_extra = "<br><b>ADVERTENCIA:</b> Curva generada con valores sintéticos por falta de datos originales" if using_synthetic_range else ""
-            # Información adicional del modelo para hover
             model_info = create_model_hover_info(modelo)
-            
             fig.add_trace(go.Scatter(
                 x=x_range_norm,
-                y=predictions,
+                y=predictions_norm,
                 mode='lines',
                 name=f'Curva - {predictor} ({modelo.get("tipo", "unknown")})' + (" [sintética]" if using_synthetic_range else ""),
                 line=dict(
@@ -243,7 +265,7 @@ def create_interactive_plot(
                 # Información personalizada para identificar el modelo en callbacks
                 customdata=[i] * len(predictions),  # Índice del modelo para identificarlo
                 text=[
-                    f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y: {yv:.3f}{hover_extra}<br>{model_info}" for xv, xn, yv in zip(x_range_orig, x_range_norm, predictions)
+                    f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y normalizada: {yv:.3f}{hover_extra}<br>{model_info}" for xv, xn, yv in zip(x_range_orig, x_range_norm, predictions_norm)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
@@ -274,6 +296,17 @@ def create_interactive_plot(
     # --- Agregar marcadores de imputación si hay detalles disponibles ---    # --- PUNTOS IMPUTADOS ---
     # Usar la nueva estructura de datos y filtrado por métodos
     if detalles_por_celda and celda_key in detalles_por_celda:
+        # Asegurar que y_min y y_max estén definidos
+        if 'y_min' not in locals() or 'y_max' not in locals() or y_min is None or y_max is None:
+            # Buscar en los modelos de 1 predictor
+            y_min, y_max = None, None
+            for modelo in modelos_1_pred:
+                df_original = get_model_original_data(modelo)
+                if df_original is not None and parametro in df_original.columns:
+                    y_data = df_original[parametro].dropna()
+                    if len(y_data) > 0:
+                        y_min = y_data.min() if y_min is None else min(y_min, y_data.min())
+                        y_max = y_data.max() if y_max is None else max(y_max, y_data.max())
         from .plot_model_curves import extract_imputed_values_from_details, filter_imputed_points_by_method
         methods_to_show = selected_imputation_methods or ['final', 'similitud', 'correlacion']
         imputed_points = extract_imputed_values_from_details(
@@ -286,10 +319,15 @@ def create_interactive_plot(
             metodo = point.get('imputation_method', 'unknown')
             x_norm = point.get('x_normalized', 0.5)
             y_value = point.get('y_value', 0)
+            # Normalizar el valor imputado usando el mismo rango que los datos originales
+            if y_min is not None and y_max is not None and y_max != y_min:
+                y_value_norm = (y_value - y_min) / (y_max - y_min)
+            else:
+                y_value_norm = 0.5
             confidence = point.get('confidence', '')
             iteration = point.get('iteration', '')
             warning = point.get('warning', '')
-            tooltip = f"Método: {metodo.capitalize()}<br>Valor Y: {y_value:.3f}<br>Confianza: {confidence}<br>Iteración: {iteration}"
+            tooltip = f"Método: {metodo.capitalize()}<br>Valor Y normalizado: {y_value_norm:.3f}<br>Confianza: {confidence}<br>Iteración: {iteration}"
             if warning:
                 tooltip += f"<br><b>Advertencia:</b> {warning}"
             symbol = point.get('symbol', 'circle')
@@ -305,7 +343,7 @@ def create_interactive_plot(
                 color = 'red'
             fig.add_trace(go.Scatter(
                 x=[x_norm],
-                y=[y_value],
+                y=[y_value_norm],
                 mode='markers',
                 name=f'Imputación {metodo.capitalize()}',
                 marker=dict(
@@ -323,7 +361,14 @@ def create_interactive_plot(
         title=f'Análisis de Modelos - {aeronave}: {parametro}',
         xaxis_title="X adimensional",
         yaxis_title=parametro,
-        hovermode='closest',
+        hovermode='x',  # Cambia a 'x' para anclar el hover a un lateral
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=9,  # Disminuye el tamaño de la letra en un 30% aprox (de 13 a 9)
+            font_family="Arial",
+            align="left",
+            namelength=-1
+        ),
         legend=dict(
             yanchor="top",
             y=0.99,
@@ -346,7 +391,9 @@ def create_interactive_plot(
             gridwidth=1,
             zeroline=True,
             zerolinecolor='gray',
-            zerolinewidth=1
+            zerolinewidth=1,
+            hoverformat='.3f',
+            side='top'
         ),
         yaxis=dict(
             fixedrange=False,  # Permitir zoom en Y
@@ -656,17 +703,196 @@ def create_interactive_plot_3d(
     selected_imputation_methods: Optional[list] = None
 ) -> go.Figure:
     """
-    Visualización 3D de modelos de 2 predictores (lineales o polinómicos).
-    (Stub: implementar en este archivo. Debe usar ecuacion_normalizada_latex y coeficientes normalizados para polinómicos de 2 predictores).
+    Visualización 3D de modelos de 2 predictores (lineales o polinómicos) para Dash.
+    Utiliza la función create_3d_plot para graficar los modelos filtrados y normalizados.
     """
-    fig = go.Figure()
-    fig.add_annotation(
-        text="[Stub] Visualización 3D no implementada. Implementar en plot_interactive.py",
-        xref="paper", yref="paper",
-        x=0.5, y=0.5, xanchor='center', yanchor='middle',
-        showarrow=False,
-        font=dict(size=16, color="red")
+    # Si no hay modelos, mostrar mensaje claro
+    if not modelos_2_pred or len(modelos_2_pred) == 0:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No hay modelos de 2 predictores para mostrar.",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, xanchor='center', yanchor='middle',
+            showarrow=False,
+            font=dict(size=16, color="gray")
+        )
+        fig.update_layout(
+            title=f"Modelos de 2 Predictores (3D) - {aeronave}: {parametro}",
+            template='plotly_white',
+            autosize=True,
+            margin=dict(l=10, r=10, t=40, b=10),
+            uirevision=f"{aeronave}_{parametro}_3d"  # <-- Forzar uirevision único para 3D
+        )
+        return fig
+    # Llama a la función principal de visualización 3D
+    fig = create_3d_plot(
+        modelos_2_pred,
+        modelo_seleccionado_idx=highlight_model_idx,
+        aeronave=aeronave,
+        parametro=parametro
+    )
+    # Título y ejes personalizados
+    fig.update_layout(
+        title=f"Modelos de 2 Predictores (3D) - {aeronave}: {parametro}",
+        scene=dict(
+            zaxis_title=f"{parametro} (normalizado)",
+        ),
+        uirevision=f"{aeronave}_{parametro}_3d"  # <-- Forzar uirevision único para 3D
     )
     return fig
 
-# Aquí van todas las funciones de "alto nivel" que combinan y orquestan los helpers, y que definen la visualización global.
+def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, parametro=None):
+    """
+    Genera un gráfico 3D interactivo con Plotly para modelos de 2 predictores (linear-2 y poly-2).
+    Visualiza simultáneamente todos los modelos filtrados, mostrando su plano/superficie y puntos de entrenamiento normalizados.
+    El modelo seleccionado se destaca con mayor opacidad.
+    """
+    import plotly.graph_objects as go
+    import numpy as np
+
+    fig = go.Figure()
+    colores = [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+        '#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A',
+        '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52'
+    ]
+    n_colores = len(colores)
+    n_modelos = len(modelos)
+    x0_name, x1_name = None, None
+    # Malla normalizada
+    grid_n = 30
+    x0_grid = np.linspace(0, 1, grid_n)
+    x1_grid = np.linspace(0, 1, grid_n)
+    X0, X1 = np.meshgrid(x0_grid, x1_grid)
+    # Graficar cada modelo
+    for idx, modelo in enumerate(modelos):
+        tipo = modelo.get('tipo', '').lower()
+        if not (tipo.startswith('linear-2') or tipo.startswith('poly-2')):
+            continue
+        coefs = modelo.get('coeficientes_originales')
+        intercepto = modelo.get('intercepto_original')
+        predictores = modelo.get('predictores', [])
+        ecuacion_latex = modelo.get('ecuacion_normalizada_latex', '')
+        mape = modelo.get('mape', None)
+        r2 = modelo.get('r2', None)
+        if coefs is None or intercepto is None or len(predictores) != 2:
+            continue
+        x0_name, x1_name = predictores[0], predictores[1]
+        # Calcular Z para la malla
+        if tipo.startswith('linear-2') and len(coefs) >= 2:
+            Z = intercepto + coefs[0]*X0 + coefs[1]*X1
+        elif tipo.startswith('poly-2') and len(coefs) >= 5:
+            Z = (intercepto + coefs[0]*X0 + coefs[1]*X1 +
+                 coefs[2]*X0**2 + coefs[3]*X0*X1 + coefs[4]*X1**2)
+        else:
+            continue
+        # Normalizar Z usando el mismo rango que los puntos de entrenamiento
+        datos_entrenamiento = modelo.get('datos_entrenamiento', {})
+        X_train = datos_entrenamiento.get('X_original')
+        y_train = datos_entrenamiento.get('y_original')
+        if y_train is not None and len(y_train) > 0:
+            y_train = np.array(y_train)
+            y_min, y_max = np.min(y_train), np.max(y_train)
+            if y_max != y_min:
+                Z_norm = (Z - y_min) / (y_max - y_min)
+            else:
+                Z_norm = np.full_like(Z, 0.5)
+        else:
+            # Si no hay datos de entrenamiento, no normalizar
+            Z_norm = Z
+        # Color y opacidad
+        color = colores[idx % n_colores]
+        opacity = 0.85 if idx == modelo_seleccionado_idx else 0.45
+        # Hover info
+        aeronave = modelo.get('Aeronave', 'N/A')
+        parametro_obj = modelo.get('Parámetro', modelo.get('parametro', 'N/A'))
+        ecuacion_latex = modelo.get('ecuacion_normalizada_latex', '')
+        hovertext = (
+            f"<b>Aeronave:</b> {aeronave}<br>"
+            f"<b>Parámetro:</b> {parametro_obj}<br>"
+            f"<b>Tipo:</b> {modelo.get('tipo','')}<br>"
+            f"<b>Predictores:</b> {x0_name}, {x1_name}<br>"
+            f"<b>Ecuación:</b> {ecuacion_latex}<br>"
+            f"<b>MAPE:</b> {mape:.3f}%<br>"
+            f"<b>R²:</b> {r2:.3f}<br>"
+            f"<b>Z normalizado:</b> %{{z:.3f}}"
+        )
+        fig.add_trace(go.Surface(
+            x=X0, y=X1, z=Z_norm,
+            name=f"{modelo.get('tipo','')} [{x0_name}, {x1_name}]",
+            showscale=False,
+            opacity=opacity,
+            surfacecolor=None,
+            hovertemplate=hovertext + "<extra></extra>",
+            legendgroup=f"modelo_{idx}",
+            visible=True,
+            colorscale=[[0, color], [1, color]],
+            # Para click: customdata con el índice
+            customdata=np.full(X0.shape, idx)
+        ))
+        # Puntos de entrenamiento
+        datos_entrenamiento = modelo.get('datos_entrenamiento', {})
+        X_train = datos_entrenamiento.get('X_original')
+        y_train = datos_entrenamiento.get('y_original')
+        if X_train is not None and y_train is not None and len(X_train) > 0 and len(y_train) == len(X_train):
+            # Normalizar X_train por columna (igual que en 2D)
+            X_train = np.array(X_train)
+            y_train = np.array(y_train)
+            # Normalización por predictor
+            x0_vals = X_train[:,0]
+            x1_vals = X_train[:,1]
+            x0_min, x0_max = np.min(x0_vals), np.max(x0_vals)
+            x1_min, x1_max = np.min(x1_vals), np.max(x1_vals)
+            x0_norm = (x0_vals - x0_min) / (x0_max - x0_min) if x0_max != x0_min else np.full_like(x0_vals, 0.5)
+            x1_norm = (x1_vals - x1_min) / (x1_max - x1_min) if x1_max != x1_min else np.full_like(x1_vals, 0.5)
+            # Normalización del eje z (y_train)
+            y_min, y_max = np.min(y_train), np.max(y_train)
+            y_train_norm = (y_train - y_min) / (y_max - y_min) if y_max != y_min else np.full_like(y_train, 0.5)
+            fig.add_trace(go.Scatter3d(
+                x=x0_norm, y=x1_norm, z=y_train_norm,
+                mode='markers',
+                name=f"Entrenamiento {idx+1}",
+                marker=dict(
+                    size=5 if idx != modelo_seleccionado_idx else 8,
+                    color=color,
+                    opacity=1.0 if idx == modelo_seleccionado_idx else 0.7
+                ),
+                # Información personalizada para identificar el modelo en callbacks
+                customdata=np.full(X_train.shape[0], idx),
+                text=[
+                    f"Predictor 1: {x0_name}<br>Predictor 2: {x1_name}<br>" +
+                    f"Valor original X1: {x0_vals[i]:.3f}<br>Valor original X2: {x1_vals[i]:.3f}<br>" +
+                    f"X1 normalizado: {x0_norm[i]:.3f}<br>X2 normalizado: {x1_norm[i]:.3f}<br>" +
+                    f"Y: {y_train[i]:.3f}<br>" +
+                    f"Modelo: {tipo}<br>" +
+                    f"MAPE: {mape:.3f}%<br>" +
+                    f"R²: {r2:.3f}<br>" +
+                    f"Fuente de datos: entrenamiento"
+                    for i in range(len(y_train_norm))
+                ],
+                hovertemplate='%{text}<extra></extra>',
+                legendgroup=f'model_{idx}',
+                showlegend=True
+            ))
+
+    # Ajustes finales de la figura
+    # Usar los argumentos recibidos, o valores por defecto si no se pasan
+    safe_parametro = parametro if parametro else 'Parámetro'
+    safe_aeronave = aeronave if aeronave else 'Aeronave'
+    fig.update_layout(
+        scene=dict(
+            xaxis_title=f"{x0_name} (normalizado)",
+            yaxis_title=f"{x1_name} (normalizado)",
+            zaxis_title=f"{safe_parametro} (normalizado)",
+            camera=dict(
+                eye=dict(x=1.2, y=1.2, z=0.8)
+            )
+        ),
+        margin=dict(l=0, r=0, t=40, b=0),
+        title=f"Modelos de 2 Predictores (3D) - {safe_aeronave}: {safe_parametro}",
+        uirevision=f"{safe_aeronave}_{safe_parametro}_3d",
+        template='plotly_white'
+    )
+
+    return fig

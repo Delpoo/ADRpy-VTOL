@@ -302,24 +302,18 @@ def create_main_layout() -> html.Div:
                 }),
                 # Gráfico principal (centro, expandible)
                 html.Div(id='main-plot-container', children=[
+                    # El área central ahora contiene SIEMPRE el dcc.Graph para asegurar interactividad
                     dcc.Graph(
                         id='main-plot', 
                         style={'height': '70vh', 'width': '100%'},
-                        config={
-                            'displayModeBar': True,
-                            'displaylogo': False,
-                            'modeBarButtonsToRemove': ['select2d', 'lasso2d'],
-                            'toImageButtonOptions': {
-                                'format': 'png',
-                                'filename': 'modelo_analisis',
-                                'height': 600,
-                                'width': 1000,
-                                'scale': 1
-                            },
-                            'scrollZoom': True,
-                            'doubleClick': 'reset+autosize',
-                            'responsive': True,
-                            'showTips': True
+                        clear_on_unhover=False,  # CRÍTICO: Preservar clicks al salir del hover
+                        figure={
+                            'data': [],
+                            'layout': {
+                                'title': 'Seleccione aeronave y parámetro',
+                                'showlegend': False,
+                                'clickmode': 'event+select'
+                            }
                         }
                     ),
                     dcc.Tabs(id='plot-tabs', value='main-view', children=[
@@ -462,10 +456,16 @@ def format_model_info(modelo: Dict):
     
     components = []
     
+    # Aeronave y parámetro objetivo
+    aeronave = modelo.get('Aeronave', 'N/A')
+    parametro = modelo.get('Parámetro', modelo.get('parametro', 'N/A'))
+    components.append(html.H5(f"Aeronave: {aeronave}"))
+    components.append(html.H5(f"Parámetro: {parametro}"))
+
     # Información básica
     components.append(html.H5("Información Básica"))
     components.append(html.P(f"Tipo: {modelo.get('tipo', 'N/A')}"))
-    components.append(html.P(f"Predictores: {', '.join(modelo.get('predictores', []))}"))
+    components.append(html.P(f"Predictores: {', '.join(modelo.get('predictores', []) )}"))
     components.append(html.P(f"N° Predictores: {modelo.get('n_predictores', 'N/A')}"))
     
     # Ecuación

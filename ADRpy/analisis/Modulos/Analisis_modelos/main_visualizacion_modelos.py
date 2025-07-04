@@ -276,12 +276,18 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         show_model_curves = 'show' in (show_curves or [])
         show_only_real = 'only_real' in (only_real_curves or [])
 
-        # --- Lógica de pestañas 2D/3D ---
+        # --- Lógica de pestañas 2D/3D/Comparación/Métricas ---
         if plot_tab == '3d-view':
-            # Filtrar solo modelos de 2 predictores (lineales o polinómicos)
-            modelos_2_pred = [m for m in modelos_celda if isinstance(m, dict) and m.get('n_predictores', 0) == 2 and (('lineal' in m.get('tipo', '').lower()) or ('polin' in m.get('tipo', '').lower()))]
-            # Llamar helper 3D (debe implementarse en plot_interactive.py)
+            # Filtrar solo modelos de 2 predictores (linear-2 o poly-2)
+            tipos_validos = ['linear-2', 'poly-2']
+            modelos_2_pred = [
+                m for m in modelos_celda
+                if isinstance(m, dict)
+                and m.get('n_predictores', 0) == 2
+                and m.get('tipo', '').lower() in tipos_validos
+            ]
             from .plot_interactive import create_interactive_plot_3d
+            # Crear SIEMPRE una nueva figura para 3D
             fig = create_interactive_plot_3d(
                 modelos_2_pred,
                 aeronave,
@@ -292,6 +298,37 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 detalles_por_celda=models_data.get('detalles') if models_data else None,
                 selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
             )
+            df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
+            summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
+            return fig, summary_table
+        elif plot_tab in ['comparison-view', 'metrics-view']:
+            # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área central
+            if plot_tab == 'metrics-view':
+                from .metrics_dashboard import generate_metrics_dashboard
+                from .metrics_tab import find_missing_models
+                modelos_no_mostrados = find_missing_models(models_data['modelos'], models_data['detalles'])
+                dashboard = generate_metrics_dashboard(
+                    modelos_por_celda=models_data['modelos'],
+                    detalles_por_celda=models_data['detalles'],
+                    modelos_filtrados=[m for ms in modelos_filtrados.values() for m in ms],
+                    modelos_mostrados=[m for ms in modelos_celda for m in [ms] if isinstance(ms, dict)],
+                    celda_seleccionada=celda_key,
+                    modelos_no_mostrados=modelos_no_mostrados
+                )
+                dashboard_scrollable = html.Div(
+                    dashboard,
+                    style={
+                        'maxHeight': '650px',
+                        'overflowY': 'auto',
+                        'padding': '0 10px',
+                        'background': '#fff',
+                        'borderRadius': '10px',
+                        'boxShadow': '0 2px 12px rgba(0,0,0,0.06)'
+                    }
+                )
+                return dashboard_scrollable, dash.no_update
+            # Para comparación, puedes mantener el comportamiento anterior o ajustarlo según necesidades
+            return go.Figure(), html.P("En desarrollo")
         else:
             # 2D (por defecto)
             fig = create_interactive_plot(
@@ -305,21 +342,19 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 detalles_por_celda=models_data.get('detalles') if models_data else None,
                 selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
             )
-
-        preserve_zoom = True
-        if ctx.triggered:
-            triggered_ids = [t['prop_id'].split('.')[0] for t in ctx.triggered]
-            trigger_info = {'triggered_ids': triggered_ids}
-            current_selection = {'aeronave': aeronave, 'parametro': parametro}
-            preserve_zoom = should_preserve_zoom(trigger_info, current_selection)
-        fig = apply_stable_configuration(fig, aeronave, parametro, preserve_zoom)
-        fig.update_layout(
-            showlegend=('hide' not in (hide_legend or []))
-        )
-        # Tabla resumen igual para ambas vistas
-        df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
-        summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
-        return fig, summary_table
+            preserve_zoom = True
+            if ctx.triggered:
+                triggered_ids = [t['prop_id'].split('.')[0] for t in ctx.triggered]
+                trigger_info = {'triggered_ids': triggered_ids}
+                current_selection = {'aeronave': aeronave, 'parametro': parametro}
+                preserve_zoom = should_preserve_zoom(trigger_info, current_selection)
+            fig = apply_stable_configuration(fig, aeronave, parametro, preserve_zoom)
+            fig.update_layout(
+                showlegend=('hide' not in (hide_legend or []))
+            )
+            df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
+            summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
+            return fig, summary_table
 
     # Callback para el panel de información: hover/click, tabla seleccionada y filtros
     @app.callback(
@@ -331,7 +366,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          Input('parametro-dropdown', 'value'),
          Input('predictor-dropdown', 'value'),
          Input('tipo-modelo-checklist', 'value'),
-         Input('comparison-type', 'value'),         Input('models-data-store', 'data')]
+         Input('comparison-type', 'value'),
+         Input('models-data-store', 'data')]
     )
     def update_info_panel(hoverData, clickData, selected_rows, aeronave, parametro, predictor, tipos_modelo, comparison_type, models_data):
         if not aeronave or not parametro or not models_data:
@@ -366,15 +402,30 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             if 0 <= selected_row_idx < len(modelos_celda):
                 selected_model = modelos_celda[selected_row_idx]
         
-        # Prioridad 2: Click en gráfica
+        # Prioridad 2: Click en gráfica (PRIORIDAD SOBRE HOVER)
         elif clickData and 'points' in clickData and clickData['points']:
-            idx = clickData['points'][0].get('curveNumber')
-            if idx is not None and idx < len(modelos_celda):
+            point = clickData['points'][0]
+            # Usar customdata si está disponible (más preciso)
+            if 'customdata' in point and point['customdata'] is not None:
+                idx = point['customdata']
+            else:
+                # Fallback a curveNumber
+                idx = point.get('curveNumber')
+            
+            if idx is not None and 0 <= idx < len(modelos_celda):
                 selected_model = modelos_celda[idx]
-          # Prioridad 3: Hover en gráfica
-        elif hoverData and 'points' in hoverData and hoverData['points']:
-            idx = hoverData['points'][0].get('curveNumber')
-            if idx is not None and idx < len(modelos_celda):
+        
+        # Prioridad 3: Hover en gráfica (SOLO si no hay click activo)
+        elif hoverData and 'points' in hoverData and hoverData['points'] and not clickData:
+            point = hoverData['points'][0]
+            # Usar customdata si está disponible
+            if 'customdata' in point and point['customdata'] is not None:
+                idx = point['customdata']
+            else:
+                # Fallback a curveNumber
+                idx = point.get('curveNumber')
+            
+            if idx is not None and 0 <= idx < len(modelos_celda):
                 selected_model = modelos_celda[idx]
           # Si no hay selección, mostrar el mejor modelo por confianza promedio
         if not selected_model and modelos_celda:
@@ -405,7 +456,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          State('tipo-modelo-checklist', 'value'),
          State('comparison-type', 'value'),
          State('models-data-store', 'data'),
-         State('selected-model-store', 'data')]
+         State('selected-model-store', 'data')],
+        prevent_initial_call=False  # CRÍTICO: Permitir captura de eventos de click
     )
     def sync_model_selection(selected_rows, clickData, aeronave, parametro, predictor, tipos_modelo, comparison_type, models_data, prev_store):
         """Sincroniza la selección entre tabla y gráfica"""
@@ -417,7 +469,6 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             return prev_store
         
         trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        logger.info(f"[DEBUG] sync_model_selection: trigger_id={trigger_id}, selected_rows={selected_rows}, clickData={clickData}")
         
         if predictor == '__all__':
             predictores = None
@@ -442,39 +493,46 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         if trigger_id == 'summary-table' and selected_rows:
             selected_idx = selected_rows[0]
         elif trigger_id == 'main-plot' and clickData:
+            # DEBUG: Mostrar información de click recibido
+            import os
+            if os.environ.get('DASH_DEBUG_CLICK'):
+                print(f"🎯 CLICK DETECTADO!")
+                print(f"   clickData: {clickData}")
+            
             if clickData and 'points' in clickData and clickData['points']:
                 point = clickData['points'][0]
-                logger.info(f"[DEBUG] Click point data: {point}")
-                
-                # Intentar obtener el índice del modelo desde customdata
+                if os.environ.get('DASH_DEBUG_CLICK'):
+                    print(f"   point: {point}")
+                    print(f"   customdata: {point.get('customdata')}")
+                    print(f"   curveNumber: {point.get('curveNumber')}")
+                # Obtener el índice del modelo desde customdata
                 if 'customdata' in point and point['customdata'] is not None:
                     selected_idx = point['customdata']
-                    logger.info(f"[DEBUG] Modelo seleccionado por customdata: {selected_idx}")
+                    if os.environ.get('DASH_DEBUG_CLICK'):
+                        print(f"   ✅ Usando customdata: {selected_idx}")
                 # Fallback: usar curveNumber si customdata no está disponible
                 elif 'curveNumber' in point:
-                    # Calcular el índice del modelo basado en curveNumber
-                    # Cada modelo puede tener hasta 3 trazas (puntos originales, entrenamiento, curva)
                     curve_number = point['curveNumber']
-                    logger.info(f"[DEBUG] curveNumber: {curve_number}, modelos disponibles: {len(modelos_celda)}")
-                    
-                    # Mapear curveNumber a índice de modelo
-                    # Asumiendo que las trazas se agregan en orden: orig, train, curve para cada modelo
-                    if curve_number < len(modelos_celda) * 3:  # Máximo 3 trazas por modelo
+                    # Mapear curveNumber a índice de modelo (aproximación)
+                    if curve_number < len(modelos_celda) * 3:
                         selected_idx = curve_number // 3
                         if selected_idx >= len(modelos_celda):
                             selected_idx = len(modelos_celda) - 1
-                    logger.info(f"[DEBUG] Modelo inferido por curveNumber: {selected_idx}")
-                
+                    if os.environ.get('DASH_DEBUG_CLICK'):
+                        print(f"   ⚠️ Usando curveNumber fallback: {curve_number} → idx: {selected_idx}")
                 # Validar que el índice esté dentro del rango
                 if selected_idx is not None and (selected_idx < 0 or selected_idx >= len(modelos_celda)):
-                    logger.warning(f"[DEBUG] Índice fuera de rango: {selected_idx}, ajustando...")
+                    if os.environ.get('DASH_DEBUG_CLICK'):
+                        print(f"   ❌ Índice fuera de rango: {selected_idx}, max: {len(modelos_celda)-1}")
                     selected_idx = None
+                
+                if os.environ.get('DASH_DEBUG_CLICK'):
+                    print(f"   🎯 SELECTED_IDX FINAL: {selected_idx}")
         else:
             # Si no hay trigger válido, mantener selección previa
             if prev_store and prev_store.get('aeronave') == aeronave and prev_store.get('parametro') == parametro:
                 selected_idx = prev_store.get('model_idx')
 
-        logger.info(f"[DEBUG] selected_idx calculado: {selected_idx}")
         return {
             'aeronave': aeronave,
             'parametro': parametro,

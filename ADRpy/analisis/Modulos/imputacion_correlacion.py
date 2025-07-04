@@ -290,21 +290,22 @@ def entrenar_modelo(
             y_raw = np.array(df_train[objetivo].values, dtype=float)
             
             # Normalización
-            scaler_X = StandardScaler()
-            scaler_y = StandardScaler()
-            X_transformed = scaler_X.fit_transform(X_raw)
-            y_transformed = scaler_y.fit_transform(y_raw.reshape(-1, 1)).flatten()
             if poly:
                 pf = PolynomialFeatures(degree=2, include_bias=False)
-                X_trans = pf.fit_transform(X_transformed)
+                X_poly = pf.fit_transform(X_raw)
+                scaler_X = StandardScaler()
+                X_trans = scaler_X.fit_transform(X_poly)
                 tipo_transformacion = "polinómica+normalización"
             else:
+                scaler_X = StandardScaler()
+                X_trans = scaler_X.fit_transform(X_raw)
                 pf = None
-                X_trans = X_transformed
                 tipo_transformacion = "normalización"
+            scaler_y = StandardScaler()
+            y_transformed = scaler_y.fit_transform(y_raw.reshape(-1, 1)).flatten()
             tipo = ("poly" if poly else "linear") + f"-{len(predictores)}"
             # Validaciones numéricas
-            const_cols = [i for i in range(X_transformed.shape[1]) if np.isclose(X_transformed[:, i].var(), 0)]
+            const_cols = [i for i in range(X_trans.shape[1]) if np.isclose(X_trans[:, i].var(), 0)]
             if const_cols:
                 raise ModeloDescartado(f"Varianza cero en columnas {const_cols}")
 
@@ -331,29 +332,17 @@ def entrenar_modelo(
                     f"{coef:.6g} x_{{{i}}}" for i, coef in enumerate(coeficientes)
                 ])
             )
-            # Desnormalizar coeficientes e intercepto
-            if poly and pf is not None and hasattr(pf, 'powers_'):
-                powers = pf.powers_
-                if scaler_X.scale_ is not None and scaler_X.mean_ is not None:
-                    escalas_ajustadas = np.prod(np.power(scaler_X.scale_, powers), axis=1)
-                    mean_terms = np.prod(np.power(scaler_X.mean_, powers), axis=1)
-                else:
-                    # Fallback si los escaladores no están bien definidos
-                    escalas_ajustadas = np.ones(len(coeficientes))
-                    mean_terms = np.zeros(len(coeficientes))
-            else:
-                if scaler_X.scale_ is not None and scaler_X.mean_ is not None:
-                    escalas_ajustadas = scaler_X.scale_
-                    mean_terms = scaler_X.mean_
-                else:
-                    escalas_ajustadas = np.ones(len(coeficientes))
-                    mean_terms = np.zeros(len(coeficientes))
-
-            if scaler_y.scale_ is not None and scaler_y.mean_ is not None:
+            # Desnormalizar coeficientes e intercepto (método estándar)
+            if scaler_X.scale_ is not None and scaler_X.mean_ is not None and scaler_y.scale_ is not None and scaler_y.mean_ is not None:
+                escalas_ajustadas = scaler_X.scale_
+                medias_ajustadas = scaler_X.mean_
                 coef_original = (coeficientes * scaler_y.scale_[0] / escalas_ajustadas).tolist()
-                intercepto_original = float(scaler_y.mean_[0] - np.dot(coef_original, mean_terms))
+                b_shift = sum([
+                    coeficientes[j] * medias_ajustadas[j] / escalas_ajustadas[j]
+                    for j in range(len(coeficientes))
+                ])
+                intercepto_original = float(scaler_y.scale_[0] * (intercepto - b_shift) + scaler_y.mean_[0])
             else:
-                # Fallback si el escalador y no está bien definido
                 coef_original = coeficientes.tolist()
                 intercepto_original = float(intercepto)
 
@@ -535,16 +524,19 @@ def imputar_valores_celda(df_resultado, df_filtrado, objetivo, info, idx):
             valor = np.exp(pred_log)
     else:
         # Modelos lineales y polinómicos: usar escalado y polinomio si corresponde
-        if info["scaler_X"] is not None:
-            X_scaled = info["scaler_X"].transform(X_pred)
-        else:
-            X_scaled = X_pred
-            
         if info["pf"] is not None:
-            X_scaled = info["pf"].transform(X_scaled)
-            
+            # Primero expandir a polinómicos
+            X_pred_poly = info["pf"].transform(X_pred)
+            if info["scaler_X"] is not None:
+                X_scaled = info["scaler_X"].transform(X_pred_poly)
+            else:
+                X_scaled = X_pred_poly
+        else:
+            if info["scaler_X"] is not None:
+                X_scaled = info["scaler_X"].transform(X_pred)
+            else:
+                X_scaled = X_pred
         y_norm = info["modelo"].predict(X_scaled)[0]
-        
         if info["scaler_y"] is not None:
             valor = info["scaler_y"].inverse_transform([[y_norm]])[0, 0]
         else:
