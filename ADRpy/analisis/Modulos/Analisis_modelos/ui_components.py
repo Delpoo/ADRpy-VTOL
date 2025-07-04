@@ -286,9 +286,9 @@ def create_main_layout() -> html.Div:
                                    'cursor': 'pointer'
                                })
                 ], style={
-                    'width': '22%',
-                    'minWidth': '220px',
-                    'maxWidth': '320px',
+                    'width': '19%',
+                    'minWidth': '200px',
+                    'maxWidth': '300px',
                     'display': 'block',
                     'verticalAlign': 'top',
                     'padding': '20px',
@@ -302,43 +302,49 @@ def create_main_layout() -> html.Div:
                 }),
                 # Gráfico principal (centro, expandible)
                 html.Div(id='main-plot-container', children=[
-                    # El área central ahora contiene SIEMPRE el dcc.Graph para asegurar interactividad
-                    dcc.Graph(
-                        id='main-plot', 
-                        style={'height': '70vh', 'width': '100%'},
-                        clear_on_unhover=False,  # CRÍTICO: Preservar clicks al salir del hover
-                        figure={
-                            'data': [],
-                            'layout': {
-                                'title': 'Seleccione aeronave y parámetro',
-                                'showlegend': False,
-                                'clickmode': 'event+select'
-                            }
+                    # El área central ahora acepta cualquier componente (gráfica o dashboard)
+                    html.Div(
+                        id='main-plot',
+                        style={
+                            'height': '100%',
+                            'width': '100%',
+                            'minHeight': '0',
+                            'flex': '1 1 0%',
+                            'display': 'flex',
+                            'flexDirection': 'column',
+                            'justifyContent': 'stretch',
+                            'alignItems': 'stretch',
+                            'overflow': 'hidden'
                         }
                     ),
+                    # Tabs ahora van debajo del área central
                     dcc.Tabs(id='plot-tabs', value='main-view', children=[
                         dcc.Tab(label='2D', value='main-view'),
                         dcc.Tab(label='3D', value='3d-view'),
                         dcc.Tab(label='Comparación', value='comparison-view'),
                         dcc.Tab(label='Métricas', value='metrics-view')
-                    ]),
+                    ], style={'marginTop': '0'}),
                     html.Div(id='tab-content')
                 ], style={
-                    'width': '56%',  # Se ajustará dinámicamente
+                    'width': '62%',  # Se ajustará dinámicamente
                     'minWidth': '320px',
-                    'display': 'inline-block',
+                    'display': 'flex',
+                    'flexDirection': 'column',
                     'verticalAlign': 'top',
                     'margin': '10px',
                     'boxSizing': 'border-box',
                     'transition': 'width 0.3s',
+                    'height': '80vh',
+                    'minHeight': '500px',
+                    'maxHeight': '100vh',
                 }),
                 # Panel de información (derecha)
                 html.Div([
                     create_info_panel()
                 ], style={
-                    'width': '22%',
-                    'minWidth': '220px',
-                    'maxWidth': '340px',
+                    'width': '19%',
+                    'minWidth': '200px',
+                    'maxWidth': '300px',
                     'display': 'inline-block',
                     'verticalAlign': 'top',
                     'boxSizing': 'border-box',

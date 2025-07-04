@@ -199,7 +199,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 all_preds.update(m.get('predictores', []))
         return create_predictor_dropdown(sorted(all_preds))    # Callback principal: actualiza gráfica y tabla resumen según TODOS los filtros
     @app.callback(
-        [Output('main-plot', 'figure'),
+        [Output('main-plot', 'children'),
          Output('summary-table-container', 'children')],
         [Input('update-button', 'n_clicks'),
          Input('aeronave-dropdown', 'value'),
@@ -241,7 +241,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 showarrow=False,
                 font=dict(size=16, color="gray")
             )
-            return empty_fig, html.P("Sin datos")
+            empty_fig.update_layout(height=600)
+            return dcc.Graph(figure=empty_fig), html.P("Sin datos")
 
         # Filtro de predictores
         if predictor == '__all__':
@@ -298,11 +299,18 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 detalles_por_celda=models_data.get('detalles') if models_data else None,
                 selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
             )
+            # Fondo blanco y título centrado
+            fig.update_layout(
+                autosize=True,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                title_x=0.5
+            )
             df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
             summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
-            return fig, summary_table
+            return dcc.Graph(figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
         elif plot_tab in ['comparison-view', 'metrics-view']:
-            # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área central
+            # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área principal (main-plot)
             if plot_tab == 'metrics-view':
                 from .metrics_dashboard import generate_metrics_dashboard
                 from .metrics_tab import find_missing_models
@@ -315,20 +323,17 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                     celda_seleccionada=celda_key,
                     modelos_no_mostrados=modelos_no_mostrados
                 )
-                dashboard_scrollable = html.Div(
-                    dashboard,
-                    style={
-                        'maxHeight': '650px',
-                        'overflowY': 'auto',
-                        'padding': '0 10px',
-                        'background': '#fff',
-                        'borderRadius': '10px',
-                        'boxShadow': '0 2px 12px rgba(0,0,0,0.06)'
-                    }
-                )
-                return dashboard_scrollable, dash.no_update
+                # El dashboard ya es un html.Div con estilos internos, solo lo devolvemos directamente
+                return dashboard, dash.no_update
             # Para comparación, puedes mantener el comportamiento anterior o ajustarlo según necesidades
-            return go.Figure(), html.P("En desarrollo")
+            fig = go.Figure()
+            fig.update_layout(
+                autosize=True,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                title_x=0.5
+            )
+            return dcc.Graph(figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), html.P("En desarrollo")
         else:
             # 2D (por defecto)
             fig = create_interactive_plot(
@@ -350,11 +355,15 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 preserve_zoom = should_preserve_zoom(trigger_info, current_selection)
             fig = apply_stable_configuration(fig, aeronave, parametro, preserve_zoom)
             fig.update_layout(
-                showlegend=('hide' not in (hide_legend or []))
+                showlegend=('hide' not in (hide_legend or [])),
+                autosize=True,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                title_x=0.5
             )
             df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
             summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
-            return fig, summary_table
+            return dcc.Graph(figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
 
     # Callback para el panel de información: hover/click, tabla seleccionada y filtros
     @app.callback(
