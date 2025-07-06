@@ -158,7 +158,7 @@ def filter_models(modelos_por_celda: Dict,
                  only_real_curves: bool = False,
                  comparison_type: str = 'by_type',
                  mejores: bool = False,
-                 require_loocv: bool = True,
+                 require_loocv: bool = False,
                  exclude_2pred_from_2d: bool = False) -> Dict:
     """
     Filtra los modelos según los criterios especificados y el modo de comparación.
@@ -171,8 +171,8 @@ def filter_models(modelos_por_celda: Dict,
     only_real_curves:
         - Si True, solo modelos con datos reales en y_original
     require_loocv:
-        - Si True, solo incluye modelos con validación LOOCV (default)
-        - Si False, incluye todos los modelos
+        - Si True, solo incluye modelos con validación LOOCV
+        - Si False, incluye todos los modelos (default)
     exclude_2pred_from_2d:
         - Si True, excluye modelos con 2 predictores (para vista 2D)
     """

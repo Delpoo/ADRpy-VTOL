@@ -209,6 +209,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          Input('show-training-points', 'value'),
          Input('show-model-curves', 'value'),
          Input('show-only-real-curves', 'value'),
+         Input('show-models-without-loocv', 'value'),
          Input('hide-plot-legend', 'value'),
          Input('imputation-methods-checklist', 'value'),
          Input('comparison-type', 'value'),
@@ -217,7 +218,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         [State('models-data-store', 'data')],
         prevent_initial_call=False
     )
-    def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_curves, only_real_curves, hide_legend, imputation_methods, comparison_type, selected_model_data, plot_tab, models_data):
+    def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_curves, only_real_curves, show_without_loocv, hide_legend, imputation_methods, comparison_type, selected_model_data, plot_tab, models_data):
         import copy
         ctx = dash.callback_context
         
@@ -252,12 +253,20 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         else:
             predictores = None
 
+        # Determinar si mostrar solo curvas con datos reales
+        only_real = 'only_real' in (only_real_curves or [])
+        
+        # Determinar si requiere validación LOOCV (invertido porque el checkbox es "mostrar sin LOOCV")
+        require_loocv = 'show_without_loocv' not in (show_without_loocv or [])
+
         modelos_filtrados = filter_models(
             models_data['modelos'],
             aeronave=aeronave,
             parametro=parametro,
             tipos_modelo=tipos_modelo,
             predictores=predictores,
+            only_real_curves=only_real,
+            require_loocv=require_loocv,
             comparison_type=comparison_type
         )
         celda_key = f"{aeronave}|{parametro}"
@@ -375,10 +384,12 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          Input('parametro-dropdown', 'value'),
          Input('predictor-dropdown', 'value'),
          Input('tipo-modelo-checklist', 'value'),
+         Input('show-only-real-curves', 'value'),
+         Input('show-models-without-loocv', 'value'),
          Input('comparison-type', 'value'),
          Input('models-data-store', 'data')]
     )
-    def update_info_panel(hoverData, clickData, selected_rows, aeronave, parametro, predictor, tipos_modelo, comparison_type, models_data):
+    def update_info_panel(hoverData, clickData, selected_rows, aeronave, parametro, predictor, tipos_modelo, only_real_curves, show_without_loocv, comparison_type, models_data):
         if not aeronave or not parametro or not models_data:
             return html.P("Seleccione una combinación válida para ver información del modelo.")
         
@@ -390,12 +401,20 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         else:
             predictores = None
 
+        # Determinar si mostrar solo curvas con datos reales
+        only_real = 'only_real' in (only_real_curves or [])
+        
+        # Determinar si requiere validación LOOCV (invertido porque el checkbox es "mostrar sin LOOCV")
+        require_loocv = 'show_without_loocv' not in (show_without_loocv or [])
+
         modelos_filtrados = filter_models(
             models_data['modelos'],
             aeronave=aeronave,
             parametro=parametro,
             tipos_modelo=tipos_modelo,
             predictores=predictores,
+            only_real_curves=only_real,
+            require_loocv=require_loocv,
             comparison_type=comparison_type
         )
         
@@ -463,12 +482,14 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          State('parametro-dropdown', 'value'),
          State('predictor-dropdown', 'value'),
          State('tipo-modelo-checklist', 'value'),
+         State('show-only-real-curves', 'value'),
+         State('show-models-without-loocv', 'value'),
          State('comparison-type', 'value'),
          State('models-data-store', 'data'),
          State('selected-model-store', 'data')],
         prevent_initial_call=False  # CRÍTICO: Permitir captura de eventos de click
     )
-    def sync_model_selection(selected_rows, clickData, aeronave, parametro, predictor, tipos_modelo, comparison_type, models_data, prev_store):
+    def sync_model_selection(selected_rows, clickData, aeronave, parametro, predictor, tipos_modelo, only_real_curves, show_without_loocv, comparison_type, models_data, prev_store):
         """Sincroniza la selección entre tabla y gráfica"""
         if not aeronave or not parametro or not models_data:
             return prev_store
@@ -486,12 +507,20 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         else:
             predictores = None
 
+        # Determinar si mostrar solo curvas con datos reales
+        only_real = 'only_real' in (only_real_curves or [])
+        
+        # Determinar si requiere validación LOOCV (invertido porque el checkbox es "mostrar sin LOOCV")
+        require_loocv = 'show_without_loocv' not in (show_without_loocv or [])
+
         modelos_filtrados = filter_models(
             models_data['modelos'],
             aeronave=aeronave,
             parametro=parametro,
             tipos_modelo=tipos_modelo,
             predictores=predictores,
+            only_real_curves=only_real,
+            require_loocv=require_loocv,
             comparison_type=comparison_type
         )
         celda_key = f"{aeronave}|{parametro}"
@@ -591,6 +620,46 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         if os.environ.get('DASH_DEBUG_CLICK'):
             print(f"   ⚠️ No coinciden datos o índice None, retornando []")
         return []
+
+    # Callbacks para el botón flotante de alertas
+    @app.callback(
+        Output('alerts-modal', 'style'),
+        [Input('floating-alerts-button', 'n_clicks'),
+         Input('close-alerts-modal', 'n_clicks')],
+        [State('alerts-modal', 'style')]
+    )
+    def toggle_alerts_modal(open_clicks, close_clicks, current_style):
+        """Toggle del modal de alertas"""
+        ctx = dash.callback_context
+        if not ctx.triggered:
+            return {'display': 'none'}
+        
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        
+        if button_id == 'floating-alerts-button' and open_clicks:
+            return {'display': 'block'}
+        elif button_id == 'close-alerts-modal' and close_clicks:
+            return {'display': 'none'}
+        
+        return current_style or {'display': 'none'}
+
+    @app.callback(
+        Output('alerts-content', 'children'),
+        [Input('floating-alerts-button', 'n_clicks')],
+        [State('summary-table-container', 'children'),
+         State('models-data-store', 'data')]
+    )
+    def update_alerts_modal_content(n_clicks, summary_table_data, models_data):
+        """Actualiza el contenido del modal de alertas"""
+        if not n_clicks:
+            return [html.P("Haga clic en el botón 🚨 para ver alertas del sistema.")]
+        
+        # Intentar extraer información de validación si existe
+        df_summary = None
+        modelos_por_celda = models_data.get('modelos', {}) if models_data else {}
+        
+        from .ui_components import update_alerts_content
+        return update_alerts_content(df_summary, modelos_por_celda)
 
     # Ejecutar aplicación
     print(f"Iniciando aplicación Dash en http://localhost:{port}")

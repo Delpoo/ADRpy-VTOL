@@ -163,7 +163,16 @@ def create_visualization_options() -> html.Div:
             style={'marginBottom': '10px'},
             inputStyle={"marginRight": "5px"}
         ),
-          dcc.Checklist(
+        
+        dcc.Checklist(
+            id='show-models-without-loocv',
+            options=[{'label': 'Mostrar modelos sin validación LOOCV', 'value': 'show_without_loocv'}],
+            value=['show_without_loocv'],  # Por defecto mostrar todos los modelos
+            style={'marginBottom': '10px'},
+            inputStyle={"marginRight": "5px"}
+        ),
+        
+        dcc.Checklist(
             id='hide-plot-legend',
             options=[{'label': 'Ocultar leyenda de la gráfica', 'value': 'hide'}],
             value=[],
@@ -383,13 +392,78 @@ def create_main_layout() -> html.Div:
         dcc.Store(id='models-data-store'),
         dcc.Store(id='filtered-models-store'),
         dcc.Store(id='unique-values-store'),
-        dcc.Store(id='selected-model-store', data=None)  # Store para modelo seleccionado
+        dcc.Store(id='selected-model-store', data=None),  # Store para modelo seleccionado
+        
+        # Botón flotante de alertas
+        create_floating_alerts_button()
     ])
+
+
+def create_validation_alert(df_summary: 'pd.DataFrame') -> html.Div:
+    """
+    Crea alerta de validación si hay modelos problemáticos.
+    
+    Parameters:
+    -----------
+    df_summary : pd.DataFrame
+        DataFrame con información de validación en attrs
+        
+    Returns:
+    --------
+    html.Div
+        Componente de alerta o None si no hay problemas
+    """
+    if not hasattr(df_summary, 'attrs'):
+        return html.Div()
+    
+    modelos_validos = df_summary.attrs.get('modelos_validos', 0)
+    modelos_con_problemas = df_summary.attrs.get('modelos_con_problemas', 0)
+    problemas_encontrados = df_summary.attrs.get('problemas_encontrados', {})
+    
+    if modelos_con_problemas == 0:
+        return html.Div()
+    
+    total_modelos = modelos_validos + modelos_con_problemas
+    
+    # Crear mensaje de alerta
+    mensaje_principal = f"⚠️ {modelos_con_problemas} de {total_modelos} modelos tienen problemas de datos:"
+    
+    # Listar los problemas más frecuentes
+    problemas_texto = []
+    for problema, cantidad in sorted(problemas_encontrados.items(), key=lambda x: x[1], reverse=True)[:5]:
+        # Traducir nombres técnicos a mensajes más amigables
+        problema_amigable = {
+            'sin_tipo': 'Sin tipo de modelo',
+            'sin_predictores': 'Sin predictores definidos', 
+            'y_original_formato_invalido': 'Datos Y en formato inválido',
+            'x_original_formato_invalido': 'Datos X en formato inválido',
+            'y_original_sin_datos_validos': 'Datos Y sin valores válidos',
+            'x_original_vacio': 'Datos X vacíos',
+            'r2_invalido': 'R² inválido (NaN/infinito)',
+            'confianza_nan': 'Confianza NaN'
+        }.get(problema, problema)
+        
+        problemas_texto.append(f"• {problema_amigable}: {cantidad} modelo{'s' if cantidad > 1 else ''}")
+    
+    return html.Div([
+        html.Div(mensaje_principal, style={'fontWeight': 'bold', 'marginBottom': '5px'}),
+        html.Ul([html.Li(texto) for texto in problemas_texto[:3]], style={'margin': '0', 'paddingLeft': '20px'}),
+        html.Small("Los modelos problemáticos pueden aparecer en la tabla pero no ser graficables.", 
+                  style={'fontStyle': 'italic', 'color': '#666'}) if problemas_texto else None
+    ], style={
+        'backgroundColor': '#fff3cd',
+        'border': '1px solid #ffeaa7', 
+        'color': '#856404',
+        'padding': '10px',
+        'marginBottom': '10px',
+        'borderRadius': '4px',
+        'fontSize': '14px'
+    })
 
 
 def create_summary_table(df_summary: 'pd.DataFrame', selected_row_idx: Optional[int] = None):
     """
-    Crea tabla de resumen de modelos con resaltado opcional.
+    Crea tabla de resumen de modelos con resaltado opcional y alertas de validación.
     
     Parameters:
     -----------
@@ -400,11 +474,14 @@ def create_summary_table(df_summary: 'pd.DataFrame', selected_row_idx: Optional[
         
     Returns:
     --------
-    dash_table.DataTable
-        Tabla de Dash
+    html.Div
+        Contenedor con alerta (si aplica) y tabla de Dash
     """
     if df_summary.empty:
         return html.P("No hay datos para mostrar.")
+
+    # Crear alerta de validación si hay problemas
+    alert_component = create_validation_alert(df_summary)
 
     # Estilo condicional para resaltar fila seleccionada
     style_data_conditional = [
@@ -416,6 +493,24 @@ def create_summary_table(df_summary: 'pd.DataFrame', selected_row_idx: Optional[
             'if': {'state': 'selected'},
             'backgroundColor': '#ffe082',  # Amarillo suave para fila seleccionada
             'color': 'black',
+        },
+        # Resaltar filas con errores críticos en rojo suave
+        {
+            'if': {
+                'filter_query': '{Estado} contains "❌"',
+                'column_id': 'Estado'
+            },
+            'backgroundColor': '#ffebee',
+            'color': '#d32f2f'
+        },
+        # Resaltar filas con advertencias en amarillo suave
+        {
+            'if': {
+                'filter_query': '{Estado} contains "⚠️"',
+                'column_id': 'Estado'
+            },
+            'backgroundColor': '#fff8e1',
+            'color': '#f57c00'
         }
     ]
     
@@ -428,29 +523,32 @@ def create_summary_table(df_summary: 'pd.DataFrame', selected_row_idx: Optional[
             'fontWeight': 'bold'
         })
 
-    return dash_table.DataTable(
-        id='summary-table',
-        data=df_summary.to_dict('records'),
-        columns=[{"name": col, "id": col} for col in df_summary.columns if col != '_selected_'],
-        row_selectable='single',  # Habilita selección de filas
-        style_cell={
-            'textAlign': 'left',
-            'padding': '10px',
-            'fontFamily': 'Arial'
-        },
-        style_header={
-            'backgroundColor': '#007bff',
-            'color': 'white',
-            'fontWeight': 'bold'
-        },
-        style_data_conditional=style_data_conditional,
-        sort_action="native",
-        filter_action="native",
-        page_action="native",
-        page_current=0,
-        page_size=10,
-        selected_rows=[selected_row_idx] if selected_row_idx is not None else []
-    )
+    return html.Div([
+        alert_component,  # Incluir componente de alerta al inicio
+        dash_table.DataTable(
+            id='summary-table',
+            data=df_summary.to_dict('records'),
+            columns=[{"name": col, "id": col} for col in df_summary.columns if col != '_selected_'],
+            row_selectable='single',  # Habilita selección de filas
+            style_cell={
+                'textAlign': 'left',
+                'padding': '10px',
+                'fontFamily': 'Arial'
+            },
+            style_header={
+                'backgroundColor': '#007bff',
+                'color': 'white',
+                'fontWeight': 'bold'
+            },
+            style_data_conditional=style_data_conditional,
+            sort_action="native",
+            filter_action="native",
+            page_action="native",
+            page_current=0,
+            page_size=50,  # Aumentado de 10 a 50 modelos por página
+            selected_rows=[selected_row_idx] if selected_row_idx is not None else []
+        )
+    ])
 
 
 def format_model_info(modelo: Dict):
@@ -627,3 +725,163 @@ def create_filter_controls() -> html.Div:
         'overflowY': 'auto',
         'height': 'fit-content'
     })
+def create_floating_alerts_button() -> html.Div:
+    """
+    Crea un botón flotante para mostrar/ocultar alertas del sistema.
+    
+    Returns:
+    --------
+    html.Div
+        Botón flotante con modal de alertas
+    """
+    return html.Div([
+        # Botón flotante
+        html.Button(
+            "🚨",
+            id="floating-alerts-button",
+            style={
+                'position': 'fixed',
+                'bottom': '20px',
+                'right': '20px',
+                'width': '60px',
+                'height': '60px',
+                'borderRadius': '50%',
+                'border': 'none',
+                'backgroundColor': '#dc3545',
+                'color': 'white',
+                'fontSize': '24px',
+                'cursor': 'pointer',
+                'boxShadow': '0 4px 8px rgba(0,0,0,0.3)',
+                'zIndex': '1000',
+                'transition': 'all 0.3s ease'
+            }
+        ),
+        
+        # Modal de alertas (inicialmente oculto)
+        html.Div(
+            id="alerts-modal",
+            children=[
+                html.Div([
+                    html.Div([
+                        html.H4("🚨 Alertas del Sistema", style={'margin': '0 0 15px 0'}),
+                        html.Button(
+                            "×",
+                            id="close-alerts-modal",
+                            style={
+                                'position': 'absolute',
+                                'top': '10px',
+                                'right': '15px',
+                                'border': 'none',
+                                'background': 'none',
+                                'fontSize': '24px',
+                                'cursor': 'pointer',
+                                'color': '#999'
+                            }
+                        ),
+                        html.Div(id="alerts-content", children=[
+                            html.P("Cargando alertas del sistema...", style={'color': '#666'})
+                        ])
+                    ], style={
+                        'backgroundColor': 'white',
+                        'padding': '20px',
+                        'borderRadius': '8px',
+                        'maxWidth': '500px',
+                        'maxHeight': '400px',
+                        'overflowY': 'auto',
+                        'position': 'relative',
+                        'margin': 'auto',
+                        'marginTop': '10vh'
+                    })
+                ], style={
+                    'position': 'fixed',
+                    'top': '0',
+                    'left': '0',
+                    'width': '100%',
+                    'height': '100%',
+                    'backgroundColor': 'rgba(0,0,0,0.5)',
+                    'zIndex': '1001',
+                    'display': 'flex',
+                    'alignItems': 'flex-start',
+                    'justifyContent': 'center'
+                })
+            ],
+            style={'display': 'none'}  # Inicialmente oculto
+        )
+    ])
+
+
+def update_alerts_content(df_summary: Optional['pd.DataFrame'] = None, modelos_por_celda: Optional[dict] = None) -> list:
+    """
+    Actualiza el contenido de alertas basado en el estado actual del sistema.
+    
+    Parameters:
+    -----------
+    df_summary : pd.DataFrame, optional
+        DataFrame con información de validación
+    modelos_por_celda : dict, optional
+        Diccionario con todos los modelos
+        
+    Returns:
+    --------
+    list
+        Lista de componentes HTML para mostrar en el modal
+    """
+    alertas = []
+    
+    # Alertas de modelos problemáticos
+    if df_summary is not None and hasattr(df_summary, 'attrs'):
+        modelos_con_errores = df_summary.attrs.get('modelos_con_problemas', 0)
+        problemas_encontrados = df_summary.attrs.get('problemas_encontrados', {})
+        
+        if modelos_con_errores > 0:
+            alertas.append(html.Div([
+                html.H5("⚠️ Modelos con Problemas", style={'color': '#dc3545', 'marginBottom': '10px'}),
+                html.P(f"{modelos_con_errores} modelos tienen problemas de datos:", style={'marginBottom': '8px'}),
+                html.Ul([
+                    html.Li(f"{problema.replace('_', ' ').title()}: {cantidad} modelo{'s' if cantidad > 1 else ''}")
+                    for problema, cantidad in sorted(problemas_encontrados.items(), key=lambda x: x[1], reverse=True)[:5]
+                ], style={'marginLeft': '15px', 'marginBottom': '10px'}),
+                html.Small("Los modelos aparecen en la tabla pero pueden tener limitaciones de visualización.", 
+                          style={'color': '#666', 'fontStyle': 'italic'})
+            ], style={'marginBottom': '15px', 'padding': '10px', 'backgroundColor': '#fff3cd', 'borderRadius': '4px'}))
+    
+    # Alertas de filtros activos
+    alertas.append(html.Div([
+        html.H5("🔍 Filtros Activos", style={'color': '#007bff', 'marginBottom': '10px'}),
+        html.P("Algunos modelos pueden estar ocultos por filtros activos:"),
+        html.Ul([
+            html.Li("Filtro LOOCV: Oculta modelos sin confianza LOOCV"),
+            html.Li("Filtros de tipo: Pueden limitar tipos de modelo visibles"),
+            html.Li("Filtros de método: Pueden filtrar por método de imputación")
+        ], style={'marginLeft': '15px'})
+    ], style={'marginBottom': '15px', 'padding': '10px', 'backgroundColor': '#e3f2fd', 'borderRadius': '4px'}))
+    
+    # Alertas de rendimiento
+    if modelos_por_celda:
+        total_modelos = sum(len(v) for v in modelos_por_celda.values())
+        if total_modelos > 1000:
+            alertas.append(html.Div([
+                html.H5("⚡ Rendimiento", style={'color': '#ff9800', 'marginBottom': '10px'}),
+                html.P(f"Se detectaron {total_modelos} modelos en total. Con datasets grandes:"),
+                html.Ul([
+                    html.Li("La carga inicial puede ser lenta"),
+                    html.Li("Use filtros para mejorar la navegación"),
+                    html.Li("Las tablas están paginadas para mejor rendimiento")
+                ], style={'marginLeft': '15px'})
+            ], style={'marginBottom': '15px', 'padding': '10px', 'backgroundColor': '#fff3e0', 'borderRadius': '4px'}))
+    
+    # Alertas generales del sistema
+    alertas.append(html.Div([
+        html.H5("💡 Consejos de Uso", style={'color': '#28a745', 'marginBottom': '10px'}),
+        html.Ul([
+            html.Li("Use la tabla de resumen para identificar modelos específicos"),
+            html.Li("Los modelos marcados como ❌ pueden tener datos faltantes"),
+            html.Li("Revise los KPIs en la pestaña Métricas para estadísticas globales"),
+            html.Li("Active/desactive filtros para ver diferentes conjuntos de modelos")
+        ], style={'marginLeft': '15px'})
+    ], style={'padding': '10px', 'backgroundColor': '#e8f5e8', 'borderRadius': '4px'}))
+    
+    if not alertas:
+        return [html.P("✅ No hay alertas activas en el sistema.", style={'color': '#28a745', 'textAlign': 'center'})]
+    
+    return alertas

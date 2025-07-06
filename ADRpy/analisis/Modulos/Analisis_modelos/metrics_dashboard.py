@@ -15,14 +15,42 @@ def generate_metrics_dashboard(
     celda_seleccionada: Optional[str] = None,
     modelos_no_mostrados: Optional[List[Dict]] = None
 ) -> html.Div:
+    # Importar función de validación para contar modelos con errores
+    from .plot_interactive import validate_model_for_plotting
+    
     # KPIs globales
     total_celdas = len(modelos_por_celda)
     total_modelos = sum(len(v) for v in modelos_por_celda.values())
     total_modelos_filtrados = len(modelos_filtrados) if modelos_filtrados is not None else 0
     total_modelos_mostrados = len(modelos_mostrados) if modelos_mostrados is not None else 0
-    total_modelos_no_mostrados = len(modelos_no_mostrados) if modelos_no_mostrados is not None else 0
     total_celdas_con_modelos = sum(1 for v in modelos_por_celda.values() if len(v) > 0)
     porcentaje_celdas_cubiertas = 100 * total_celdas_con_modelos / total_celdas if total_celdas else 0
+    
+    # Calcular modelos no mostrados como: total disponibles - total mostrados
+    # Nota: modelos_no_mostrados puede venir de find_missing_models() pero es otra métrica diferente
+    total_modelos_no_mostrados = total_modelos - total_modelos_mostrados
+    
+    # NUEVO: Contar modelos con warnings vs modelos completos
+    modelos_con_warnings = 0
+    modelos_completos = 0
+    modelos_criticos = 0
+    tipos_warnings = {}
+    
+    for modelos_lista in modelos_por_celda.values():
+        for modelo in modelos_lista:
+            if isinstance(modelo, dict):
+                es_valido, warnings = validate_model_for_plotting(modelo)
+                if not es_valido:
+                    modelos_criticos += 1
+                elif warnings:
+                    modelos_con_warnings += 1
+                    for warning in warnings:
+                        tipos_warnings[warning] = tipos_warnings.get(warning, 0) + 1
+                else:
+                    modelos_completos += 1
+    
+    porcentaje_con_warnings = 100 * modelos_con_warnings / total_modelos if total_modelos > 0 else 0
+    porcentaje_criticos = 100 * modelos_criticos / total_modelos if total_modelos > 0 else 0
 
     # Distribución por tipo de modelo
     tipos = []
@@ -78,8 +106,11 @@ def generate_metrics_dashboard(
         kpi_box(total_celdas, "Celdas importadas", '#28a745', "Cantidad de celdas (combinaciones aeronave-parámetro) importadas del JSON."),
         kpi_box(f"{porcentaje_celdas_cubiertas:.1f}%", "Cobertura de celdas", '#17a2b8', "Porcentaje de celdas que tienen al menos un modelo entrenado."),
         kpi_box(total_modelos_filtrados, "Modelos filtrados", '#6f42c1', "Cantidad de modelos que cumplen los filtros activos en la interfaz (tipo, predictores, etc)."),
-        kpi_box(total_modelos_no_mostrados, "Modelos no mostrados", '#dc3545', "Modelos presentes en el JSON pero que no se visualizan por inconsistencias, errores o falta de datos requeridos."),
-        kpi_box(total_modelos_mostrados, "Modelos mostrados", '#ff9800', "Modelos que efectivamente se visualizan en la gráfica principal para la celda seleccionada."),
+        kpi_box(total_modelos_mostrados, "Modelos mostrados", '#fd7e14', "Modelos que efectivamente se visualizan en la gráfica principal para la celda seleccionada."),
+        kpi_box(modelos_completos, "Modelos completos", '#28a745', f"Modelos sin problemas ni campos faltantes ({100-porcentaje_con_warnings-porcentaje_criticos:.1f}% del total)."),
+        kpi_box(modelos_con_warnings, "Modelos incompletos", '#ff9800', f"Modelos con datos faltantes no críticos ({porcentaje_con_warnings:.1f}% del total). Ej: sin LOOCV, sin método imputación."),
+        kpi_box(modelos_criticos, "Modelos con errores", '#dc3545', f"Modelos con errores críticos que impiden su graficado ({porcentaje_criticos:.1f}% del total)."),
+        kpi_box(total_modelos_no_mostrados, "Modelos no mostrados", '#6c757d', "Diferencia entre modelos importados y modelos actualmente mostrados en la interfaz."),
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'marginBottom': '18px', 'justifyContent': 'center', 'width': '100%'})
 
     # Visualización: Modelos por celda (heatmap compacto)

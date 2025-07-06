@@ -28,6 +28,74 @@ def _to_list_safe(val):
 logger = logging.getLogger(__name__)
 
 
+def validate_model_for_plotting(modelo: dict) -> tuple[bool, list[str]]:
+    """
+    Valida si un modelo puede ser graficado de manera segura.
+    
+    Returns:
+        tuple: (es_valido, lista_de_warnings)
+        - es_valido: True si el modelo puede ser graficado (solo se bloquea por errores críticos)
+        - lista_de_warnings: Lista de problemas informativos o menores detectados
+    """
+    if not isinstance(modelo, dict):
+        return False, ["modelo_no_es_dict"]
+    
+    warnings = []
+    
+    # Verificar datos básicos (solo informativos, no críticos)
+    if not modelo.get('tipo'):
+        warnings.append("sin_tipo")
+    
+    predictores = modelo.get('predictores', [])
+    if not predictores:
+        warnings.append("sin_predictores")
+    
+    # Método de imputación faltante - solo informativo
+    if not modelo.get('metodo_imputacion'):
+        warnings.append("sin_metodo_imputacion")
+    
+    # LOOCV faltante - solo informativo
+    if modelo.get('Confianza_LOOCV') is None:
+        warnings.append("sin_loocv")
+    
+    # Verificar datos de entrenamiento si existen
+    datos_entrenamiento = modelo.get('datos_entrenamiento', {})
+    if datos_entrenamiento:
+        y_original = datos_entrenamiento.get('y_original')
+        x_original = datos_entrenamiento.get('X_original')
+        
+        if y_original is not None:
+            if not isinstance(y_original, (list, tuple)):
+                return False, ["y_original_formato_invalido"]  # CRÍTICO
+            elif len(y_original) == 0 or len([y for y in y_original if y is not None and not (isinstance(y, float) and y != y)]) == 0:
+                return False, ["y_original_sin_datos_validos"]  # CRÍTICO
+        
+        if x_original is not None:
+            if not isinstance(x_original, (list, tuple)):
+                return False, ["x_original_formato_invalido"]  # CRÍTICO
+            elif len(x_original) == 0:
+                return False, ["x_original_vacio"]  # CRÍTICO
+    
+    # Verificar métricas básicas - solo informativos
+    r2 = modelo.get('r2')
+    if r2 is not None and isinstance(r2, (int, float)):
+        if r2 != r2 or abs(r2) == float('inf'):  # NaN o infinito
+            warnings.append("r2_invalido")
+    
+    confianza = modelo.get('Confianza')
+    if confianza is not None and isinstance(confianza, (int, float)):
+        if confianza != confianza:  # NaN
+            warnings.append("confianza_nan")
+    
+    # Si no tiene n_predictores válido, es problema menor
+    n_pred = modelo.get('n_predictores', 0)
+    if not isinstance(n_pred, int) or n_pred <= 0:
+        warnings.append("n_predictores_invalido")
+    
+    # Todos los modelos son válidos para mostrar a menos que haya errores críticos de datos
+    return True, warnings
+
+
 def create_interactive_plot(
     modelos_filtrados: Dict,
     aeronave: str,
@@ -61,7 +129,24 @@ def create_interactive_plot(
         )
         return fig
     modelos = modelos_filtrados[celda_key]
-    modelos_1_pred = [m for m in modelos if isinstance(m, dict) and m.get('n_predictores', 0) == 1]
+    
+    # Validar y filtrar modelos problemáticos
+    modelos_validos = []
+    modelos_con_problemas = []
+    
+    for i, modelo in enumerate(modelos):
+        if isinstance(modelo, dict) and modelo.get('n_predictores', 0) == 1:
+            es_valido, problemas = validate_model_for_plotting(modelo)
+            if es_valido:
+                modelos_validos.append(modelo)
+            else:
+                modelos_con_problemas.append({
+                    'modelo': modelo,
+                    'problemas': problemas,
+                    'indice': i
+                })
+    
+    modelos_1_pred = modelos_validos
     if not modelos_1_pred:
         fig.add_annotation(
             text="Visualización disponible solo para modelos de 1 predictor",
@@ -657,40 +742,111 @@ def create_metrics_summary_table(modelos_filtrados: Dict,
     modelos = modelos_filtrados[celda_key]
     
     summary_data = []
+    modelos_validos = 0
+    modelos_con_problemas = 0
+    problemas_encontrados = {}
     
     for i, modelo in enumerate(modelos):
         if isinstance(modelo, dict):
-            confianza = modelo.get('Confianza', 0)
-            confianza_loocv = modelo.get('Confianza_LOOCV', 0)
-            # Calcular confianza final como promedio (si ambos existen y son numéricos)
-            if confianza is not None and confianza_loocv is not None:
+            # Validar modelo antes de procesarlo
+            es_valido, warnings = validate_model_for_plotting(modelo)
+            
+            # Validar modelo antes de procesarlo
+            es_valido, warnings = validate_model_for_plotting(modelo)
+            
+            if not es_valido:
+                modelos_con_problemas += 1
+                for warning in warnings:
+                    problemas_encontrados[warning] = problemas_encontrados.get(warning, 0) + 1
+            elif warnings:
+                modelos_con_problemas += 1
+                for warning in warnings:
+                    problemas_encontrados[warning] = problemas_encontrados.get(warning, 0) + 1
+            else:
+                modelos_validos += 1
+            
+            confianza = modelo.get('Confianza')
+            confianza_loocv = modelo.get('Confianza_LOOCV')
+            
+            # Calcular confianza final como promedio (solo si ambos existen y son numéricos)
+            if (confianza is not None and confianza_loocv is not None and 
+                isinstance(confianza, (int, float)) and isinstance(confianza_loocv, (int, float))):
                 try:
                     confianza_final = round((float(confianza) + float(confianza_loocv)) / 2, 3)
                 except Exception:
                     confianza_final = ''
             else:
-                confianza_final = ''
+                # Si no hay LOOCV, usar solo la confianza básica
+                if confianza is not None and isinstance(confianza, (int, float)):
+                    confianza_final = round(float(confianza), 3)
+                else:
+                    confianza_final = ''
+            
+            # Procesar valores con manejo seguro de None
+            def safe_round(value, decimals=3, default=0):
+                if value is None:
+                    return default
+                try:
+                    return round(float(value), decimals)
+                except (ValueError, TypeError):
+                    return default
+            
+            def safe_round_display(value, decimals=3, default='N/A'):
+                if value is None:
+                    return default
+                try:
+                    return round(float(value), decimals)
+                except (ValueError, TypeError):
+                    return default
+            
+            # Determinar estado de validación
+            if not es_valido:
+                # Errores críticos (rojo) - modelo no se puede graficar
+                estado_validacion = f"❌ Error crítico: {', '.join(warnings[:2])}"
+                if len(warnings) > 2:
+                    estado_validacion += f" (+{len(warnings)-2})"
+            elif not warnings:
+                estado_validacion = "✅ Completo"
+            elif any(w in ["sin_loocv", "sin_metodo_imputacion"] for w in warnings):
+                # Avisos informativos (amarillo)
+                estado_validacion = f"⚠️ Incompleto: {', '.join([w.replace('sin_', '') for w in warnings[:2]])}"
+                if len(warnings) > 2:
+                    estado_validacion += f" (+{len(warnings)-2})"
+            else:
+                # Otros problemas menores (amarillo)
+                estado_validacion = f"⚠️ Advertencia: {', '.join(warnings[:2])}"
+                if len(warnings) > 2:
+                    estado_validacion += f" (+{len(warnings)-2})"
+                
             row = {
                 'ID': i + 1,
+                'Estado': estado_validacion,
                 'Tipo': modelo.get('tipo', 'N/A'),
                 'Predictores': ', '.join(modelo.get('predictores', [])),
                 'N° Predictores': modelo.get('n_predictores', 0),
-                'MAPE (%)': round(modelo.get('mape', 0), 3),
-                'R²': round(modelo.get('r2', 0), 3),
-                'Correlación': round(modelo.get('corr', 0), 3),
-                'Confianza': round(confianza, 3),
-                'Confianza_LOOCV': round(confianza_loocv, 3),
+                'MAPE (%)': safe_round(modelo.get('mape')),
+                'R²': safe_round(modelo.get('r2')),
+                'Correlación': safe_round(modelo.get('corr')),
+                'Confianza': safe_round(confianza),
+                'Confianza_LOOCV': safe_round_display(confianza_loocv),
                 'Confianza Final': confianza_final,
                 'N° Muestras': modelo.get('n_muestras_entrenamiento', 0),
-                'MAPE_LOOCV': round(modelo.get('MAPE_LOOCV', 0), 3),
-                'R2_LOOCV': round(modelo.get('R2_LOOCV', 0), 3),
-                'Corr_LOOCV': round(modelo.get('Corr_LOOCV', 0), 3),
+                'MAPE_LOOCV': safe_round_display(modelo.get('MAPE_LOOCV')),
+                'R2_LOOCV': safe_round_display(modelo.get('R2_LOOCV')),
+                'Corr_LOOCV': safe_round_display(modelo.get('Corr_LOOCV')),
                 'k_LOOCV': modelo.get('k_LOOCV', ''),
                 'Advertencia': modelo.get('Advertencia', '')
             }
             summary_data.append(row)
     
-    return pd.DataFrame(summary_data)
+    df_result = pd.DataFrame(summary_data)
+    
+    # Agregar información de validación como atributos del DataFrame
+    df_result.attrs['modelos_validos'] = modelos_validos
+    df_result.attrs['modelos_con_problemas'] = modelos_con_problemas
+    df_result.attrs['problemas_encontrados'] = problemas_encontrados
+    
+    return df_result
 
 def create_interactive_plot_3d(
     modelos_2_pred: list,
