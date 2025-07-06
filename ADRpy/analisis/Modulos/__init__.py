@@ -7,7 +7,32 @@ Este paquete contiene todos los módulos necesarios para:
 - Bucles de imputación (similitud y correlación)
 - Análisis visual de modelos
 - Exportación de resultados
+- Utilidades para notebook optimizado
 """
+
+# Importar utilidades principales para acceso directo
+try:
+    from .notebook_utils import (
+        create_panel, 
+        launch_debug, 
+        launch_production,
+        quick_status,
+        run_full_diagnostic,
+        get_metrics,
+        show_logs
+    )
+    __all__ = [
+        'create_panel', 
+        'launch_debug', 
+        'launch_production',
+        'quick_status',
+        'run_full_diagnostic', 
+        'get_metrics',
+        'show_logs'
+    ]
+except ImportError:
+    # Si notebook_utils no está disponible, no fallar
+    __all__ = []
 
 __version__ = "1.0.0"
 __author__ = "ADRpy Analysis System"

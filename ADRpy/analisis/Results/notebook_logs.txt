@@ -1,0 +1,200 @@
+2025-07-05 16:01:47 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:01:59 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 16:01:59 [MONITOR] Monitoreo iniciado
+2025-07-05 16:01:59 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 16:01:59 [ERROR] Error lanzando aplicación: main_visualizacion_modelos() got an unexpected keyword argument 'description'
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\notebook_utils.py\", line 573, in launch_app\n    main_visualizacion_modelos(**config)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\nTypeError: main_visualizacion_modelos() got an unexpected keyword argument 'description'\n"}
+2025-07-05 16:02:14 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 16:02:14 [MONITOR] Monitoreo iniciado
+2025-07-05 16:02:14 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 16:02:14 [ERROR] Error lanzando aplicación: main_visualizacion_modelos() got an unexpected keyword argument 'description'
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\notebook_utils.py\", line 573, in launch_app\n    except Exception as e:\n        ^^^^^^^^^^^^^^^^^^\nTypeError: main_visualizacion_modelos() got an unexpected keyword argument 'description'\n"}
+2025-07-05 16:04:50 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:07:43 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 16:07:43 [MONITOR] Monitoreo iniciado
+2025-07-05 16:07:43 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 16:22:16 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:22:42 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 16:22:42 [MONITOR] Monitoreo iniciado
+2025-07-05 16:22:42 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 16:22:59 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 16:22:59 [MONITOR] Monitoreo iniciado
+2025-07-05 16:22:59 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 16:23:39 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 16:23:39 [MONITOR] Monitoreo iniciado
+2025-07-05 16:23:39 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 16:32:41 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:32:41 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:33:07 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:33:07 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:37:39 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:39:00 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:40:27 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:41:19 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:41:19 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:41:20 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:41:42 [MAINTENANCE] Logs antiguos borrados, conservados últimas 24h
+2025-07-05 16:41:56 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 16:41:56 [MONITOR] Monitoreo iniciado
+2025-07-05 16:41:56 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 16:50:02 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:50:47 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:50:47 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:52:07 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:52:07 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:52:09 [IMPORT] Módulo notebook_utils cargado
+2025-07-05 16:52:25 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 16:52:25 [MONITOR] Monitoreo iniciado
+2025-07-05 16:52:25 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 16:52:32 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 16:52:32 [MONITOR] Monitoreo iniciado
+2025-07-05 16:52:32 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 17:19:21 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 17:19:21 [MONITOR] Monitoreo iniciado
+2025-07-05 17:19:21 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 17:21:29 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 17:21:29 [MONITOR] Monitoreo iniciado
+2025-07-05 17:21:29 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 17:28:41 [MAINTENANCE] Logs antiguos borrados, conservados últimas 24h
+2025-07-05 17:29:12 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 17:29:12 [MONITOR] Monitoreo iniciado
+2025-07-05 17:29:12 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 17:34:16 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 17:34:16 [MONITOR] Monitoreo iniciado
+2025-07-05 17:34:16 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 17:34:36 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 17:34:36 [MONITOR] Monitoreo iniciado
+2025-07-05 17:34:36 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 17:44:38 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 17:44:38 [MONITOR] Monitoreo iniciado
+2025-07-05 17:44:38 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 17:46:22 [MAINTENANCE] Logs antiguos borrados, conservados últimas 24h
+2025-07-05 17:46:24 [MAINTENANCE] Logs antiguos borrados, conservados últimas 24h
+2025-07-05 17:46:37 [MAINTENANCE] Logs antiguos borrados, conservados últimas 24h
+2025-07-05 17:52:15 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 17:52:15 [MONITOR] Monitoreo iniciado
+2025-07-05 17:52:15 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 18:14:48 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 18:14:48 [MONITOR] Monitoreo iniciado
+2025-07-05 18:14:48 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 18:25:59 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 18:25:59 [MONITOR] Monitoreo iniciado
+2025-07-05 18:25:59 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 18:42:56 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 18:42:56 [MONITOR] Monitoreo iniciado
+2025-07-05 18:42:56 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 18:43:01 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 18:43:01 [MONITOR] Monitoreo iniciado
+2025-07-05 18:43:01 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 18:56:24 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 18:56:24 [MONITOR] Monitoreo iniciado
+2025-07-05 18:56:24 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 19:05:29 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 19:05:29 [MONITOR] Monitoreo iniciado
+2025-07-05 19:05:29 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 19:36:54 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 19:36:54 [MONITOR] Monitoreo iniciado
+2025-07-05 19:36:54 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 19:40:17 [LAUNCH] Intentando lanzar en modo debug
+2025-07-05 19:40:17 [MONITOR] Monitoreo iniciado
+2025-07-05 19:40:17 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 174}
+2025-07-05 20:20:44 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:20:44 [MONITOR] Monitoreo iniciado
+2025-07-05 20:20:44 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:23:52 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:23:52 [MONITOR] Monitoreo iniciado
+2025-07-05 20:23:52 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:25:51 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:25:51 [MONITOR] Monitoreo iniciado
+2025-07-05 20:25:51 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:27:51 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:27:51 [MONITOR] Monitoreo iniciado
+2025-07-05 20:27:51 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:28:53 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:28:53 [MONITOR] Monitoreo iniciado
+2025-07-05 20:28:53 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:29:42 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:29:42 [MONITOR] Monitoreo iniciado
+2025-07-05 20:29:42 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:30:53 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:30:53 [MONITOR] Monitoreo iniciado
+2025-07-05 20:30:53 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:35:28 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:35:28 [MONITOR] Monitoreo iniciado
+2025-07-05 20:35:28 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:35:50 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:35:50 [MONITOR] Monitoreo iniciado
+2025-07-05 20:35:50 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:39:35 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:39:35 [MONITOR] Monitoreo iniciado
+2025-07-05 20:39:35 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 20:48:57 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 20:48:57 [MONITOR] Monitoreo iniciado
+2025-07-05 20:48:57 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:01:53 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:01:53 [MONITOR] Monitoreo iniciado
+2025-07-05 21:01:53 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:04:17 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:04:17 [MONITOR] Monitoreo iniciado
+2025-07-05 21:04:17 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:06:15 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:06:15 [MONITOR] Monitoreo iniciado
+2025-07-05 21:06:15 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:09:45 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:09:45 [MONITOR] Monitoreo iniciado
+2025-07-05 21:09:45 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:15:37 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:15:37 [MONITOR] Monitoreo iniciado
+2025-07-05 21:15:37 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:16:13 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:16:13 [MONITOR] Monitoreo iniciado
+2025-07-05 21:16:13 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:23:44 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:23:44 [MONITOR] Monitoreo iniciado
+2025-07-05 21:23:44 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-05 21:27:55 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-05 21:27:55 [MONITOR] Monitoreo iniciado
+2025-07-05 21:27:55 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 174}

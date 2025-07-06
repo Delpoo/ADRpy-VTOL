@@ -262,18 +262,28 @@ def create_main_layout() -> html.Div:
                 html.Div(id='filters-panel', children=[
                     html.H3("Filtros y Controles"),
                     html.Label("Aeronave:"),
-                    html.Div(id='aeronave-dropdown-container'),  # Contenedor para el dropdown de aeronave
+                    html.Div(id='aeronave-dropdown-container', children=[
+                        create_aeronave_dropdown([])  # Inicializar con dropdown vacío
+                    ]),
                     html.Label("Parámetro:"),
-                    html.Div(id='parametro-dropdown-container'),  # Contenedor para el dropdown de parámetro
+                    html.Div(id='parametro-dropdown-container', children=[
+                        create_parametro_dropdown([])  # Inicializar con dropdown vacío
+                    ]),
                     html.Label("Predictor:"),
-                    html.Div(id='predictor-dropdown-container'),  # Nuevo: Contenedor para el dropdown de predictor
+                    html.Div(id='predictor-dropdown-container', children=[
+                        create_predictor_dropdown([])  # Inicializar con dropdown vacío
+                    ]),
                     html.Label("Tipos de Modelo:"),
-                    html.Div(id='tipo-modelo-container'),  # Checklist de tipo de modelo
-                    html.Div(id='visualization-options-container'),  # Opciones de visualización (toggles)
+                    html.Div(id='tipo-modelo-container', children=[
+                        create_tipo_modelo_checklist([])  # Inicializar con checklist vacío
+                    ]),
+                    html.Div(id='visualization-options-container', children=[
+                        create_visualization_options()  # Contiene todos los componentes: show-*, hide-*, comparison-type, etc.
+                    ]),
                     html.Label("Métodos de Imputación:"),
-                    html.Div(id='imputation-methods-container'),  # Checklist de métodos de imputación
+                    html.Div(id='imputation-methods-container'),  # Se llena por callback debido a duplicación
                     html.Label("Tipo de comparación:"),
-                    html.Div(id='comparison-type-container'),  # RadioItems de tipo de comparación
+                    html.Div(id='comparison-type-container'),  # Se llena por callback debido a duplicación,
                     html.Button('Actualizar Visualización', 
                                id='update-button',
                                style={

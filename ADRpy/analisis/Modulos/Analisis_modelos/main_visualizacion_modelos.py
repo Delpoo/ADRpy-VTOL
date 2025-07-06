@@ -242,7 +242,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 font=dict(size=16, color="gray")
             )
             empty_fig.update_layout(height=600)
-            return dcc.Graph(figure=empty_fig), html.P("Sin datos")
+            return dcc.Graph(id='plot-graph', figure=empty_fig), html.P("Sin datos")
 
         # Filtro de predictores
         if predictor == '__all__':
@@ -308,7 +308,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             )
             df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
             summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
-            return dcc.Graph(figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
+            return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
         elif plot_tab in ['comparison-view', 'metrics-view']:
             # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área principal (main-plot)
             if plot_tab == 'metrics-view':
@@ -333,7 +333,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 paper_bgcolor='white',
                 title_x=0.5
             )
-            return dcc.Graph(figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), html.P("En desarrollo")
+            return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), html.P("En desarrollo")
         else:
             # 2D (por defecto)
             fig = create_interactive_plot(
@@ -363,13 +363,13 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             )
             df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
             summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
-            return dcc.Graph(figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
+            return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
 
     # Callback para el panel de información: hover/click, tabla seleccionada y filtros
     @app.callback(
         Output('model-info-content', 'children'),
-        [Input('main-plot', 'hoverData'),
-         Input('main-plot', 'clickData'),
+        [Input('plot-graph', 'hoverData'),
+         Input('plot-graph', 'clickData'),
          Input('summary-table', 'selected_rows'),  # Agregar selección de tabla
          Input('aeronave-dropdown', 'value'),
          Input('parametro-dropdown', 'value'),
@@ -458,7 +458,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
     @app.callback(
         Output('selected-model-store', 'data'),
         [Input('summary-table', 'selected_rows'),
-         Input('main-plot', 'clickData')],
+         Input('plot-graph', 'clickData')],
         [State('aeronave-dropdown', 'value'),
          State('parametro-dropdown', 'value'),
          State('predictor-dropdown', 'value'),
@@ -501,7 +501,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         selected_idx = None
         if trigger_id == 'summary-table' and selected_rows:
             selected_idx = selected_rows[0]
-        elif trigger_id == 'main-plot' and clickData:
+        elif trigger_id == 'plot-graph' and clickData:
             # DEBUG: Mostrar información de click recibido
             import os
             if os.environ.get('DASH_DEBUG_CLICK'):
@@ -514,6 +514,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                     print(f"   point: {point}")
                     print(f"   customdata: {point.get('customdata')}")
                     print(f"   curveNumber: {point.get('curveNumber')}")
+                    print(f"   pointIndex: {point.get('pointIndex')}")
                 # Obtener el índice del modelo desde customdata
                 if 'customdata' in point and point['customdata'] is not None:
                     selected_idx = point['customdata']
@@ -542,11 +543,18 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
             if prev_store and prev_store.get('aeronave') == aeronave and prev_store.get('parametro') == parametro:
                 selected_idx = prev_store.get('model_idx')
 
-        return {
+        result = {
             'aeronave': aeronave,
             'parametro': parametro,
             'model_idx': selected_idx
         }
+        
+        # DEBUG: Mostrar resultado del callback
+        import os
+        if os.environ.get('DASH_DEBUG_CLICK'):
+            print(f"🔄 SYNC_MODEL_SELECTION RESULTADO: {result}")
+            
+        return result
       # Callback para actualizar selected_rows cuando cambia el store
     @app.callback(
         Output('summary-table', 'selected_rows'),
@@ -557,7 +565,16 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
     )
     def update_table_selection(selected_model_data, aeronave, parametro):
         """Actualiza la selección de la tabla basada en el store"""
+        import os
+        if os.environ.get('DASH_DEBUG_CLICK'):
+            print(f"📋 UPDATE_TABLE_SELECTION llamado:")
+            print(f"   selected_model_data: {selected_model_data}")
+            print(f"   aeronave: {aeronave}")
+            print(f"   parametro: {parametro}")
+            
         if not selected_model_data or not aeronave or not parametro:
+            if os.environ.get('DASH_DEBUG_CLICK'):
+                print(f"   ❌ Datos faltantes, retornando []")
             return []
             
         stored_aeronave = selected_model_data.get('aeronave')
@@ -567,8 +584,12 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         # Solo aplicar si coincide la aeronave y parámetro actuales
         if (stored_aeronave == aeronave and stored_parametro == parametro and 
             stored_idx is not None):
+            if os.environ.get('DASH_DEBUG_CLICK'):
+                print(f"   ✅ Seleccionando fila {stored_idx}")
             return [stored_idx]
         
+        if os.environ.get('DASH_DEBUG_CLICK'):
+            print(f"   ⚠️ No coinciden datos o índice None, retornando []")
         return []
 
     # Ejecutar aplicación
