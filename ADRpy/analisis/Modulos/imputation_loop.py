@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import json
+import os
 # from .imputacion_similitud_flexible import *  # COMENTADO: Reemplazado por nueva implementación
 from .imputacion_similitud_nueva import imputacion_por_similitud
 from .html_utils import convertir_a_html
@@ -364,54 +365,163 @@ def bucle_imputacion_similitud_correlacion(
     imputaciones_validas = [imp for imp in resumen_imputaciones if not is_missing(imp.get("Valor imputado", None))]
     print(f"\033[1mTotal de valores imputados: {len(imputaciones_validas)}\033[0m")
 
-    # --- Nuevo: armar detalles_por_celda limpio para exportar solo lo esencial ---
-    CAMPOS_CLAVE = [
-        "Valor imputado", "Confianza", "Iteración imputación", "Método predictivo", "Detalle imputacion", "X_visualizacion"
-    ]
-    def extraer_campos(dic, campos, advertencia=None):
-        if not dic:
-            return {}
-        d = {k: dic.get(k) for k in campos if k in dic}
-        if advertencia:
-            d["Advertencia"] = advertencia
-        elif "Advertencia" in dic:
-            d["Advertencia"] = dic["Advertencia"]
-        return d
-
-    detalles_por_celda = {}
-    for detalle in detalles_para_excel:
-        aeronave = detalle.get("Aeronave")
-        parametro = detalle.get("Parámetro")
-        if not aeronave or not parametro:
-            continue
-        key = f"{aeronave}|{parametro}"
-        # Extraer advertencias de cada subdiccionario
-        adv_final = (detalle.get("final") or {}).get("Advertencia")
-        adv_similitud = (detalle.get("similitud") or {}).get("Advertencia")
-        adv_correlacion = (detalle.get("correlacion") or {}).get("Advertencia")
-        detalles_por_celda[key] = {
-            "final": extraer_campos(detalle.get("final"), CAMPOS_CLAVE, adv_final),
-            "similitud": extraer_campos(detalle.get("similitud"), CAMPOS_CLAVE, adv_similitud),
-            "correlacion": extraer_campos(detalle.get("correlacion"), CAMPOS_CLAVE, adv_correlacion),
-        }
-    print(f"[DEBUG] detalles_por_celda FINAL: {len(detalles_por_celda)} claves")
-
-    # Al final del bucle, exportar modelos_por_celda y detalles_por_celda a JSON
-    import json    # Crear directorio Results si no existe y exportar JSON
+    # === EXPORTAR JSON OPTIMIZADO (estructura unificada por celda) ===
+    import json
     try:
         import os
         results_dir = os.path.join(os.path.dirname(__file__), '../Results')
         if not os.path.exists(results_dir):
             os.makedirs(results_dir)
+        
+        # Estructura unificada: una sola entrada por celda con toda la información
+        datos_unificados_por_celda = {}
+        
+        # Procesar información de imputación primero
+        informacion_imputacion_por_celda = {}
+        for detalle in detalles_para_excel:
+            aeronave = detalle.get("Aeronave")
+            parametro = detalle.get("Parámetro")
+            if not aeronave or not parametro:
+                continue
+            
+            key = f"{aeronave}|{parametro}"
+            
+            # Extraer información de imputación directamente
+            campos_clave = ["Valor imputado", "Confianza", "Iteración imputación", "Método predictivo", "X_visualizacion"]
+            
+            def extraer_info_imputacion(dic):
+                if not dic:
+                    return {}
+                info = {}
+                for campo in campos_clave:
+                    if campo in dic:
+                        info[campo] = dic[campo]
+                if "Advertencia" in dic:
+                    info["Advertencia"] = dic["Advertencia"]
+                return info
+            
+            informacion_imputacion_por_celda[key] = {
+                "final": extraer_info_imputacion(detalle.get("final")),
+                "similitud": extraer_info_imputacion(detalle.get("similitud")),
+                "correlacion": extraer_info_imputacion(detalle.get("correlacion"))
+            }
+        
+        # Procesar modelos y unificar con información de imputación
+        for key, modelos in modelos_por_celda.items():
+            if not modelos:
+                continue
+                
+            idx, parametro = key.split('|')
+            primer_modelo = modelos[0]
+            
+            # Crear estructura unificada para esta celda
+            celda_unificada = {
+                "informacion_generica_celda": {
+                    "parametro_objetivo": parametro,
+                    "idx_objetivo": idx
+                }
+            }
+            
+            # Agregar df_original e información de normalización global
+            if "df_original" in primer_modelo:
+                celda_unificada["informacion_generica_celda"]["df_original"] = primer_modelo["df_original"]
+                
+                # Incluir metadatos globales de normalización si existen
+                if "datos_entrenamiento" in primer_modelo:
+                    dt = primer_modelo["datos_entrenamiento"]
+                    # Buscar información de normalización en cualquier parte del primer modelo
+                    info_normalizacion = {}
+                    for campo in ["x_min", "x_max", "y_min", "y_max"]:
+                        if campo in dt:
+                            info_normalizacion[campo] = dt[campo]
+                    
+                    if info_normalizacion:
+                        celda_unificada["informacion_generica_celda"]["info_normalizacion_global"] = info_normalizacion
+            
+            # Agregar información de imputación a la información genérica
+            if key in informacion_imputacion_por_celda:
+                imputacion_info = informacion_imputacion_por_celda[key]
+                celda_unificada["informacion_generica_celda"]["final"] = imputacion_info["final"]
+                celda_unificada["informacion_generica_celda"]["similitud"] = imputacion_info["similitud"] 
+                celda_unificada["informacion_generica_celda"]["correlacion"] = imputacion_info["correlacion"]
+                
+                # Agregar X_visualizacion a información genérica (es común para todos los modelos)
+                correlacion_info = imputacion_info.get("correlacion", {})
+                celda_unificada["informacion_generica_celda"]["X_visualizacion"] = correlacion_info.get("X_visualizacion")
+            
+            # Procesar todos los modelos de esta celda
+            modelos_celda = []
+            for modelo in modelos:
+                # Extraer información completa de datos_entrenamiento
+                datos_ent = modelo.get("datos_entrenamiento", {})
+                
+                modelo_optimizado = {
+                    # Información básica del modelo
+                    "tipo": modelo.get("tipo", ""),
+                    "predictores": modelo.get("predictores", []),
+                    "n_predictores": modelo.get("n_predictores", 0),
+                    "n_muestras_entrenamiento": modelo.get("n_muestras_entrenamiento", 0),
+                    
+                    # Coeficientes y ecuaciones en escala original (AMBOS NECESARIOS)
+                    "coeficientes_originales": modelo.get("coeficientes_originales", []),
+                    "intercepto_original": modelo.get("intercepto_original", 0),
+                    "ecuacion_string": modelo.get("ecuacion_string", ""),
+                    
+                    # Métricas de evaluación (sin LOOCV que es redundante)
+                    "mape": modelo.get("mape", 0),
+                    "r2": modelo.get("r2", 0),
+                    "corr": modelo.get("corr", 0),
+                    "Confianza": modelo.get("Confianza", 0),
+                    "Confianza_LOOCV": modelo.get("Confianza_LOOCV", 0),
+                    "Corr_LOOCV": modelo.get("Corr_LOOCV", 0),
+                    "MAPE_LOOCV": modelo.get("MAPE_LOOCV", 0),
+                    "R2_LOOCV": modelo.get("R2_LOOCV", 0),
+                    "Advertencia": modelo.get("Advertencia", None),
+                    
+                    # Peso de predictores 
+                    "Peso de predictores": modelo.get("Peso de predictores", []),
+                    
+                    # Transformación y método de imputación
+                    "transformacion": modelo.get("tipo_transformacion", ""),
+                    "metodo_imputacion": "correlacion",  # Especificar método usado
+                    
+                    # Datos de entrenamiento COMPLETOS (CORREGIDOS)
+                    "datos_entrenamiento": datos_ent
+                }
+                
+                # Valor teórico imputado (solo y/z, sin X_visualizacion)
+                if key in informacion_imputacion_por_celda:
+                    correlacion_info = informacion_imputacion_por_celda[key].get("correlacion", {})
+                    # Solo incluir el valor imputado (y o z)
+                    valor_imputado = correlacion_info.get("Valor imputado")
+                    if valor_imputado is not None:
+                        modelo_optimizado["valor_teorico_imputado"] = valor_imputado
+                    else:
+                        modelo_optimizado["valor_teorico_imputado"] = None
+                else:
+                    modelo_optimizado["valor_teorico_imputado"] = None
+                    
+                modelos_celda.append(modelo_optimizado)
+            
+            # Agregar modelos a la estructura unificada como lista
+            celda_unificada["informacion_modelos_celda"] = {"modelos": modelos_celda}
+            
+            # Guardar en estructura final
+            datos_unificados_por_celda[key] = celda_unificada
+        
+        # Exportar JSON con estructura unificada
+        export_dict_unificado = datos_unificados_por_celda
+
         output_path = os.path.join(results_dir, 'modelos_completos_por_celda.json')
-        export_dict = {
-            "modelos_por_celda": modelos_por_celda,
-            "detalles_por_celda": detalles_por_celda
-        }
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(export_dict, f, ensure_ascii=False, indent=2)
-        print(f"[DEBUG] Archivo JSON exportado a: {output_path}")
+            json.dump(export_dict_unificado, f, ensure_ascii=False, indent=2, separators=(',', ': '))
+        print(f"[DEBUG] Archivo JSON unificado exportado a: {output_path}")
+        print(f"[DEBUG] Estructura: {len(datos_unificados_por_celda)} celdas con información completa")
+        
     except Exception as e:
         print(f"[WARNING] No se pudo exportar el archivo JSON: {e}")
 
-    return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel, modelos_por_celda, detalles_por_celda
+    return df_procesado_base, pd.DataFrame(resumen_imputaciones), imputaciones_finales, detalles_para_excel, modelos_por_celda
+
+
+

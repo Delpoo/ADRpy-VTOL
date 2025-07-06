@@ -12,9 +12,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import logging
-from .plot_config import COLORS, SYMBOLS, _ensure_list
-from .plot_data_access import get_model_original_data, get_model_training_data
-from .plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
+try:
+    from .plot_config import COLORS, SYMBOLS, _ensure_list
+    from .plot_data_access import get_model_original_data, get_model_training_data
+    from .plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
+except ImportError:
+    from plot_config import COLORS, SYMBOLS, _ensure_list
+    from plot_data_access import get_model_original_data, get_model_training_data
+    from plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
 
 
 def _to_list_safe(val):
@@ -929,7 +934,7 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
         coefs = modelo.get('coeficientes_originales')
         intercepto = modelo.get('intercepto_original')
         predictores = modelo.get('predictores', [])
-        ecuacion_latex = modelo.get('ecuacion_normalizada_latex', '')
+        ecuacion_string = modelo.get('ecuacion_string', '')
         mape = modelo.get('mape', None)
         r2 = modelo.get('r2', None)
         if coefs is None or intercepto is None or len(predictores) != 2:
@@ -963,13 +968,13 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
         # Hover info
         aeronave = modelo.get('Aeronave', 'N/A')
         parametro_obj = modelo.get('Parámetro', modelo.get('parametro', 'N/A'))
-        ecuacion_latex = modelo.get('ecuacion_normalizada_latex', '')
+        ecuacion_string = modelo.get('ecuacion_string', '')
         hovertext = (
             f"<b>Aeronave:</b> {aeronave}<br>"
             f"<b>Parámetro:</b> {parametro_obj}<br>"
             f"<b>Tipo:</b> {modelo.get('tipo','')}<br>"
             f"<b>Predictores:</b> {x0_name}, {x1_name}<br>"
-            f"<b>Ecuación:</b> {ecuacion_latex}<br>"
+            f"<b>Ecuación:</b> {ecuacion_string}<br>"
             f"<b>MAPE:</b> {mape:.3f}%<br>"
             f"<b>R²:</b> {r2:.3f}<br>"
             f"<b>Z normalizado:</b> %{{z:.3f}}"

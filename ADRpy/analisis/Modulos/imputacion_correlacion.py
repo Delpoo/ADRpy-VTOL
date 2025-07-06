@@ -167,7 +167,6 @@ def entrenar_modelo(
     intercepto_original = 0.0
     pred_original = np.array([])
     y_original_metrics = np.array([])
-    ecuacion_normalizada = None
     ecuacion_desnormalizada = None
     tipo = "unknown"
     tipo_transformacion = "unknown"
@@ -175,7 +174,6 @@ def entrenar_modelo(
     try:
         # Determinar tipo de modelo y aplicar transformaciones si es necesario
         ecuacion_string = None
-        ecuacion_latex = None
         if modelo_extra == "log":
             # Logarítmico: y = a + b*log(x)
             if len(predictores) != 1:
@@ -202,10 +200,9 @@ def entrenar_modelo(
             intercepto_original = float(modelo.intercept_)
             pred_original = pred_transformed
             y_original_metrics = y_transformed
-            # Ecuación string y LaTeX
+            # Ecuación string
             var = str(predictores[0])
             ecuacion_string = f"y = {intercepto_original:.6g} + {coef_original[0]:.6g}*log({var})"
-            ecuacion_latex = f"y = {intercepto_original:.6g} + {coef_original[0]:.6g} \\cdot \\log({var})"
         elif modelo_extra == "potencia":
             # Potencia: y = a*x^b  <=> log(y) = log(a) + b*log(x)
             if len(predictores) != 1:
@@ -234,10 +231,9 @@ def entrenar_modelo(
             intercepto_original = float(np.exp(modelo.intercept_))  # a (coeficiente)
             pred_original = np.exp(pred_transformed)
             y_original_metrics = np.exp(y_transformed)
-            # Ecuación string y LaTeX
+            # Ecuación string
             var = str(predictores[0])
             ecuacion_string = f"y = {intercepto_original:.6g}*{var}**{coef_original[0]:.6g}"
-            ecuacion_latex = f"y = {intercepto_original:.6g} \\cdot {var}^{{{coef_original[0]:.6g}}}"
         elif modelo_extra == "exp":
             # Exponencial: y = a*exp(b*x) <=> log(y) = log(a) + b*x
             if len(predictores) != 1:
@@ -266,10 +262,9 @@ def entrenar_modelo(
             intercepto_original = float(np.exp(modelo.intercept_))  # a
             pred_original = np.exp(pred_transformed)
             y_original_metrics = np.exp(y_transformed)
-            # Ecuación string y LaTeX
+            # Ecuación string
             var = str(predictores[0])
             ecuacion_string = f"y = {intercepto_original:.6g}*exp({coef_original[0]:.6g}*{var})"
-            ecuacion_latex = f"y = {intercepto_original:.6g} \\cdot e^{{{coef_original[0]:.6g} \\cdot {var}}}"
         else:
             # Modelos lineales y polinómicos
             if poly:
@@ -323,15 +318,6 @@ def entrenar_modelo(
             coeficientes = modelo.coef_
             intercepto = modelo.intercept_
 
-            # Crear ecuación normalizada (string y LaTeX)
-            ecuacion_normalizada = f"y = {intercepto} + " + " + ".join([
-                f"{coef}*x{i}" for i, coef in enumerate(coeficientes)
-            ])
-            ecuacion_normalizada_latex = (
-                "y = " + f"{intercepto:.6g}" + " + " + " + ".join([
-                    f"{coef:.6g} x_{{{i}}}" for i, coef in enumerate(coeficientes)
-                ])
-            )
             # Desnormalizar coeficientes e intercepto (método estándar)
             if scaler_X.scale_ is not None and scaler_X.mean_ is not None and scaler_y.scale_ is not None and scaler_y.mean_ is not None:
                 escalas_ajustadas = scaler_X.scale_
@@ -350,18 +336,12 @@ def entrenar_modelo(
                 f"y = {intercepto_original} + " +
                 " + ".join(f"{coef}*x{i}" for i, coef in enumerate(coef_original))
             )
-            ecuacion_desnormalizada_latex = (
-                "y = " + f"{intercepto_original:.6g}" + " + " + " + ".join([
-                    f"{coef:.6g} x_{{{i}}}" for i, coef in enumerate(coef_original)
-                ])
-            )
             # Calcular predicciones y métricas en escala original
             pred_transformed = modelo.predict(X_trans)
             pred_original = scaler_y.inverse_transform(pred_transformed.reshape(-1, 1)).flatten()
             y_original_metrics = scaler_y.inverse_transform(y_transformed.reshape(-1, 1)).flatten()
             # Ecuación string y LaTeX (desnormalizada)
             ecuacion_string = ecuacion_desnormalizada
-            ecuacion_latex = ecuacion_desnormalizada_latex
         # Calcular métricas siempre en escala original
         mape = float(mean_absolute_percentage_error(y_original_metrics, pred_original) * 100)
         r2 = r2_score(y_original_metrics, pred_original)
@@ -398,9 +378,6 @@ def entrenar_modelo(
             "Peso de predictores": pesos_predictores,
             # Ecuaciones
             "ecuacion_string": ecuacion_string,
-            "ecuacion_latex": ecuacion_latex,
-            "ecuacion_normalizada": ecuacion_normalizada,
-            "ecuacion_normalizada_latex": ecuacion_normalizada_latex if 'ecuacion_normalizada_latex' in locals() else None,
             # Métricas (calculadas en escala original)
             "mape": mape,
             "r2": r2,
@@ -697,9 +674,6 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                         "Peso de predictores": m.get("Peso de predictores", []),
                         "intercepto_original": m["intercepto_original"],
                         "ecuacion_string": m.get("ecuacion_string"),
-                        "ecuacion_latex": m.get("ecuacion_latex"),
-                        "ecuacion_normalizada": m.get("ecuacion_normalizada"),
-                        "ecuacion_normalizada_latex": m.get("ecuacion_normalizada_latex"),
                         "mape": m["mape"],
                         "r2": m["r2"],
                         "corr": m["corr"],

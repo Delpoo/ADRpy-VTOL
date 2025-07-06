@@ -22,40 +22,47 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def extract_coefficients_from_equation(ecuacion_normalizada_latex: str, n_predictores: int) -> Optional[List[float]]:
+def extract_coefficients_from_model(modelo: Dict[str, Any]) -> Optional[List[float]]:
     """
-    Extrae coeficientes de la ecuación LaTeX normalizada.
+    Extrae coeficientes del modelo usando los campos directos.
     
-    Para modelos polinómicos de 2 predictores, la ecuación tiene la forma:
-    y = c0 + c1*x0 + c2*x1 + c3*x0² + c4*x1² + c5*x0*x1
+    Para modelos polinómicos de 2 predictores, se usa:
+    coeficientes_originales + intercepto_original
     
     Parameters:
     -----------
-    ecuacion_normalizada_latex : str
-        Ecuación en formato LaTeX normalizada
-    n_predictores : int
-        Número de predictores (debe ser 2)
+    modelo : Dict[str, Any]
+        Diccionario del modelo con coeficientes_originales e intercepto_original
         
     Returns:
     --------
     Optional[List[float]]
         Lista de coeficientes [c0, c1, c2, c3, c4, c5] o None si hay error
+        donde c0 es el intercepto
     """
-    if n_predictores != 2:
-        return None
-        
     try:
-        # Remover espacios y limpiar la ecuación
-        ecuacion = ecuacion_normalizada_latex.replace(' ', '')
-        # Limpiar signos problemáticos
-        ecuacion = ecuacion.replace('+-', '-')
+        coefs = modelo.get('coeficientes_originales', [])
+        intercepto = modelo.get('intercepto_original', 0)
+        n_predictores = modelo.get('n_predictores', 0)
         
-        # Buscar coeficientes usando regex más robusto
-        # Patrón para intercepto (después del =)
-        intercepto_match = re.search(r'y=([+-]?[\d\.e-]+)', ecuacion)
-        c0 = float(intercepto_match.group(1)) if intercepto_match else 0.0
+        if n_predictores != 2:
+            return None
+            
+        if not isinstance(coefs, list) or len(coefs) == 0:
+            return None
+            
+        # Para modelos de 2 predictores, esperamos diferentes números de coeficientes
+        # Linear-2: 2 coeficientes (c1, c2) + intercepto
+        # Poly-2: 5 coeficientes (c1, c2, c3, c4, c5) + intercepto
         
-        # Patrón para términos lineales x_{0}
+        # Retornar [intercepto, c1, c2, ...] 
+        result = [float(intercepto)] + [float(c) for c in coefs]
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error extrayendo coeficientes del modelo: {e}")
+        return None
         x0_linear_pattern = r'([+-]?[\d\.e-]+)x_\{0\}(?![²\^])'  # No seguido por ² o ^
         x0_match = re.search(x0_linear_pattern, ecuacion)
         c1 = float(x0_match.group(1)) if x0_match else 0.0
@@ -295,9 +302,8 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
         
         # Agregar superficie del modelo
         if show_model_surface:
-            # Extraer coeficientes de la ecuación normalizada
-            ecuacion_normalizada_latex = model.get('ecuacion_normalizada_latex', '')
-            coefficients = extract_coefficients_from_equation(ecuacion_normalizada_latex, 2)
+            # Extraer coeficientes del modelo directamente
+            coefficients = extract_coefficients_from_model(model)
             
             if coefficients:
                 # Generar superficie

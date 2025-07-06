@@ -183,7 +183,7 @@ df_atributos = df_procesado[filas_familia]
 df_parametros = df_procesado.drop(columns=filas_familia)
 
 
-df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel, modelos_por_celda, detalles_por_celda = bucle_imputacion_similitud_correlacion(
+df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel, modelos_por_celda = bucle_imputacion_similitud_correlacion(
     df_filtrado=df_filtrado,
     parametros_preseleccionados=parametros_preseleccionados,
     bloques_rasgos=bloques_rasgos,

@@ -279,3 +279,15 @@
 2025-07-06 01:32:10 [MONITOR] Monitoreo iniciado
 2025-07-06 01:32:10 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
   Detalles: {"port": 8055, "total_modelos": 174}
+2025-07-06 17:53:48 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-06 17:53:48 [MONITOR] Monitoreo iniciado
+2025-07-06 17:53:48 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 12}
+2025-07-06 17:56:25 [LAUNCH] Intentando lanzar en modo debug
+2025-07-06 17:56:25 [MONITOR] Monitoreo iniciado
+2025-07-06 17:56:25 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-06 18:20:25 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-06 18:20:25 [MONITOR] Monitoreo iniciado
+2025-07-06 18:20:25 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 12}

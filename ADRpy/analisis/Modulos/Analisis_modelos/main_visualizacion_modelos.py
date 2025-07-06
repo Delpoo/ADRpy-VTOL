@@ -45,29 +45,57 @@ except ImportError:
 # Importar pandas por separado (siempre necesario)
 import pandas as pd
 
-from .data_loader import (
-    load_models_data, 
-    extract_unique_values, 
-    filter_models,
-    get_parametros_for_aeronave
-)
+# Manejo flexible de imports (relativos vs absolutos)
+try:
+    # Intentar imports relativos primero
+    from .data_loader import (
+        load_models_data, 
+        extract_unique_values, 
+        filter_models,
+        get_parametros_for_aeronave
+    )
 
-from .ui_components import (
-    create_main_layout,
-    create_aeronave_dropdown,
-    create_parametro_dropdown,
-    create_tipo_modelo_checklist,
-    create_visualization_options,
-    create_summary_table,
-    format_model_info,
-    create_predictor_dropdown
-)
+    from .ui_components import (
+        create_main_layout,
+        create_aeronave_dropdown,
+        create_parametro_dropdown,
+        create_tipo_modelo_checklist,
+        create_visualization_options,
+        create_summary_table,
+        format_model_info,
+        create_predictor_dropdown
+    )
 
-from .plot_stability import (
-    get_stable_plot_config,
-    apply_stable_configuration,
-    should_preserve_zoom
-)
+    from .plot_stability import (
+        get_stable_plot_config,
+        apply_stable_configuration,
+        should_preserve_zoom
+    )
+except ImportError:
+    # Fallback a imports absolutos
+    from data_loader import (
+        load_models_data, 
+        extract_unique_values, 
+        filter_models,
+        get_parametros_for_aeronave
+    )
+
+    from ui_components import (
+        create_main_layout,
+        create_aeronave_dropdown,
+        create_parametro_dropdown,
+        create_tipo_modelo_checklist,
+        create_visualization_options,
+        create_summary_table,
+        format_model_info,
+        create_predictor_dropdown
+    )
+
+    from plot_stability import (
+        get_stable_plot_config,
+        apply_stable_configuration,
+        should_preserve_zoom
+    )
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -134,10 +162,16 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         from dash import dcc, html, dash_table
         from dash.dependencies import Input, Output, State
         import plotly.graph_objects as go
-        from .plot_interactive import (
-            create_interactive_plot,
-            create_metrics_summary_table,
-        )
+        try:
+            from .plot_interactive import (
+                create_interactive_plot,
+                create_metrics_summary_table,
+            )
+        except ImportError:
+            from plot_interactive import (
+                create_interactive_plot,
+                create_metrics_summary_table,
+            )
     except ImportError as e:
         print(f"Error: No se pueden importar los componentes necesarios de Dash: {e}")
         return
@@ -296,7 +330,10 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 and m.get('n_predictores', 0) == 2
                 and m.get('tipo', '').lower() in tipos_validos
             ]
-            from .plot_interactive import create_interactive_plot_3d
+            try:
+                from .plot_interactive import create_interactive_plot_3d
+            except ImportError:
+                from plot_interactive import create_interactive_plot_3d
             # Crear SIEMPRE una nueva figura para 3D
             fig = create_interactive_plot_3d(
                 modelos_2_pred,
@@ -321,8 +358,12 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         elif plot_tab in ['comparison-view', 'metrics-view']:
             # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área principal (main-plot)
             if plot_tab == 'metrics-view':
-                from .metrics_dashboard import generate_metrics_dashboard
-                from .metrics_tab import find_missing_models
+                try:
+                    from .metrics_dashboard import generate_metrics_dashboard
+                    from .metrics_tab import find_missing_models
+                except ImportError:
+                    from metrics_dashboard import generate_metrics_dashboard
+                    from metrics_tab import find_missing_models
                 modelos_no_mostrados = find_missing_models(models_data['modelos'], models_data['detalles'])
                 dashboard = generate_metrics_dashboard(
                     modelos_por_celda=models_data['modelos'],
@@ -658,7 +699,10 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         df_summary = None
         modelos_por_celda = models_data.get('modelos', {}) if models_data else {}
         
-        from .ui_components import update_alerts_content
+        try:
+            from .ui_components import update_alerts_content
+        except ImportError:
+            from ui_components import update_alerts_content
         return update_alerts_content(df_summary, modelos_por_celda)
 
     # Ejecutar aplicación

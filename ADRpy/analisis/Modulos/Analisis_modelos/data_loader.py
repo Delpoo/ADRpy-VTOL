@@ -18,7 +18,10 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional, Any
 import logging
 
-from .utils import safe_json_load, log_nan_warning
+try:
+    from .utils import safe_json_load, log_nan_warning
+except ImportError:
+    from utils import safe_json_load, log_nan_warning
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -46,8 +49,31 @@ def load_models_data(json_path: str) -> Tuple[Dict, Dict]:
         # Usar la función utilitaria para cargar JSON de manera segura
         data = safe_json_load(json_text)
         
-        modelos_por_celda = data.get('modelos_por_celda', {})
-        detalles_por_celda = data.get('detalles_por_celda', {})
+        # Adaptarse a la nueva estructura JSON
+        modelos_por_celda = {}
+        detalles_por_celda = {}
+        
+        # Verificar si es la estructura antigua (con claves modelos_por_celda/detalles_por_celda)
+        if 'modelos_por_celda' in data:
+            modelos_por_celda = data.get('modelos_por_celda', {})
+            detalles_por_celda = data.get('detalles_por_celda', {})
+            logger.info("Detectada estructura JSON antigua")
+        else:
+            # Nueva estructura: cada clave es una celda con sub-estructuras
+            logger.info("Detectada nueva estructura JSON")
+            for celda_key, celda_data in data.items():
+                if isinstance(celda_data, dict):
+                    # Extraer modelos de informacion_modelos_celda.modelos
+                    modelos_info = celda_data.get('informacion_modelos_celda', {})
+                    modelos_list = modelos_info.get('modelos', [])
+                    
+                    if modelos_list:
+                        modelos_por_celda[celda_key] = modelos_list
+                    
+                    # Extraer detalles de informacion_generica_celda
+                    info_generica = celda_data.get('informacion_generica_celda', {})
+                    if info_generica:
+                        detalles_por_celda[celda_key] = info_generica
         
         logger.info(f"Cargados {len(modelos_por_celda)} celdas con modelos")
         logger.info(f"Cargados {len(detalles_por_celda)} celdas con detalles")
@@ -60,8 +86,25 @@ def load_models_data(json_path: str) -> Tuple[Dict, Dict]:
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            modelos_por_celda = data.get('modelos_por_celda', {})
-            detalles_por_celda = data.get('detalles_por_celda', {})
+            
+            # Intentar ambas estructuras en el fallback
+            if 'modelos_por_celda' in data:
+                modelos_por_celda = data.get('modelos_por_celda', {})
+                detalles_por_celda = data.get('detalles_por_celda', {})
+            else:
+                modelos_por_celda = {}
+                detalles_por_celda = {}
+                for celda_key, celda_data in data.items():
+                    if isinstance(celda_data, dict):
+                        modelos_info = celda_data.get('informacion_modelos_celda', {})
+                        modelos_list = modelos_info.get('modelos', [])
+                        if modelos_list:
+                            modelos_por_celda[celda_key] = modelos_list
+                        
+                        info_generica = celda_data.get('informacion_generica_celda', {})
+                        if info_generica:
+                            detalles_por_celda[celda_key] = info_generica
+            
             logger.info("Carga fallback exitosa")
             return modelos_por_celda, detalles_por_celda
         except Exception as e2:
