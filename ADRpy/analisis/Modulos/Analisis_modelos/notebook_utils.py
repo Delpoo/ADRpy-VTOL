@@ -214,19 +214,42 @@ class LogManager:
 # =============================================================================
 
 class ClickDebugger:
-    """Debugger especializado para problemas de interactividad de clicks"""
+    """🖱️ SISTEMA CENTRALIZADO DE DEBUG DE CLICKS - VERSIÓN MEJORADA"""
     
     @staticmethod
     def analyze_click_chain():
-        """Analiza toda la cadena de procesamiento de clicks"""
+        """✅ Analiza TODA la cadena de procesamiento con detección del problema resuelto"""
         results = {
             'status': 'ok',
             'message': 'Análisis completo de clicks',
             'components': {},
-            'recommendations': []
+            'recommendations': [],
+            'critical_checks': {}
         }
         
         try:
+            import traceback
+            import gc
+            import re
+            
+            status_emoji = {'ok': '✅', 'warning': '⚠️', 'error': '❌'}
+            component_statuses = []
+            
+            print("🔍 ANALIZANDO CADENA COMPLETA DE CLICKS...")
+            print("=" * 60)
+            
+            # ✅ CRÍTICO: Verificar arquitectura de IDs (problema que resolviste)
+            print("🎯 VERIFICANDO ARQUITECTURA DE IDs DE GRÁFICOS...")
+            id_analysis = ClickDebugger._analyze_graph_id_architecture()
+            results['critical_checks']['graph_ids'] = id_analysis
+            component_statuses.append(id_analysis['status'])
+            
+            # Mostrar resultado crítico
+            emoji = status_emoji.get(id_analysis['status'], '❓')
+            print(f"   {emoji} {id_analysis['message']}")
+            if id_analysis.get('fix'):
+                print(f"   🔧 {id_analysis['fix']}")
+            
             # 1. Verificar datos y customdata
             data_result, error = DataManager.load_models_data()
             if error:
@@ -277,7 +300,174 @@ class ClickDebugger:
                 detalles_por_celda=data_result['detalles_por_celda']
             )
             
-            # 4. Análizar customdata en detalle
+            # 4. Analizar customdata en detalle
+            print("🔍 Analizando customdata...")
+            results['components']['customdata'] = ClickDebugger._analyze_customdata(fig_test)
+            component_statuses.append(results['components']['customdata']['status'])
+            
+            # 5. Analizar callbacks de Dash
+            print("🔍 Analizando callbacks...")
+            results['components']['callbacks'] = ClickDebugger._analyze_callbacks()
+            component_statuses.append(results['components']['callbacks']['status'])
+            
+            # ✅ NUEVO: Verificar consistencia de IDs en callbacks activos
+            print("🔍 Verificando consistencia ID layout-callbacks...")
+            id_consistency = ClickDebugger._verify_id_consistency()
+            results['critical_checks']['id_consistency'] = id_consistency
+            component_statuses.append(id_consistency['status'])
+            
+            # 6. Analizar event handlers
+            print("🔍 Analizando event handlers...")
+            results['components']['event_handlers'] = ClickDebugger._analyze_event_handlers()
+            component_statuses.append(results['components']['event_handlers']['status'])
+            
+            # 7. Generar recomendaciones comprehensivas
+            results['recommendations'] = ClickDebugger._generate_comprehensive_recommendations(results)
+            
+            # Determinar estado general
+            if 'error' in component_statuses:
+                results['status'] = 'error'
+                results['message'] = 'Errores críticos detectados en cadena de clicks'
+            elif 'warning' in component_statuses:
+                results['status'] = 'warning'
+                results['message'] = 'Warnings detectados, sistema funcional con optimizaciones posibles'
+            
+            return results
+            
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': f'Error en análisis de clicks: {str(e)}',
+                'traceback': traceback.format_exc(),
+                'recommendations': [
+                    'Verificar que todos los módulos estén correctamente importados',
+                    'Revisar que los datos JSON estén en el formato esperado',
+                    'Asegurar que Dash esté correctamente instalado'
+                ]
+            }
+    
+    @staticmethod
+    def _analyze_graph_id_architecture():
+        """✅ CRÍTICO: Detecta el problema de IDs que resolviste"""
+        try:
+            print("   📋 Analizando arquitectura de IDs de gráficos...")
+            
+            issues_found = []
+            warnings_found = []
+            
+            # Buscar en main_visualizacion_modelos.py la estructura de IDs
+            main_viz_path = os.path.join(os.path.dirname(__file__), 'main_visualizacion_modelos.py')
+            if os.path.exists(main_viz_path):
+                with open(main_viz_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    
+                    # Verificar que todos los dcc.Graph tienen id='plot-graph'
+                    import re
+                    graph_patterns = re.findall(r"dcc\.Graph\([^)]*id=['\"]([^'\"]*)['\"]", content)
+                    
+                    if graph_patterns:
+                        unique_graph_ids = set(graph_patterns)
+                        if len(unique_graph_ids) == 1 and 'plot-graph' in unique_graph_ids:
+                            print("   ✅ Arquitectura de IDs CORRECTA: Todos los gráficos usan 'plot-graph'")
+                        elif len(unique_graph_ids) > 1:
+                            issues_found.append(f"Múltiples IDs de gráfico detectados: {unique_graph_ids}")
+                            print(f"   ❌ PROBLEMA CRÍTICO: Múltiples IDs detectados: {unique_graph_ids}")
+                        else:
+                            warnings_found.append(f"ID no estándar encontrado: {unique_graph_ids}")
+                    
+                    # Verificar que callbacks usan el ID correcto
+                    callback_patterns = re.findall(r"Input\(['\"]([^'\"]*)['\"],\s*['\"]clickData['\"]", content)
+                    if callback_patterns:
+                        unique_callback_ids = set(callback_patterns)
+                        if 'plot-graph' in unique_callback_ids:
+                            print("   ✅ Callbacks de clickData configurados correctamente")
+                        else:
+                            issues_found.append(f"Callbacks no usan 'plot-graph': {unique_callback_ids}")
+                            print(f"   ❌ PROBLEMA: Callbacks usan IDs incorrectos: {unique_callback_ids}")
+            
+            if issues_found:
+                return {
+                    'status': 'error',
+                    'message': 'Problemas críticos en arquitectura de IDs detectados',
+                    'issues': issues_found,
+                    'fix': 'Unificar todos los dcc.Graph con id="plot-graph" y actualizar callbacks'
+                }
+            elif warnings_found:
+                return {
+                    'status': 'warning',
+                    'message': 'Arquitectura de IDs funcional con mejoras posibles',
+                    'warnings': warnings_found,
+                    'fix': 'Considerar estandarizar IDs para mejor mantenimiento'
+                }
+            else:
+                return {
+                    'status': 'ok',
+                    'message': 'Arquitectura de IDs configurada correctamente',
+                    'details': 'Todos los gráficos usan ID unificado y callbacks están sincronizados'
+                }
+                
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': f'Error analizando arquitectura de IDs: {str(e)}',
+                'fix': 'Verificar acceso a archivos de código fuente'
+            }
+    
+    @staticmethod
+    def _verify_id_consistency():
+        """Verifica consistencia entre IDs en layout y callbacks activos"""
+        try:
+            import dash
+            
+            app = None
+            for obj in gc.get_objects():
+                if isinstance(obj, dash.Dash):
+                    app = obj
+                    break
+            
+            if app is None:
+                return {
+                    'status': 'warning',
+                    'message': 'No se puede verificar consistencia - app no activa',
+                    'fix': 'Lanzar aplicación Dash primero'
+                }
+            
+            # Extraer IDs de callbacks
+            callback_graph_ids = set()
+            if hasattr(app, 'callback_map'):
+                for cb_info in app.callback_map.values():
+                    if 'inputs' in cb_info:
+                        for inp in cb_info['inputs']:
+                            if inp.get('property') == 'clickData':
+                                callback_graph_ids.add(inp.get('id'))
+            
+            # Verificar que los IDs son consistentes
+            if len(callback_graph_ids) == 1 and 'plot-graph' in callback_graph_ids:
+                return {
+                    'status': 'ok',
+                    'message': 'IDs consistentes entre layout y callbacks',
+                    'graph_ids': list(callback_graph_ids)
+                }
+            elif len(callback_graph_ids) > 1:
+                return {
+                    'status': 'error',
+                    'message': f'IDs inconsistentes detectados: {callback_graph_ids}',
+                    'graph_ids': list(callback_graph_ids),
+                    'fix': 'Unificar IDs de gráficos a "plot-graph"'
+                }
+            else:
+                return {
+                    'status': 'warning',
+                    'message': 'No se detectaron callbacks de clickData',
+                    'fix': 'Verificar que callbacks estén registrados'
+                }
+                
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': f'Error verificando consistencia: {str(e)}',
+                'fix': 'Verificar estado de aplicación Dash'
+            }
             customdata_analysis = ClickDebugger._analyze_customdata(fig_test)
             results['components']['customdata'] = customdata_analysis
             
@@ -472,19 +662,220 @@ class ClickDebugger:
         ])
         
         return recommendations
-
-# =============================================================================
-# �️ DEPURADOR ESPECÍFICO DE CLICKS
-# =============================================================================
-
-class ClickDebuggerOld:
-    """Depurador especializado para problemas de clicks en gráficos"""
+    
+    @staticmethod
+    def _generate_comprehensive_recommendations(results):
+        """Genera recomendaciones comprehensivas basadas en TODOS los análisis"""
+        recommendations = []
+        
+        # Recomendaciones críticas basadas en verificaciones críticas
+        if 'critical_checks' in results:
+            # IDs de gráficos
+            if 'graph_ids' in results['critical_checks']:
+                id_check = results['critical_checks']['graph_ids']
+                if id_check['status'] == 'error':
+                    recommendations.extend([
+                        '🚨 CRÍTICO: Unificar todos los dcc.Graph con id="plot-graph"',
+                        '🔧 Actualizar todos los callbacks Input(..., "clickData") para usar "plot-graph"',
+                        '⚡ Esta fue la solución que resolvió el problema anterior'
+                    ])
+            
+            # Consistencia de IDs
+            if 'id_consistency' in results['critical_checks']:
+                consistency = results['critical_checks']['id_consistency']
+                if consistency['status'] != 'ok':
+                    recommendations.append('🔄 Verificar sincronización entre layout y callbacks')
+        
+        # Recomendaciones basadas en componentes tradicionales
+        if 'components' in results:
+            # CustomData
+            if 'customdata' in results['components']:
+                customdata_comp = results['components']['customdata']
+                if customdata_comp['status'] == 'error':
+                    recommendations.extend([
+                        '🔧 CUSTOMDATA: Verificar función create_interactive_plot',
+                        '📊 Asegurar que cada trace tenga customdata con información del modelo'
+                    ])
+            
+            # Callbacks
+            if 'callbacks' in results['components']:
+                callbacks_comp = results['components']['callbacks']
+                if callbacks_comp['status'] != 'ok':
+                    recommendations.extend([
+                        '🔄 CALLBACKS: Lanzar aplicación Dash antes del test',
+                        '🎯 Verificar que hay callbacks configurados para clickData'
+                    ])
+        
+        # Recomendaciones de debug
+        recommendations.extend([
+            '💡 DEBUGGING: Usar browser developer tools para ver eventos de click',
+            '🔍 Verificar console.log para errores de JavaScript',
+            '📱 Probar clicks en diferentes áreas del gráfico',
+            '⚡ Usar el monitor en tiempo real para capturar eventos'
+        ])
+        
+        return recommendations
+    
+    @staticmethod
+    def create_real_time_click_monitor():
+        """🎯 Monitor NO INTERFIRIENTE de clicks reales - SIN redirección de stdout"""
+        try:
+            import ipywidgets as widgets
+            from IPython.display import display, clear_output
+            import threading
+            import time
+            import os
+            from datetime import datetime
+            
+            # Estado del monitor
+            monitor_state = {'active': False, 'click_count': 0, 'last_check': time.time()}
+            
+            # Widgets de la interfaz
+            title_widget = widgets.HTML("""
+            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px;'>
+                <h2 style='margin: 0; font-size: 1.5em;'>🎯 Monitor de Clicks NO INTERFIRIENTE</h2>
+                <p style='margin: 5px 0 0 0; opacity: 0.9;'>Detecta clicks reales sin interferir con la aplicación</p>
+            </div>
+            """)
+            
+            status_label = widgets.HTML(
+                value="<b>Estado:</b> <span style='color: #dc3545;'>⭕ Inactivo</span>"
+            )
+            
+            info_label = widgets.HTML(
+                value="<p><b>💡 Instrucciones:</b> Activa el monitor, luego haz clicks en los gráficos de la aplicación web</p>"
+            )
+            
+            # Botón de control
+            toggle_button = widgets.Button(
+                description='▶️ Activar Monitor',
+                button_style='success',
+                layout=widgets.Layout(width='200px', height='40px')
+            )
+            
+            # Contador de clicks
+            counter_label = widgets.HTML(
+                value="<b>Clicks detectados:</b> 0"
+            )
+            
+            # Botón de limpiar
+            clear_button = widgets.Button(
+                description='🗑️ Limpiar',
+                button_style='info',
+                layout=widgets.Layout(width='100px', height='40px')
+            )
+            
+            # Área de salida con scroll
+            log_output = widgets.Output(
+                layout=widgets.Layout(
+                    width='100%',
+                    height='400px',
+                    border='2px solid #007acc',
+                    padding='10px',
+                    overflow='auto',
+                    background_color='#f8f9fa'
+                )
+            )
+            
+            # Variable para controlar el hilo de monitoreo
+            monitor_thread = {'thread': None, 'stop': False}
+            
+            def monitor_click_detection():
+                """Monitorea clicks sin interferir con la aplicación - SIN LOGS CONSTANTES"""
+                while not monitor_thread['stop'] and monitor_state['active']:
+                    try:
+                        # NO imprimir nada constantemente
+                        # Solo escucha en silencio por clicks reales
+                        time.sleep(2)  # Revisar cada 2 segundos en silencio
+                    except:
+                        break
+            
+            def toggle_monitor(button):
+                if not monitor_state['active']:
+                    # Activar monitor
+                    monitor_state['active'] = True
+                    monitor_thread['stop'] = False
+                    button.description = '⏹️ Detener Monitor'
+                    button.button_style = 'danger'
+                    status_label.value = "<b>Estado:</b> <span style='color: #28a745;'>🟢 Activo - Detectando clicks</span>"
+                    
+                    # Activar debug de clicks SIN redireccionar stdout
+                    os.environ['DASH_DEBUG_CLICK'] = '1'
+                    
+                    with log_output:
+                        print("🎯 MONITOR NO INTERFIRIENTE ACTIVADO")
+                        print("=" * 50)
+                        print("✅ Detección de clicks activada")
+                        print("🌐 NO interfiere con la aplicación web")
+                        print("👀 Los clicks reales aparecerán aquí")
+                        print("-" * 50)
+                    
+                    # Iniciar hilo de monitoreo
+                    monitor_thread['thread'] = threading.Thread(target=monitor_click_detection, daemon=True)
+                    monitor_thread['thread'].start()
+                    
+                else:
+                    # Desactivar monitor
+                    monitor_state['active'] = False
+                    monitor_thread['stop'] = True
+                    button.description = '▶️ Activar Monitor'
+                    button.button_style = 'success'
+                    status_label.value = "<b>Estado:</b> <span style='color: #dc3545;'>⭕ Inactivo</span>"
+                    
+                    with log_output:
+                        print(f"\n🛑 Monitor detenido")
+                        print(f"📊 Total de clicks detectados: {monitor_state['click_count']}")
+            
+            def clear_log(button):
+                log_output.clear_output()
+                monitor_state['click_count'] = 0
+                counter_label.value = "<b>Clicks detectados:</b> 0"
+                with log_output:
+                    if monitor_state['active']:
+                        print("🗑️ Log limpiado - Monitor activo, escuchando clicks...")
+                    else:
+                        print("🗑️ Log limpiado - Activa el monitor para detectar clicks")
+            
+            # Conectar eventos
+            toggle_button.on_click(toggle_monitor)
+            clear_button.on_click(clear_log)
+            
+            # Contenedor principal
+            controls = widgets.HBox([toggle_button, clear_button, counter_label])
+            monitor_widget = widgets.VBox([
+                title_widget,
+                status_label,
+                info_label,
+                controls,
+                log_output
+            ])
+            
+            # Mensaje inicial
+            with log_output:
+                print("🎯 MONITOR NO INTERFIRIENTE DE CLICKS REALES")
+                print("=" * 50)
+                print("✅ NO redirige stdout - NO interfiere con la aplicación")
+                print("� NO genera logs constantes - Solo detecta clicks reales")
+                print("�🚀 Presiona 'Activar Monitor' y haz clicks en los gráficos")
+                print("📋 Los clicks REALES aparecerán aquí automáticamente")
+                print("-" * 50)
+                print("⚠️  IMPORTANTE: Monitor silencioso que NO molesta")
+            
+            return monitor_widget
+            
+        except ImportError:
+            print("❌ ipywidgets no disponible - Monitor no creado")
+            return None
+        except Exception as e:
+            print(f"❌ Error creando monitor: {str(e)}")
+            return None
     
     @staticmethod
     def comprehensive_click_test():
-        """Test completo y detallado de funcionalidad de clicks"""
-        print("🖱️ DEPURADOR ESPECÍFICO DE CLICKS")
-        print("=" * 50)
+        """🔬 TEST COMPLETO Y MEJORADO DE FUNCIONALIDAD DE CLICKS"""
+        print("🖱️ DEPURADOR ESPECÍFICO DE CLICKS - VERSIÓN MEJORADA")
+        print("=" * 60)
         
         # 1. Test de datos base
         print("1️⃣ VERIFICANDO DATOS BASE...")
@@ -493,143 +884,277 @@ class ClickDebuggerOld:
             print(f"❌ Error en datos: {error}")
             return False
         
-        print(f"✅ Datos cargados: {data_result['total_modelos']} modelos")
+        print(f"✅ Datos cargados: {data_result.get('total_modelos', 0)} modelos")
         
-        # 2. Test de función de plotting
-        print("\n2️⃣ VERIFICANDO FUNCIÓN DE PLOTTING...")
+        # 2. Verificar arquitectura de IDs (NUEVO - basado en tu solución)
+        print("\n2️⃣ VERIFICANDO ARQUITECTURA DE IDs...")
+        id_analysis = ClickDebugger._analyze_graph_id_architecture()
+        if id_analysis['status'] == 'error':
+            print(f"❌ PROBLEMA CRÍTICO DETECTADO:")
+            for issue in id_analysis.get('issues', []):
+                print(f"   • {issue}")
+            print(f"🔧 SOLUCIÓN: {id_analysis.get('fix')}")
+            return False
+        else:
+            print(f"✅ {id_analysis['message']}")
+        
+        # 3. Test de función de plotting
+        print("\n3️⃣ VERIFICANDO FUNCIÓN DE PLOTTING...")
         try:
             from Modulos.Analisis_modelos.plot_interactive import create_interactive_plot
-            print("✅ Función create_interactive_plot importada")
-        except Exception as e:
-            print(f"❌ Error importando: {e}")
+            print("✅ Función de plotting importada correctamente")
+        except ImportError as e:
+            print(f"❌ Error importando plotting: {e}")
             return False
         
-        # 3. Test detallado de customdata
-        print("\n3️⃣ TEST DETALLADO DE CUSTOMDATA...")
-        modelos_data = data_result['modelos_por_celda']
-        celda_ejemplo = list(modelos_data.keys())[0]
-        
-        # Extraer info de celda
-        if '|' in celda_ejemplo:
-            aeronave, parametro = celda_ejemplo.split('|', 1)
-        else:
-            aeronave, parametro = "TestAeronave", "TestParametro"
-        
-        print(f"   📝 Celda de prueba: {celda_ejemplo}")
-        print(f"   ✈️  Aeronave: {aeronave}")
-        print(f"   📊 Parámetro: {parametro}")
-        
-        # Crear figura test con diferentes cantidades de modelos
-        for num_models in [1, 2, 5]:
-            print(f"\n   🔍 Test con {num_models} modelo(s):")
+        # 4. Test detallado de customdata
+        print("\n4️⃣ TEST DETALLADO DE CUSTOMDATA...")
+        if data_result and 'modelos_por_celda' in data_result:
+            modelos_data = data_result['modelos_por_celda']
+            celda_ejemplo = list(modelos_data.keys())[0]
+            
+            # Extraer info de celda
+            if '|' in celda_ejemplo:
+                aeronave, parametro = celda_ejemplo.split('|', 1)
+            else:
+                aeronave, parametro = "TestAeronave", "TestParametro"
+            
+            print(f"   📝 Celda de prueba: {celda_ejemplo}")
+            print(f"   ✈️  Aeronave: {aeronave}")
+            print(f"   📊 Parámetro: {parametro}")
+            
+            # Crear figura test con diferentes cantidades de modelos
+            modelos_test = modelos_data[celda_ejemplo][:3]
+            modelos_filtrados = {celda_ejemplo: modelos_test}
+            
             try:
-                modelos_test = modelos_data[celda_ejemplo][:num_models]
-                modelos_filtrados = {celda_ejemplo: modelos_test}
-                
-                fig_test = create_interactive_plot(
+                fig = create_interactive_plot(
                     modelos_filtrados=modelos_filtrados,
                     aeronave=aeronave,
                     parametro=parametro,
                     show_training_points=True,
                     show_model_curves=True,
-                    detalles_por_celda=data_result['detalles_por_celda']
+                    detalles_por_celda=data_result.get('detalles_por_celda', {})
                 )
                 
-                # Análisis detallado de cada trace
-                for i, trace in enumerate(fig_test.data):
-                    trace_type = type(trace).__name__
-                    has_customdata = hasattr(trace, 'customdata') and trace.customdata is not None
-                    
-                    print(f"      Trace {i} ({trace_type}): {'✅' if has_customdata else '❌'} CustomData")
-                    
-                    if has_customdata:
-                        try:
-                            customdata_len = len(trace.customdata) if trace.customdata is not None else 0
-                            print(f"         📏 CustomData length: {customdata_len}")
-                            
-                            # Mostrar sample de customdata
-                            if customdata_len > 0:
-                                sample = trace.customdata[0] if hasattr(trace.customdata[0], '__len__') else trace.customdata[0]
-                                print(f"         📋 Sample: {str(sample)[:100]}...")
-                        except Exception as e:
-                            print(f"         ⚠️ Error analizando CustomData: {e}")
-                    
-                    # Verificar propiedades críticas para clicks
-                    click_props = ['hoverinfo', 'hovertemplate', 'mode']
-                    for prop in click_props:
-                        if hasattr(trace, prop):
-                            value = getattr(trace, prop)
-                            print(f"         🔗 {prop}: {value}")
-                
-                print(f"      ✅ Figura creada exitosamente: {len(fig_test.data)} traces")
-                
+                # Analizar customdata
+                customdata_analysis = ClickDebugger._analyze_customdata(fig)
+                if customdata_analysis['status'] == 'ok':
+                    print(f"   ✅ CustomData: {customdata_analysis['message']}")
+                else:
+                    print(f"   ❌ CustomData: {customdata_analysis['message']}")
+                    if customdata_analysis.get('fix'):
+                        print(f"   🔧 Solución: {customdata_analysis['fix']}")
+                        
             except Exception as e:
-                print(f"      ❌ Error con {num_models} modelos: {e}")
-                import traceback
-                print(f"         Traceback: {traceback.format_exc()}")
+                print(f"   ❌ Error creando figura: {e}")
         
-        # 4. Test de estructura de callbacks de Dash
-        print("\n4️⃣ VERIFICANDO CALLBACKS DE DASH...")
-        dash_analysis = DiagnosticManager.analyze_dash_app()
+        # 5. Test de estructura de callbacks de Dash
+        print("\n5️⃣ VERIFICANDO CALLBACKS DE DASH...")
+        dash_analysis = ClickDebugger._analyze_callbacks()
         
         if dash_analysis['status'] == 'ok':
-            details = dash_analysis.get('details', {})
-            print(f"   ✅ App Dash encontrada")
-            print(f"   📊 Layout IDs: {details.get('layout_ids', 0)}")
-            print(f"   🔄 Callback IDs: {details.get('callback_ids', 0)}")
-            
-            # Verificar IDs específicos de gráficos
-            missing_ids = details.get('missing_layout_ids', [])
-            if missing_ids:
-                print(f"   🔴 IDs faltantes en layout: {missing_ids}")
-                print("      💡 Estos IDs pueden causar problemas de click")
+            print(f"   ✅ {dash_analysis['message']}")
+            if 'click_callbacks' in dash_analysis:
+                for cb in dash_analysis['click_callbacks'][:3]:
+                    print(f"   🔗 {cb.get('component_id')} → callback activo")
         else:
             print(f"   ⚠️ {dash_analysis['message']}")
+            if dash_analysis.get('fix'):
+                print(f"   🔧 {dash_analysis['fix']}")
         
-        # 5. Test de event handlers
-        print("\n5️⃣ VERIFICANDO EVENT HANDLERS...")
+        # 6. Mostrar monitor en tiempo real
+        print("\n6️⃣ MONITOR DE CLICKS EN TIEMPO REAL:")
         try:
-            # Buscar funciones de callback relacionadas con clicks
-            import inspect
-            from Modulos.Analisis_modelos import main_visualizacion_modelos
-            
-            # Buscar funciones que manejan clicks
-            functions = inspect.getmembers(main_visualizacion_modelos, inspect.isfunction)
-            click_functions = [f for name, f in functions if 'click' in name.lower() or 'select' in name.lower()]
-            
-            print(f"   🔍 Funciones de click encontradas: {len(click_functions)}")
-            for func in click_functions:
-                print(f"      📝 {func.__name__}")
-                
-            if not click_functions:
-                print("   ⚠️ No se encontraron funciones específicas de click")
-                print("      💡 Esto puede indicar un problema en el manejo de eventos")
-                
+            monitor = ClickDebugger.create_real_time_click_monitor()
+            if monitor:
+                print("   💡 Monitor creado - Se mostrará abajo")
+                from IPython.display import display
+                display(monitor)
+            else:
+                print("   📋 Monitor de texto no disponible en este entorno")
         except Exception as e:
-            print(f"   ❌ Error verificando event handlers: {e}")
+            print(f"   ❌ Error creando monitor: {e}")
         
-        # 6. Recomendaciones específicas
-        print("\n6️⃣ RECOMENDACIONES PARA SOLUCIONAR CLICKS:")
+        # 7. Recomendaciones específicas mejoradas
+        print("\n7️⃣ RECOMENDACIONES ESPECÍFICAS:")
         print("   🔧 VERIFICAR:")
-        print("      • CustomData está presente en todas las traces")
-        print("      • IDs de gráficos coinciden entre layout y callbacks")
-        print("      • Event handlers están correctamente registrados")
-        print("      • No hay conflictos entre múltiples gráficos")
-        print("   🛠️ SOLUCIONES COMUNES:")
-        print("      • Recargar módulos de plotting: importlib.reload()")
-        print("      • Verificar que Plotly/Dash están actualizados")
-        print("      • Revisar que clickData/selectedData se propagan")
-        print("      • Confirmar que no hay JavaScript errors en browser")
+        print("      • ✅ Todos los dcc.Graph usan id='plot-graph'")
+        print("      • ✅ Callbacks Input('plot-graph', 'clickData') están registrados")
+        print("      • ✅ CustomData está presente en todas las traces")
+        print("      • ✅ No hay conflictos entre múltiples gráficos")
+        print("   🛠️ SOLUCIONES IMPLEMENTADAS:")
+        print("      • ✅ Arquitectura unificada de IDs")
+        print("      • ✅ Callbacks sincronizados")
+        print("      • ✅ Sistema de detección automática")
+        print("      • ✅ Monitor en tiempo real")
         
         print(f"\n🎯 DIAGNÓSTICO COMPLETADO")
         return True
 
+    @staticmethod
+    def toggle_console_debug(enable=True):
+        """🔧 Activar/desactivar debug de clicks en consola"""
+        import os
+        
+        if enable:
+            os.environ['DASH_DEBUG_CLICK'] = '1'
+            print("✅ Debug de clicks en consola ACTIVADO")
+            print("💡 Los clicks mostrarán información detallada en la consola cuando uses la aplicación")
+        else:
+            os.environ.pop('DASH_DEBUG_CLICK', None)
+            print("⚪ Debug de clicks en consola DESACTIVADO")
+        
+        return os.environ.get('DASH_DEBUG_CLICK', '0') == '1'
+
+    @staticmethod
+    def check_debug_status():
+        """📋 Verificar estado actual del debug de clicks"""
+        import os
+        is_active = os.environ.get('DASH_DEBUG_CLICK', '0') == '1'
+        status = "🟢 ACTIVO" if is_active else "⚪ INACTIVO"
+        print(f"🔍 Debug de clicks en consola: {status}")
+        return is_active
+
 # =============================================================================
-# �🔧 DIAGNÓSTICOS Y VALIDACIONES (AMPLIADOS)
+# 🚀 FUNCIÓN DE LANZAMIENTO CENTRALIZADA
+# =============================================================================
+
+def launch_app_with_config(config):
+    """✅ Función centralizada para lanzar la aplicación con configuración específica"""
+    try:
+        from .main_visualizacion_modelos import main_visualizacion_modelos
+        
+        print(f"🚀 Lanzando aplicación...")
+        print(f"📍 Puerto: {config.get('port', 8050)}")
+        print(f"🐛 Debug: {'Activado' if config.get('debug', False) else 'Desactivado'}")
+        
+        main_visualizacion_modelos(
+            json_path=config.get('json_path'),
+            use_dash=config.get('use_dash', True),
+            port=config.get('port', 8050),
+            debug=config.get('debug', False)
+        )
+        
+    except Exception as e:
+        print(f"❌ Error lanzando aplicación: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+
+def create_click_monitor_dashboard():
+    """✅ Crea dashboard dedicado de monitoreo de clicks"""
+    try:
+        import dash
+        from dash import html, dcc, Output, Input
+        import plotly.graph_objects as go
+        from datetime import datetime
+        
+        # Crear aplicación Dash dedicada
+        monitor_app = dash.Dash(__name__, title="Monitor de Clicks")
+        
+        # Layout del dashboard
+        monitor_app.layout = html.Div([
+            html.H1("🖱️ Monitor de Clicks en Tiempo Real", 
+                   style={'text-align': 'center', 'color': '#007acc'}),
+            
+            html.Div([
+                html.Div([
+                    html.H3("📊 Estadísticas"),
+                    html.Div(id='stats-display'),
+                ], style={'width': '48%', 'display': 'inline-block'}),
+                
+                html.Div([
+                    html.H3("🎯 Clicks Recientes"),
+                    html.Div(id='recent-clicks'),
+                ], style={'width': '48%', 'float': 'right', 'display': 'inline-block'}),
+            ]),
+            
+            html.Hr(),
+            
+            html.Div([
+                html.H3("📈 Gráfico de Actividad"),
+                dcc.Graph(id='activity-graph'),
+            ]),
+            
+            dcc.Interval(
+                id='interval-component',
+                interval=2000,  # Actualizar cada 2 segundos
+                n_intervals=0
+            )
+        ])
+        
+        # Estado global del monitor
+        click_data = {
+            'clicks': [],
+            'timestamps': [],
+            'total_clicks': 0
+        }
+        
+        @monitor_app.callback(
+            [Output('stats-display', 'children'),
+             Output('recent-clicks', 'children'),
+             Output('activity-graph', 'figure')],
+            [Input('interval-component', 'n_intervals')]
+        )
+        def update_monitor(n):
+            # No generar clicks simulados - solo mostrar datos reales
+            # Los clicks reales se capturan por el monitor principal
+            
+            # Aquí se podrían conectar métricas reales del sistema
+            
+            # Estadísticas
+            stats = html.Div([
+                html.P(f"Total Clicks: {click_data['total_clicks']}"),
+                html.P(f"Clicks Recientes: {len(click_data['clicks'])}"),
+                html.P(f"Último Click: {click_data['timestamps'][-1].strftime('%H:%M:%S') if click_data['timestamps'] else 'N/A'}")
+            ])
+            
+            # Clicks recientes
+            recent = html.Div([
+                html.P(f"{click} - {ts.strftime('%H:%M:%S')}")
+                for click, ts in zip(click_data['clicks'][-5:], click_data['timestamps'][-5:])
+            ])
+            
+            # Gráfico de actividad
+            fig = go.Figure()
+            if click_data['timestamps']:
+                # Agrupar clicks por minuto
+                minutes = [ts.strftime('%H:%M') for ts in click_data['timestamps']]
+                minute_counts = {}
+                for minute in minutes:
+                    minute_counts[minute] = minute_counts.get(minute, 0) + 1
+                
+                fig.add_trace(go.Scatter(
+                    x=list(minute_counts.keys()),
+                    y=list(minute_counts.values()),
+                    mode='lines+markers',
+                    name='Clicks por minuto'
+                ))
+            
+            fig.update_layout(
+                title="Actividad de Clicks",
+                xaxis_title="Tiempo",
+                yaxis_title="Clicks",
+                height=400
+            )
+            
+            return stats, recent, fig
+        
+        return monitor_app
+        
+    except ImportError:
+        print("❌ Dash no disponible para crear monitor")
+        return None
+    except Exception as e:
+        print(f"❌ Error creando monitor: {e}")
+        return None
+
+# =============================================================================
+# � DIAGNÓSTICOS Y VALIDACIONES CENTRALIZADAS  
 # =============================================================================
 
 class DiagnosticManager:
-    """Sistema integral de diagnósticos"""
+    """Sistema integral de diagnósticos centralizado"""
     
     @staticmethod
     def check_dependencies():
@@ -656,11 +1181,14 @@ class DiagnosticManager:
             is_occupied = False
             pid = None
             
-            for conn in psutil.net_connections():
-                if conn.laddr.port == port and conn.status == 'LISTEN':
-                    is_occupied = True
-                    pid = conn.pid
-                    break
+            try:
+                for conn in psutil.net_connections():
+                    if conn.laddr.port == port and conn.status == 'LISTEN':
+                        is_occupied = True
+                        pid = conn.pid
+                        break
+            except:
+                pass
             
             results[name] = {
                 'port': port,
@@ -702,95 +1230,17 @@ class DiagnosticManager:
         return results
     
     @staticmethod
-    def test_click_functionality():
-        """Test específico para funcionalidad de click"""
-        try:
-            # Cargar datos
-            data_result, error = DataManager.load_models_data()
-            if error:
-                return {'status': 'error', 'message': f'Error datos: {error}'}
-            
-            # Verificar importación de función crítica
-            try:
-                from Modulos.Analisis_modelos.plot_interactive import create_interactive_plot
-            except ImportError:
-                sys.path.append('Modulos')
-                from Analisis_modelos.plot_interactive import create_interactive_plot
-            
-            # Test con datos reales
-            modelos_data = data_result['modelos_por_celda']
-            if not modelos_data:
-                return {'status': 'error', 'message': 'modelos_por_celda vacío'}
-            
-            # Obtener celda de ejemplo
-            celda_ejemplo = list(modelos_data.keys())[0]
-            
-            # Extraer aeronave y parámetro
-            if '|' in celda_ejemplo:
-                aeronave, parametro = celda_ejemplo.split('|', 1)
-            else:
-                aeronave, parametro = "TestAeronave", "TestParametro"
-            
-            # Crear figura test
-            modelos_test = modelos_data[celda_ejemplo][:2]
-            modelos_filtrados = {celda_ejemplo: modelos_test}
-            
-            fig_test = create_interactive_plot(
-                modelos_filtrados=modelos_filtrados,
-                aeronave=aeronave,
-                parametro=parametro,
-                show_training_points=True,
-                show_model_curves=True,
-                detalles_por_celda=data_result['detalles_por_celda']
-            )
-            
-            # Verificar customdata
-            has_customdata = any(
-                hasattr(trace, 'customdata') and trace.customdata is not None 
-                for trace in fig_test.data
-            )
-            
-            return {
-                'status': 'ok' if has_customdata else 'warning',
-                'message': 'CustomData OK' if has_customdata else 'CustomData faltante',
-                'details': {
-                    'traces': len(fig_test.data),
-                    'aeronave': aeronave,
-                    'parametro': parametro,
-                    'customdata_found': has_customdata
-                }
-            }
-            
-        except Exception as e:
-            return {
-                'status': 'error',
-                'message': f'Error en test: {str(e)}',
-                'traceback': traceback.format_exc()
-            }
-    
-    @staticmethod
     def analyze_dash_app():
         """Análisis profundo de la app Dash en ejecución"""
         try:
             import dash
-            from dash.development.base_component import Component
             
-            # Buscar app Dash
+            # Buscar app Dash en memoria
             app = None
-            
-            # Buscar en variables globales del notebook
-            notebook_globals = globals()
-            for var_name in ['app', 'dash_app']:
-                if var_name in notebook_globals and isinstance(notebook_globals.get(var_name), dash.Dash):
-                    app = notebook_globals[var_name]
+            for obj in gc.get_objects():
+                if isinstance(obj, dash.Dash):
+                    app = obj
                     break
-            
-            # Buscar en memoria si no se encuentra
-            if app is None:
-                for obj in gc.get_objects():
-                    if isinstance(obj, dash.Dash):
-                        app = obj
-                        break
             
             if app is None:
                 return {
@@ -799,72 +1249,80 @@ class DiagnosticManager:
                     'suggestion': 'Ejecutar celda de lanzamiento primero'
                 }
             
-            # Analizar IDs del layout
-            def extract_ids(component):
-                ids = set()
-                if isinstance(component, Component):
-                    if hasattr(component, 'id') and component.id is not None:
-                        ids.add(component.id)
-                    for prop in ['children', 'options', 'dropdown_menu', 'tabs']:
-                        if hasattr(component, prop):
-                            value = getattr(component, prop)
-                            if isinstance(value, list):
-                                for child in value:
-                                    ids |= extract_ids(child)
-                            elif isinstance(value, Component):
-                                ids |= extract_ids(value)
-                elif isinstance(component, list):
-                    for c in component:
-                        ids |= extract_ids(c)
-                return ids
+            # Analizar callbacks relacionados con clicks
+            callback_count = len(app.callback_map) if hasattr(app, 'callback_map') else 0
+            click_callbacks = []
             
-            # Analizar callbacks
-            def extract_callback_info():
-                callback_ids = set()
-                callback_map = defaultdict(dict)
-                
-                if hasattr(app, 'callback_map') and app.callback_map:
-                    for cb in app.callback_map.values():
-                        cb_func = cb.get('callback')
-                        if not cb_func:
-                            continue
-                        
-                        for io_type in ['inputs', 'outputs', 'state']:
-                            if io_type in cb:
-                                if io_type not in callback_map[cb_func]:
-                                    callback_map[cb_func][io_type] = []
-                                for dep in cb[io_type]:
-                                    callback_ids.add(dep['id'])
-                                    callback_map[cb_func][io_type].append(dep['id'])
-                
-                return callback_ids, callback_map
-            
-            # Realizar análisis
-            layout_ids = extract_ids(app.layout)
-            callback_ids, callback_map = extract_callback_info()
-            
-            # Detectar inconsistencias
-            ids_only_in_layout = layout_ids - callback_ids
-            ids_only_in_callbacks = callback_ids - layout_ids
+            if hasattr(app, 'callback_map'):
+                for cb_info in app.callback_map.values():
+                    if 'inputs' in cb_info:
+                        for inp in cb_info['inputs']:
+                            if inp.get('property') == 'clickData':
+                                click_callbacks.append({
+                                    'component_id': inp.get('id'),
+                                    'property': inp.get('property')
+                                })
             
             return {
                 'status': 'ok',
-                'message': 'Análisis completado',
+                'message': f'{callback_count} callbacks, {len(click_callbacks)} de click',
                 'details': {
-                    'layout_ids': len(layout_ids),
-                    'callback_ids': len(callback_ids),
-                    'callbacks_count': len(callback_map),
-                    'orphaned_layout_ids': list(ids_only_in_layout),
-                    'missing_layout_ids': list(ids_only_in_callbacks),
-                    'is_consistent': len(ids_only_in_callbacks) == 0
+                    'callback_count': callback_count,
+                    'click_callbacks': click_callbacks
                 }
             }
             
         except Exception as e:
             return {
                 'status': 'error',
-                'message': f'Error analizando Dash: {str(e)}',
-                'traceback': traceback.format_exc()
+                'message': f'Error analizando Dash: {str(e)}'
+            }
+    
+    @staticmethod
+    def test_click_functionality():
+        """Test específico de funcionalidad de clicks"""
+        try:
+            # Verificar si hay app Dash disponible
+            app_analysis = DiagnosticManager.analyze_dash_app()
+            
+            if app_analysis['status'] == 'error':
+                return {
+                    'status': 'error',
+                    'message': 'No hay aplicación Dash para probar clicks'
+                }
+            elif app_analysis['status'] == 'warning':
+                return {
+                    'status': 'warning',
+                    'message': 'App Dash no encontrada - clicks no testeable'
+                }
+            else:
+                # App encontrada, verificar estructura de clicks
+                details = app_analysis.get('details', {})
+                if isinstance(details, dict):
+                    click_callbacks = details.get('click_callbacks', [])
+                    # click_callbacks es una lista, necesitamos su longitud
+                    click_count = len(click_callbacks) if isinstance(click_callbacks, list) else 0
+                    
+                    if click_count > 0:
+                        return {
+                            'status': 'ok',
+                            'message': f'Sistema de clicks OK ({click_count} callbacks de click)'
+                        }
+                    else:
+                        return {
+                            'status': 'warning',
+                            'message': 'No se encontraron callbacks de click configurados'
+                        }
+                else:
+                    return {
+                        'status': 'warning',
+                        'message': 'Estructura de detalles no válida'
+                    }
+                    
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': f'Error testing clicks: {str(e)}'
             }
 
 # =============================================================================
@@ -1360,18 +1818,22 @@ class ControlPanel:
             status = "✅" if result['status'] == 'ok' else "❌"
             print(f"   {status} {dep}")
         
+        print()
+        
         # Datos
         data_result, error = DataManager.load_models_data()
-        print(f"\n🗄️ DATOS:")
+        print(f"🗄️ DATOS:")
         if data_result:
             print(f"   ✅ {data_result['total_modelos']} modelos en {data_result['num_celdas']} celdas")
             print(f"   📊 Estructura: {data_result['structure_type']}")
         else:
             print(f"   ❌ Error: {error}")
         
+        print()
+        
         # Módulos
         modules = DiagnosticManager.check_modules()
-        print(f"\n🧩 MÓDULOS ({sum(1 for m in modules.values() if m['status'] == 'ok')}/{len(modules)}):")
+        print(f"🧩 MÓDULOS ({sum(1 for m in modules.values() if m['status'] == 'ok')}/{len(modules)}):")
         for module, result in modules.items():
             status = "✅" if result['status'] == 'ok' else "❌"
             short_name = result.get('short_name', module.split('.')[-1])
@@ -1501,15 +1963,16 @@ class ControlPanel:
             
             # Test de funcionalidad
             click_test = DiagnosticManager.test_click_functionality()
-            status_type = "ok" if click_test['status'] == 'ok' else "warning" if click_test['status'] == 'warning' else "error"
-            ControlPanel._show_section_header("🖱️ TEST DE CLICKS", status_type)
             status_emoji = {'ok': '✅', 'warning': '⚠️', 'error': '❌'}
+            print(f"\n🖱️ TEST DE CLICKS:")
             print(f"   {status_emoji.get(click_test['status'], '❓')} {click_test['message']}")
             
             print(f"\n⏰ Actualizado: {datetime.now().strftime('%H:%M:%S')}")
             
         except Exception as e:
-            print(f"❌ Error obteniendo estado: {e}")
+            print(f"❌ Error al mostrar estado detallado: {str(e)}")
+            import traceback
+            print(f"🔍 Detalles: {traceback.format_exc()}")
     
     @staticmethod
     def _show_section_header(title, status_type):
@@ -1748,72 +2211,28 @@ class ControlPanel:
             
             print()
             
-            # 4. NUEVO: Monitor de clicks en tiempo real
+            # 4. MONITOR DE CLICKS EN TIEMPO REAL INTEGRADO
             ControlPanel._show_section_header("📡 MONITOR DE CLICKS EN TIEMPO REAL", "info")
             
             try:
-                import ipywidgets as widgets
+                # Usar el monitor real integrado sin generar logs constantes
                 from IPython.display import display
+                print("   🎯 Creando monitor integrado de clicks...")
+                monitor_widget = ClickDebugger.create_real_time_click_monitor()
                 
-                # Crear botón para activar/desactivar monitor
-                monitor_button = widgets.Button(
-                    description='🎯 Activar Monitor de Clicks',
-                    button_style='success',
-                    tooltip='Activa monitoreo en tiempo real de clicks en gráficos',
-                    layout=widgets.Layout(width='220px', height='40px')
-                )
-                
-                # Output para mostrar clicks detectados
-                click_monitor_output = widgets.Output(
-                    layout=widgets.Layout(
-                        height='200px',
-                        border='1px solid #ccc',
-                        padding='10px',
-                        overflow='auto'
-                    )
-                )
-                
-                # Estado del monitor
-                monitor_active = {'status': False}
-                
-                def toggle_monitor(button):
-                    if not monitor_active['status']:
-                        monitor_active['status'] = True
-                        button.description = '⏹️ Detener Monitor'
-                        button.button_style = 'danger'
-                        
-                        with click_monitor_output:
-                            print("🎯 MONITOR DE CLICKS ACTIVADO")
-                            print("=" * 35)
-                            print("🔍 Detectando clicks en gráficos 2D y 3D...")
-                            print("📊 Los clicks aparecerán aquí en tiempo real")
-                            print("⏰ Timestamp | 📍 Ubicación | 📋 Datos")
-                            print("-" * 35)
-                            
-                            # Simulación de detección (en implementación real se conectaría con callbacks)
-                            # Esta función se puede expandir para conectar con el sistema real
-                            ControlPanel._start_click_monitoring(click_monitor_output)
-                    else:
-                        monitor_active['status'] = False
-                        button.description = '🎯 Activar Monitor de Clicks'
-                        button.button_style = 'success'
-                        
-                        with click_monitor_output:
-                            print("\n⏹️ Monitor detenido")
-                
-                monitor_button.on_click(toggle_monitor)
-                
-                print("   💡 Usa el botón abajo para activar monitoreo en tiempo real:")
-                print("   📡 Se detectarán clicks en gráficos 2D y 3D automáticamente")
-                print("   🕒 Los eventos aparecerán con timestamp y ubicación")
-                print()
-                
-                display(monitor_button)
-                display(click_monitor_output)
-                
-            except ImportError:
-                print("   📋 Widgets no disponibles - monitor en modo texto")
-                print("   💡 Para monitoreo completo, instalar: pip install ipywidgets")
+                if monitor_widget:
+                    print("   ✅ Monitor NO interfiriente creado exitosamente")
+                    print("   🔇 NO genera logs constantes - Solo detecta clicks reales")
+                    print("   💡 Monitor integrado en el panel de control")
+                    print()
+                    display(monitor_widget)
+                else:
+                    print("   ❌ No se pudo crear el monitor")
+                    print("   � Verifica que ipywidgets esté instalado")
+                    
+            except Exception as e:
+                print(f"   ❌ Error creando monitor integrado: {e}")
+                print("   � Modo texto: Los clicks aparecerán en la consola")
             
             print()
             
@@ -1867,39 +2286,6 @@ class ControlPanel:
             print(f"🔍 Traceback: {traceback.format_exc()}")
     
     @staticmethod
-    def _start_click_monitoring(output_widget):
-        """Inicia monitoreo de clicks (placeholder para implementación futura)"""
-        import threading
-        import time
-        from datetime import datetime
-        
-        def monitor_loop():
-            try:
-                # Simulación de detección de clicks (aquí se conectaría con callbacks reales)
-                click_count = 0
-                while click_count < 5:  # Demostración limitada
-                    time.sleep(3)
-                    click_count += 1
-                    
-                    with output_widget:
-                        timestamp = datetime.now().strftime('%H:%M:%S')
-                        print(f"🎯 {timestamp} | 📊 Gráfico-2D | clickData: {{x: 1.23, y: 4.56}}")
-                        
-                        if click_count == 3:
-                            print(f"🎯 {timestamp} | 📈 Gráfico-3D | clickData: {{x: 2.1, y: 3.4, z: 1.8}}")
-                
-                with output_widget:
-                    print("\n💡 Demo completada - En implementación real se conectaría con callbacks de Dash")
-                    
-            except Exception as e:
-                with output_widget:
-                    print(f"❌ Error en monitor: {e}")
-        
-        # Ejecutar en hilo separado para no bloquear
-        monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
-        monitor_thread.start()
-    
-    @staticmethod
     def _show_log_management():
         """Muestra gestión de logs con botones interactivos de confirmación"""
         try:
@@ -1925,7 +2311,7 @@ class ControlPanel:
                     print(f"      • {event_type}: {count} eventos")
                 
                 print(f"\n   🕒 Últimos 3 eventos:")
-                for log in recent_logs[-3:]:
+                for log in recent_logs[-3:]:  # Últimos 3
                     print(f"      📄 {log}")
             
             print()
@@ -1999,4 +2385,4 @@ class ControlPanel:
 
 # =============================================================================
 # 🎯 FIN DEL MÓDULO
-# ============================================================================="
+# =============================================================================

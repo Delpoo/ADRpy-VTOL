@@ -16,19 +16,16 @@ if parent_dir not in sys.path:
 
 try:
     from . import notebook_utils
-    from .notebook_utils import ClickDebugger, DataManager, Config, launch_app_with_config
-    # Importar función de monitor si existe
-    try:
-        from .notebook_utils import create_click_monitor_dashboard
-    except ImportError:
-        create_click_monitor_dashboard = None
+    from .notebook_utils import (
+        ClickDebugger, DataManager, Config, LogManager,
+        launch_app_with_config, create_click_monitor_dashboard
+    )
 except ImportError:
     import notebook_utils
-    from notebook_utils import ClickDebugger, DataManager, Config, launch_app_with_config
-    try:
-        from notebook_utils import create_click_monitor_dashboard
-    except ImportError:
-        create_click_monitor_dashboard = None
+    from notebook_utils import (
+        ClickDebugger, DataManager, Config, LogManager,
+        launch_app_with_config, create_click_monitor_dashboard
+    )
 
 
 class ControlPanel:
@@ -105,11 +102,8 @@ class ControlPanel:
                 ControlPanel._show_centered_title("🐛 LANZAMIENTO DEBUG CON MONITOR")
                 try:
                     print("🔄 Verificando sistema...")
-                    ControlPanel._display_status_compact()
                     
-                    print("\\n🚀 Iniciando aplicación con monitor de clicks...")
-                    
-                    # Configuración para debug con monitor
+                    # Usar función centralizada
                     config = {
                         'json_path': Config.JSON_PATH,
                         'use_dash': True,
@@ -121,10 +115,9 @@ class ControlPanel:
                     os.environ['DASH_DEBUG_CLICK'] = '1'
                     
                     print("🖱️ Monitor de clicks habilitado")
-                    print("📍 Monitor aparecerá en el panel derecho del dashboard")
                     print("🌐 Abriendo navegador...")
                     
-                    # Lanzar en thread separado
+                    # Usar función centralizada
                     def run_app():
                         launch_app_with_config(config)
                     
@@ -176,7 +169,7 @@ class ControlPanel:
                 try:
                     print("🔄 Creando dashboard de monitor de clicks...")
                     
-                    # Crear y lanzar dashboard específico de clicks
+                    # Usar función centralizada
                     monitor_app = create_click_monitor_dashboard()
                     
                     if monitor_app:
@@ -202,21 +195,46 @@ class ControlPanel:
             with output_main:
                 clear_output(wait=True)
                 ControlPanel._show_centered_title("📊 ESTADO DETALLADO DEL SISTEMA")
-                ControlPanel._display_status_detailed()
+                # Usar función centralizada de diagnóstico
+                try:
+                    results = ClickDebugger.analyze_click_chain()
+                    print(f"Estado general: {results['status']}")
+                    print(f"Mensaje: {results['message']}")
+                    
+                    if 'critical_checks' in results:
+                        print("\n🔍 Verificaciones críticas:")
+                        for check_name, check_result in results['critical_checks'].items():
+                            status_emoji = {'ok': '✅', 'warning': '⚠️', 'error': '❌'}
+                            emoji = status_emoji.get(check_result['status'], '❓')
+                            print(f"   {emoji} {check_name}: {check_result['message']}")
+                except Exception as e:
+                    print(f"❌ Error en diagnóstico: {e}")
         
         def run_full_diagnostic(button):
             with output_main:
                 clear_output(wait=True)
                 ControlPanel._show_centered_title("🔬 DIAGNÓSTICO COMPLETO")
-                ControlPanel._run_diagnostic()
+                # Usar función centralizada
+                try:
+                    success = ClickDebugger.comprehensive_click_test()
+                    if success:
+                        print("✅ Diagnóstico completado exitosamente")
+                    else:
+                        print("❌ Se encontraron problemas en el diagnóstico")
+                except Exception as e:
+                    print(f"❌ Error ejecutando diagnóstico: {e}")
         
         def clear_and_reset(button):
             with output_main:
                 clear_output(wait=True)
                 ControlPanel._show_centered_title("🗑️ LIMPIEZA Y RESET")
                 print("🔄 Limpiando logs y reiniciando estado...")
-                # Aquí podrías agregar lógica de limpieza
-                print("✅ Sistema limpiado")
+                try:
+                    LogManager.clear_old_logs(hours=1)  # Limpiar logs de la última hora
+                    print("✅ Logs limpiados")
+                    print("🔄 Estado reiniciado")
+                except Exception as e:
+                    print(f"❌ Error limpiando: {e}")
                 ControlPanel._show_initial_message()
         
         # Conectar eventos
