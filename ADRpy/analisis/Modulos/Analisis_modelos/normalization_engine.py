@@ -252,7 +252,13 @@ class ModelNormalizationEngine:
             
             # Calcular predicciones según el tipo de modelo
             if tipo.startswith('linear'):
-                y_original = intercepto + coeficientes[0] * x_original
+                # Modelo lineal: y = intercepto + c1*x1 + c2*x2 + ...
+                if len(coeficientes) == 1:
+                    y_original = intercepto + coeficientes[0] * x_original
+                else:
+                    # Múltiples predictores: solo podemos graficar el primer predictor
+                    y_original = intercepto + coeficientes[0] * x_original
+                    metadata["multi_predictor_warning"] = f"Modelo con {len(coeficientes)} predictores, graficando solo el primero"
             elif tipo.startswith('log'):
                 # y = a + b*log(x), evitar log(0)
                 x_original_safe = np.maximum(x_original, 1e-8)
@@ -265,10 +271,37 @@ class ModelNormalizationEngine:
                 x_original_safe = np.maximum(x_original, 1e-8)
                 y_original = intercepto * np.power(x_original_safe, coeficientes[0])
             elif tipo.startswith('poly'):
-                # Modelo polinómico - necesita manejo especial de características
-                # Por ahora, solo lineal
-                y_original = intercepto + coeficientes[0] * x_original
-                metadata.update({"poly_warning": "Modelo polinómico simplificado a lineal para visualización"})
+                # Modelo polinómico: reconstruir usando PolynomialFeatures
+                try:
+                    from sklearn.preprocessing import PolynomialFeatures
+                    # Para modelos poly-1: [x, x^2] -> coefs = [c1, c2]
+                    # Para modelos poly-2: [x1, x2, x1^2, x1*x2, x2^2] -> coefs = [c1, c2, c3, c4, c5]
+                    n_predictores = int(tipo.split('-')[1]) if '-' in tipo else 1
+                    
+                    if n_predictores == 1:
+                        # Polinómico de 1 predictor: y = intercepto + c1*x + c2*x^2
+                        if len(coeficientes) >= 2:
+                            y_original = intercepto + coeficientes[0] * x_original + coeficientes[1] * (x_original ** 2)
+                        else:
+                            # Fallback a lineal si no hay suficientes coeficientes
+                            y_original = intercepto + coeficientes[0] * x_original
+                            metadata["poly_fallback_warning"] = "Insuficientes coeficientes para polinómico, usando aproximación lineal"
+                    else:
+                        # Múltiples predictores: solo graficar el primer predictor con sus términos
+                        # Para poly-2: términos son [x1, x2, x1^2, x1*x2, x2^2]
+                        # Graficamos: y = intercepto + c1*x1 + c3*x1^2 (asumiendo x2 = valor_medio)
+                        if len(coeficientes) >= 3:
+                            # Usar los coeficientes correspondientes al primer predictor
+                            y_original = intercepto + coeficientes[0] * x_original + coeficientes[2] * (x_original ** 2)
+                        else:
+                            # Fallback a lineal
+                            y_original = intercepto + coeficientes[0] * x_original
+                            metadata["poly_fallback_warning"] = "Insuficientes coeficientes para polinómico completo, usando aproximación lineal"
+                        metadata["multi_predictor_poly_warning"] = f"Modelo polinómico con {n_predictores} predictores, graficando curva del primer predictor"
+                except ImportError:
+                    # Si no está disponible sklearn, usar aproximación lineal
+                    y_original = intercepto + coeficientes[0] * x_original
+                    metadata["sklearn_missing_warning"] = "sklearn no disponible, usando aproximación lineal para modelo polinómico"
             else:
                 # Por defecto, asumir lineal
                 y_original = intercepto + coeficientes[0] * x_original

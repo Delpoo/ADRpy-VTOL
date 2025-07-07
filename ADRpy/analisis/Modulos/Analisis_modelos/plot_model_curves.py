@@ -11,12 +11,12 @@ import plotly.graph_objects as go
 import logging
 try:
     from .plot_config import COLORS, SYMBOLS, _ensure_list
-    from .plot_data_access import get_model_original_data, get_model_training_data
     from .normalization_engine import normalization_engine, get_normalized_model_data
+    from .json_data_helpers import get_full_dataframe_from_celda
 except ImportError:
     from plot_config import COLORS, SYMBOLS, _ensure_list
-    from plot_data_access import get_model_original_data, get_model_training_data
     from normalization_engine import normalization_engine, get_normalized_model_data
+    from json_data_helpers import get_full_dataframe_from_celda
 
 logger = logging.getLogger(__name__)
 

@@ -44,22 +44,16 @@ def extract_coefficients_from_model(modelo: Dict[str, Any]) -> Optional[List[flo
         coefs = modelo.get('coeficientes_originales', [])
         intercepto = modelo.get('intercepto_original', 0)
         n_predictores = modelo.get('n_predictores', 0)
-        
         if n_predictores != 2:
             return None
-            
         if not isinstance(coefs, list) or len(coefs) == 0:
             return None
-            
         # Para modelos de 2 predictores, esperamos diferentes números de coeficientes
         # Linear-2: 2 coeficientes (c1, c2) + intercepto
         # Poly-2: 5 coeficientes (c1, c2, c3, c4, c5) + intercepto
-        
         # Retornar [intercepto, c1, c2, ...] 
         result = [float(intercepto)] + [float(c) for c in coefs]
-        
         return result
-        
     except Exception as e:
         logger.error(f"Error extrayendo coeficientes del modelo: {e}")
         return None
@@ -167,28 +161,17 @@ def normalize_training_data(X_original: List[List[float]], y_original: List[floa
 
 def get_model_ranges(model: Dict[str, Any]) -> Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]:
     """
-    Obtiene los rangos de normalización del modelo.
-    
-    Parameters:
-    -----------
-    model : Dict[str, Any]
-        Diccionario del modelo con datos de entrenamiento
-        
-    Returns:
-    --------
-    Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]
-        Rangos (x0_range, x1_range, y_range)
+    Obtiene los rangos de normalización del modelo de forma robusta usando helpers.
     """
-    X_original = model['datos_entrenamiento']['X_original']
-    y_original = model['datos_entrenamiento']['y_original']
-    
-    X_array = np.array(X_original)
-    y_array = np.array(y_original)
-    
+    from .json_data_helpers import get_model_specific_data
+    X_data, y_data, df_filtrado, warnings = get_model_specific_data({}, model)
+    if X_data is None or y_data is None or len(X_data) == 0:
+        return (None, None, None)
+    X_array = np.array(X_data)
+    y_array = np.array(y_data)
     x0_range = (X_array[:, 0].min(), X_array[:, 0].max())
     x1_range = (X_array[:, 1].min(), X_array[:, 1].max())
     y_range = (y_array.min(), y_array.max())
-    
     return x0_range, x1_range, y_range
 
 
@@ -238,54 +221,46 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
     }
     
     # Procesar cada modelo
+    from .json_data_helpers import get_model_specific_data
     for idx, model in enumerate(modelos_2pred):
         if not isinstance(model, dict):
             continue
-            
         tipo = model.get('tipo', 'unknown')
         predictores = model.get('predictores', [])
-        
-        # Verificar que tengamos 2 predictores
         if len(predictores) != 2:
             continue
-            
-        # Obtener datos de entrenamiento
-        try:
-            X_original = model['datos_entrenamiento']['X_original']
-            y_original = model['datos_entrenamiento']['y_original']
-        except KeyError:
-            logger.warning(f"Datos de entrenamiento faltantes en modelo {idx}")
+        # Usar helper robusto para extraer datos de entrenamiento
+        X_data, y_data, df_filtrado, warnings = get_model_specific_data({}, model)
+        if X_data is None or y_data is None or len(X_data) == 0:
+            logger.warning(f"Datos de entrenamiento faltantes o inválidos en modelo {idx}: {warnings}")
             continue
-            
-        # Obtener rangos de normalización
-        x0_range, x1_range, y_range = get_model_ranges(model)
-        
+        X_array = np.array(X_data)
+        y_array = np.array(y_data)
+        # Rangos normalizados (0,1) para superficie
+        x0_range = (X_array[:, 0].min(), X_array[:, 0].max())
+        x1_range = (X_array[:, 1].min(), X_array[:, 1].max())
+        y_range = (y_array.min(), y_array.max())
         # Normalizar datos de entrenamiento
-        x0_norm, x1_norm, y_norm = normalize_training_data(
-            X_original, y_original, x0_range, x1_range, y_range
-        )
-        
-        # Color y opacidad según si está resaltado
+        x0_norm = (X_array[:, 0] - x0_range[0]) / (x0_range[1] - x0_range[0]) if x0_range[1] > x0_range[0] else X_array[:, 0]
+        x1_norm = (X_array[:, 1] - x1_range[0]) / (x1_range[1] - x1_range[0]) if x1_range[1] > x1_range[0] else X_array[:, 1]
+        y_norm = (y_array - y_range[0]) / (y_range[1] - y_range[0]) if y_range[1] > y_range[0] else y_array
         is_highlighted = (highlight_model_idx is not None and idx == highlight_model_idx)
         color = color_map.get(tipo, '#2ca02c')
         opacity = 1.0 if is_highlighted else 0.7
         size = 8 if is_highlighted else 6
-        
-        # Agregar puntos de entrenamiento
         if show_training_points:
             hover_text = [
                 f"Modelo {idx+1}: {tipo}<br>" +
-                f"{predictores[0]}: {X_original[i][0]:.3f}<br>" +
-                f"{predictores[1]}: {X_original[i][1]:.3f}<br>" +
-                f"{parametro}: {y_original[i]:.3f}<br>" +
+                f"{predictores[0]}: {X_array[i,0]:.3f}<br>" +
+                f"{predictores[1]}: {X_array[i,1]:.3f}<br>" +
+                f"{parametro}: {y_array[i]:.3f}<br>" +
                 f"R²: {model.get('r2', 0):.3f}<br>" +
                 f"MAPE: {model.get('mape', 0):.2f}%"
-                for i in range(len(X_original))
+                for i in range(len(X_array))
             ]
-            
             fig.add_trace(go.Scatter3d(
                 x=x0_norm,
-                y=x1_norm, 
+                y=x1_norm,
                 z=y_norm,
                 mode='markers',
                 marker=dict(
@@ -299,25 +274,17 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
                 hovertemplate='%{text}<extra></extra>',
                 showlegend=True
             ))
-        
-        # Agregar superficie del modelo
         if show_model_surface:
-            # Extraer coeficientes del modelo directamente
             coefficients = extract_coefficients_from_model(model)
-            
             if coefficients:
-                # Generar superficie
                 try:
                     X_surf, Y_surf, Z_surf = generate_model_surface(
-                        coefficients, 
-                        x_range=(0, 1),  # Rango normalizado
-                        y_range=(0, 1),  # Rango normalizado
+                        coefficients,
+                        x_range=(0, 1),
+                        y_range=(0, 1),
                         resolution=30
                     )
-                    
-                    # Ajustar opacidad de la superficie
                     surf_opacity = 0.6 if is_highlighted else 0.3
-                    
                     fig.add_trace(go.Surface(
                         x=X_surf,
                         y=Y_surf,
@@ -336,7 +303,6 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
                             "<extra></extra>"
                         )
                     ))
-                    
                 except Exception as e:
                     logger.warning(f"Error creando superficie para modelo {idx}: {e}")
             else:

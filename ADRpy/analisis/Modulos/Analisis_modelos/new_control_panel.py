@@ -299,15 +299,18 @@ class ControlPanel:
     def _display_status_detailed():
         """Muestra estado detallado del sistema"""
         ControlPanel._display_status_compact()
-        
-        print("\\n🔍 Verificando datos...")
+        print("\n🔍 Verificando datos...")
         try:
             data_result, error = DataManager.load_models_data()
             if error:
                 print(f"   ❌ Error: {error}")
+            elif data_result is None:
+                print("   ⚠️ No se pudo cargar datos de modelos (data_result es None)")
             else:
-                print(f"   ✅ {data_result['total_modelos']} modelos cargados")
-                print(f"   📊 {data_result['num_celdas']} celdas de datos")
+                total_modelos = data_result.get('total_modelos', 'N/A')
+                num_celdas = data_result.get('num_celdas', 'N/A')
+                print(f"   ✅ {total_modelos} modelos cargados")
+                print(f"   📊 {num_celdas} celdas de datos")
         except Exception as e:
             print(f"   ❌ Error verificando datos: {e}")
     

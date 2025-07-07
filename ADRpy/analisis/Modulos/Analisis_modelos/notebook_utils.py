@@ -889,14 +889,17 @@ class ClickDebugger:
         # 2. Verificar arquitectura de IDs (NUEVO - basado en tu solución)
         print("\n2️⃣ VERIFICANDO ARQUITECTURA DE IDs...")
         id_analysis = ClickDebugger._analyze_graph_id_architecture()
-        if id_analysis['status'] == 'error':
+        if isinstance(id_analysis, dict) and id_analysis.get('status') == 'error':
             print(f"❌ PROBLEMA CRÍTICO DETECTADO:")
             for issue in id_analysis.get('issues', []):
                 print(f"   • {issue}")
             print(f"🔧 SOLUCIÓN: {id_analysis.get('fix')}")
             return False
+        elif isinstance(id_analysis, dict):
+            print(f"✅ {id_analysis.get('message', '')}")
         else:
-            print(f"✅ {id_analysis['message']}")
+            print(f"❌ Error inesperado en análisis de IDs: {id_analysis}")
+            return False
         
         # 3. Test de función de plotting
         print("\n3️⃣ VERIFICANDO FUNCIÓN DE PLOTTING...")
@@ -1467,7 +1470,7 @@ class AppLauncher:
             # Registrar lanzamiento exitoso
             LogManager.log_event('LAUNCH', f'Aplicación lanzada exitosamente en modo {mode}', {
                 'port': config['port'],
-                'total_modelos': data_result['total_modelos']
+                'total_modelos': data_result['total_modelos'] if data_result else 0
             })
             
             # Lanzar la aplicación
@@ -1532,27 +1535,71 @@ class ControlPanel:
             tooltip='Actualiza el estado del sistema',
             layout=widgets.Layout(width='140px', height='40px', margin='2px')
         )
-        
         diagnostic_button = widgets.Button(
             description='🔬 Diagnóstico',
             button_style='primary',
             tooltip='Ejecuta diagnóstico integral',
             layout=widgets.Layout(width='140px', height='40px', margin='2px')
         )
-        
         click_debug_button = widgets.Button(
             description='🖱️ Debug Clicks',
             button_style='warning',
             tooltip='Diagnóstico específico para problemas de clicks',
             layout=widgets.Layout(width='140px', height='40px', margin='2px')
         )
-        
+        # NUEVO: Botón Debug JSON
+        json_debug_button = widgets.Button(
+            description='🐞 Debug JSON',
+            button_style='danger',
+            tooltip='Valida y muestra errores/warnings del JSON de modelos',
+            layout=widgets.Layout(width='140px', height='40px', margin='2px')
+        )
         clear_logs_button = widgets.Button(
-            description='� Logs',
+            description='🗑️ Logs',
             button_style='info',
             tooltip='Ver y gestionar logs del sistema',
             layout=widgets.Layout(width='140px', height='40px', margin='2px')
         )
+        # NUEVO: Panel de salida para debug JSON
+        output_json_debug = widgets.Output(layout=widgets.Layout(
+            height='350px', width='100%',
+            overflow='auto', border='2px solid #d9534f',
+            padding='10px', background_color='#fff5f5', margin='10px 0 0 0'
+        ))
+        # NUEVO: Función para debug JSON
+        def debug_json(button):
+            with output_json_debug:
+                output_json_debug.clear_output(wait=True)
+                print("\n==============================")
+                print("🐞 DEBUG JSON DE MODELOS")
+                print("==============================\n")
+                try:
+                    import json
+                    from Modulos.Analisis_modelos import json_data_helpers
+                    json_path = Config.JSON_PATH
+                    if not os.path.exists(json_path):
+                        print(f"❌ Archivo JSON no encontrado: {json_path}")
+                        return
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    report = json_data_helpers.validate_new_json_structure(data)
+                    print(f"✔️ Archivo: {json_path}")
+                    print(f"Celdas procesadas: {report['celdas_procesadas']}")
+                    print(f"Modelos totales: {report['modelos_totales']}")
+                    print(f"DF completos encontrados: {report['df_completos_encontrados']}")
+                    print(f"\nEstado: {'VÁLIDO ✅' if report['valid'] else 'NO VÁLIDO ❌'}")
+                    if report['errors']:
+                        print("\n❌ Errores:")
+                        for err in report['errors']:
+                            print(f"   - {err}")
+                    if report['warnings']:
+                        print("\n⚠️ Warnings:")
+                        for warn in report['warnings']:
+                            print(f"   - {warn}")
+                    if not report['errors'] and not report['warnings']:
+                        print("\n✅ Sin errores ni advertencias detectadas.")
+                except Exception as e:
+                    print(f"❌ Error ejecutando debug JSON: {e}")
         
         # ========== FUNCIONES DE LOS BOTONES ==========
         
@@ -1645,6 +1692,7 @@ class ControlPanel:
         diagnostic_button.on_click(run_diagnostic)
         clear_logs_button.on_click(clear_logs_with_confirmation)
         click_debug_button.on_click(debug_clicks)
+        json_debug_button.on_click(debug_json)
         
         # LAYOUT MEJORADO Y SIMÉTRICO
         title = widgets.HTML("""
@@ -1679,7 +1727,7 @@ class ControlPanel:
                 </p>
             </div>
             """),
-            widgets.HBox([status_button, diagnostic_button], 
+            widgets.HBox([status_button, diagnostic_button, json_debug_button], 
                         layout=widgets.Layout(justify_content='center')),
             widgets.HBox([click_debug_button, clear_logs_button], 
                         layout=widgets.Layout(justify_content='center'))
@@ -1704,7 +1752,9 @@ class ControlPanel:
             launch_section,
             tools_section,
             widgets.HTML("<br>"),  # Separador
-            results_section
+            results_section,
+            widgets.HTML(value="<h4 style='color:#d9534f; margin-top:20px;'>🐞 Debug JSON Output</h4>"),
+            output_json_debug
         ], layout=widgets.Layout(padding='10px'))
         
         # Mostrar mensaje inicial en el panel
@@ -1721,6 +1771,7 @@ class ControlPanel:
             print("   • 📊 Estado: Información en tiempo real del sistema")
             print("   • 🔬 Diagnóstico: Análisis completo de componentes")
             print("   • 🖱️ Debug Clicks: Diagnóstico específico de interacciones")
+            print("   • 🐞 Debug JSON: Validación y diagnóstico del archivo JSON de modelos")
             print("   • 🗑️ Borrar Logs: Gestión de archivos de historial")
             print()
             print("📌 Toda la salida se mostrará en este panel único con scroll automático")
@@ -1930,8 +1981,6 @@ class ControlPanel:
                 short_name = result.get('short_name', module.split('.')[-1])
                 print(f"   {status_emoji} {short_name:<20} {result['message']}")
             
-            print()
-            
             # Puertos y aplicaciones
             ports = DiagnosticManager.check_ports()
             ControlPanel._show_section_header("🌐 PUERTOS Y APLICACIONES", "info")
@@ -2136,14 +2185,16 @@ class ControlPanel:
             if dash_analysis['status'] == 'ok':
                 details = dash_analysis['details']
                 print(f"   ✅ App Dash encontrada")
-                print(f"   📊 Layout IDs: {details.get('layout_ids', 0)}")
-                print(f"   � Callbacks: {details.get('callbacks_count', 0)}")
-                
-                # Mostrar IDs críticos para clicks
-                if details.get('missing_layout_ids') or details.get('orphaned_layout_ids'):
-                    print(f"   ⚠️  IDs inconsistentes detectados - pueden afectar clicks")
+                if isinstance(details, dict):
+                    print(f"   📊 Layout IDs: {details.get('layout_ids', 0)}")
+                    print(f"   � Callbacks: {details.get('callbacks_count', 0)}")
+                    # Mostrar IDs críticos para clicks
+                    if details.get('missing_layout_ids') or details.get('orphaned_layout_ids'):
+                        print(f"   ⚠️  IDs inconsistentes detectados - pueden afectar clicks")
+                    else:
+                        print(f"   ✅ Todos los IDs están correctamente vinculados")
                 else:
-                    print(f"   ✅ Todos los IDs están correctamente vinculados")
+                    print(f"   ⚠️  Detalles de Dash analysis no disponibles o malformados: {details}")
             else:
                 print(f"   ❌ {dash_analysis['message']}")
                 print(f"   💡 Sin app Dash, los clicks no funcionarán")
@@ -2242,17 +2293,16 @@ class ControlPanel:
                 emoji = status_emoji.get(comp_data['status'], '❓')
                 print(f"\n{emoji} {comp_name.upper()}")
                 print(f"   � {comp_data['message']}")
-                
-                if comp_data.get('fix'):
+                if isinstance(comp_data, dict) and comp_data.get('fix'):
                     print(f"   🔧 Solución: {comp_data['fix']}")
-                
                 # Mostrar detalles específicos si los hay
-                if 'traces_with_customdata' in comp_data:
-                    print(f"   📈 Traces con customdata: {len(comp_data['traces_with_customdata'])}")
-                if 'traces_without_customdata' in comp_data:
-                    print(f"   ⚠️  Traces sin customdata: {len(comp_data['traces_without_customdata'])}")
-                if 'click_callbacks' in comp_data:
-                    print(f"   � Click callbacks: {len(comp_data['click_callbacks'])}")
+                if isinstance(comp_data, dict):
+                    if 'traces_with_customdata' in comp_data:
+                        print(f"   📈 Traces con customdata: {len(comp_data['traces_with_customdata'])}")
+                    if 'traces_without_customdata' in comp_data:
+                        print(f"   ⚠️  Traces sin customdata: {len(comp_data['traces_without_customdata'])}")
+                    if 'click_callbacks' in comp_data:
+                        print(f"   � Click callbacks: {len(comp_data['click_callbacks'])}")
             
             print()
             
@@ -2382,7 +2432,3 @@ class ControlPanel:
             
         except Exception as e:
             print(f"❌ Error gestionando logs: {e}")
-
-# =============================================================================
-# 🎯 FIN DEL MÓDULO
-# =============================================================================

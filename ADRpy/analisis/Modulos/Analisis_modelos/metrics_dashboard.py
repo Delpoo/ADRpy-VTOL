@@ -71,7 +71,18 @@ def generate_metrics_dashboard(
         )
 
     # Top 5 modelos por MAPE (menor es mejor)
-    modelos_flat = [m for ms in modelos_por_celda.values() for m in ms if isinstance(m, dict) and m.get('mape') is not None]
+    modelos_flat = []
+    for celda_key, ms in modelos_por_celda.items():
+        if '|' in celda_key:
+            aeronave, parametro = celda_key.split('|', 1)
+        else:
+            aeronave, parametro = celda_key, ''
+        for m in ms:
+            if isinstance(m, dict) and m.get('mape') is not None:
+                m = dict(m)  # avoid mutating original
+                m['Aeronave'] = aeronave
+                m['Parámetro'] = parametro
+                modelos_flat.append(m)
     top_mape = sorted(modelos_flat, key=lambda m: m.get('mape', 9999))[:5]
     df_top_mape = pd.DataFrame(top_mape)
     # Modelos por número de predictores

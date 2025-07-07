@@ -14,12 +14,14 @@ import plotly.graph_objects as go
 import logging
 try:
     from .plot_config import COLORS, SYMBOLS, _ensure_list
-    from .plot_data_access import get_model_original_data, get_model_training_data
     from .plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
+    from .json_data_helpers import get_full_dataframe_from_celda
+    from .normalization_engine import ModelNormalizationEngine
 except ImportError:
     from plot_config import COLORS, SYMBOLS, _ensure_list
-    from plot_data_access import get_model_original_data, get_model_training_data
     from plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
+    from json_data_helpers import get_full_dataframe_from_celda
+    from normalization_engine import ModelNormalizationEngine
 
 
 def _to_list_safe(val):
@@ -171,8 +173,55 @@ def create_interactive_plot(
         is_dimmed = highlight_model_idx is not None and i != highlight_model_idx
         marker_opacity = 1.0 if is_highlighted else (0.4 if is_dimmed else 0.6)
         marker_size = 8 if is_highlighted else 6
-        df_original = get_model_original_data(modelo)
-        df_filtrado = get_model_training_data(modelo)
+
+        # --- CONSTRUIR DATAFRAME DESDE DATOS DEL MODELO ACTUAL ---
+        df_original = None
+        df_filtrado = None
+        
+        # Usar los datos de entrenamiento del modelo actual
+        datos_entrenamiento = modelo.get('datos_entrenamiento', {})
+        X_data = datos_entrenamiento.get('X_original')
+        y_data = datos_entrenamiento.get('y_original')
+        columnas_pred = datos_entrenamiento.get('columnas_predictores')
+        
+        if X_data is not None and y_data is not None and columnas_pred is not None:
+            try:
+                # Construir DataFrame desde datos del modelo
+                df_model = pd.DataFrame(X_data, columns=columnas_pred)
+                df_model[parametro] = y_data
+                
+                # Verificar que el predictor está en las columnas
+                if predictor in df_model.columns and parametro in df_model.columns:
+                    mask = df_model[predictor].notna() & df_model[parametro].notna()
+                    df_original = df_model.loc[mask, [predictor, parametro]].copy()
+                    df_filtrado = df_original.copy() if df_original is not None else None
+            except Exception as e:
+                # Fallback: usar detalles_por_celda si está disponible
+                if detalles_por_celda and celda_key in detalles_por_celda:
+                    # Crear estructura completa de celda para get_full_dataframe_from_celda
+                    celda_completa = {
+                        'informacion_generica_celda': detalles_por_celda[celda_key],
+                        'informacion_modelos_celda': {'modelos': modelos_filtrados[celda_key]}
+                    }
+                    df_celda, warnings_df = get_full_dataframe_from_celda(celda_completa)
+                    if isinstance(df_celda, pd.DataFrame):
+                        if predictor in df_celda.columns and parametro in df_celda.columns:
+                            mask = df_celda[predictor].notna() & df_celda[parametro].notna()
+                            df_original = df_celda.loc[mask, [predictor, parametro]].copy()
+                            df_filtrado = df_original.copy() if df_original is not None else None
+        
+        # Si aún no hay datos, usar detalles_por_celda como último recurso
+        if df_original is None and detalles_por_celda and celda_key in detalles_por_celda:
+            celda_completa = {
+                'informacion_generica_celda': detalles_por_celda[celda_key],
+                'informacion_modelos_celda': {'modelos': modelos_filtrados[celda_key]}
+            }
+            df_celda, warnings_df = get_full_dataframe_from_celda(celda_completa)
+            if isinstance(df_celda, pd.DataFrame):
+                if predictor in df_celda.columns and parametro in df_celda.columns:
+                    mask = df_celda[predictor].notna() & df_celda[parametro].notna()
+                    df_original = df_celda.loc[mask, [predictor, parametro]].copy()
+                    df_filtrado = df_original.copy() if df_original is not None else None
         # Calcular min y max SOLO de ese predictor usando df_original
         x_min, x_max = None, None
         y_min, y_max = None, None
@@ -192,30 +241,32 @@ def create_interactive_plot(
             mask = df_original[predictor].notna() & df_original[parametro].notna()
             x_orig = df_original.loc[mask, predictor]
             y_orig = df_original.loc[mask, parametro]
-            # Asegurar que sean Series de 1D y no DataFrame
+            # Asegurar que sean arrays de numpy 1D
             if isinstance(x_orig, pd.DataFrame):
                 x_orig = x_orig.squeeze()
                 if isinstance(x_orig, pd.DataFrame):
                     x_orig = x_orig.iloc[:,0]
-            if not isinstance(x_orig, pd.Series):
+            if not isinstance(x_orig, (pd.Series, np.ndarray, list)):
                 x_orig = pd.Series(x_orig)
+            x_orig = np.asarray(x_orig).flatten()
             if isinstance(y_orig, pd.DataFrame):
                 y_orig = y_orig.squeeze()
                 if isinstance(y_orig, pd.DataFrame):
                     y_orig = y_orig.iloc[:,0]
-            if not isinstance(y_orig, pd.Series):
+            if not isinstance(y_orig, (pd.Series, np.ndarray, list)):
                 y_orig = pd.Series(y_orig)
+            y_orig = np.asarray(y_orig).flatten()
             if x_max != x_min:
                 x_orig_norm = (x_orig - x_min) / (x_max - x_min)
             else:
-                x_orig_norm = pd.Series([0.5] * len(x_orig), index=x_orig.index if hasattr(x_orig, 'index') else None)
+                x_orig_norm = np.full_like(x_orig, 0.5, dtype=float)
             if y_max != y_min:
                 y_orig_norm = (y_orig - y_min) / (y_max - y_min)
             else:
-                y_orig_norm = pd.Series([0.5] * len(y_orig), index=y_orig.index if hasattr(y_orig, 'index') else None)
-            x_orig_list = _to_list_safe(x_orig)
-            x_orig_norm_list = _to_list_safe(x_orig_norm)
-            y_orig_norm_list = _to_list_safe(y_orig_norm)
+                y_orig_norm = np.full_like(y_orig, 0.5, dtype=float)
+            x_orig_list = x_orig.tolist()
+            x_orig_norm_list = x_orig_norm.tolist()
+            y_orig_norm_list = y_orig_norm.tolist()
             fig.add_trace(go.Scatter(
                 x=x_orig_norm_list,
                 y=y_orig_norm_list,
@@ -263,17 +314,19 @@ def create_interactive_plot(
             mask = df_filtrado[predictor].notna() & df_filtrado[parametro].notna()
             x_train = df_filtrado.loc[mask, predictor]
             y_train = df_filtrado.loc[mask, parametro]
+            x_train = np.asarray(x_train).flatten()
+            y_train = np.asarray(y_train).flatten()
             if x_max != x_min:
                 x_train_norm = (x_train - x_min) / (x_max - x_min)
             else:
-                x_train_norm = pd.Series([0.5] * len(x_train), index=x_train.index)
+                x_train_norm = np.full_like(x_train, 0.5, dtype=float)
             if y_max != y_min:
                 y_train_norm = (y_train - y_min) / (y_max - y_min)
             else:
-                y_train_norm = pd.Series([0.5] * len(y_train), index=y_train.index if hasattr(y_train, 'index') else None)
-            x_train_list = _to_list_safe(x_train)
-            x_train_norm_list = _to_list_safe(x_train_norm)
-            y_train_norm_list = _to_list_safe(y_train_norm)
+                y_train_norm = np.full_like(y_train, 0.5, dtype=float)
+            x_train_list = x_train.tolist()
+            x_train_norm_list = x_train_norm.tolist()
+            y_train_norm_list = y_train_norm.tolist()
             # Determinar resaltado y opacidad para el modelo actual
             training_opacity = 1.0 if is_highlighted else (0.5 if is_dimmed else 0.9)
             training_size = 10 if is_highlighted else 8
@@ -320,48 +373,128 @@ def create_interactive_plot(
                 x_min, x_max = 0, 10
             using_synthetic_range = True
         if show_model_curves:
-            if x_max != x_min:
-                x_range_orig = np.linspace(x_min, x_max, 100)
-                x_range_norm = (x_range_orig - x_min) / (x_max - x_min)
-            else:
-                x_range_orig = np.array([x_min])
-                x_range_norm = np.array([0.5])
-            predictions = get_model_predictions_safe(modelo, x_range_orig)
-            if predictions is None:
-                continue
-            # Normalizar predicciones
-            if y_min is not None and y_max is not None and y_max != y_min:
-                predictions_norm = (predictions - y_min) / (y_max - y_min)
-            else:
-                predictions_norm = np.full_like(predictions, 0.5)
-            color_idx = i % len(COLORS['model_lines'])
-            model_color = COLORS['selected_model'] if (highlight_model_idx is not None and i == highlight_model_idx) else COLORS['model_lines'][color_idx]
-            line_width = 5 if (highlight_model_idx is not None and i == highlight_model_idx) else 2
-            opacity = 1.0 if (highlight_model_idx is not None and i == highlight_model_idx) else (0.3 if highlight_model_idx is not None else 1.0)
-            line_style = 'dash' if using_synthetic_range else 'solid'
-            hover_extra = "<br><b>ADVERTENCIA:</b> Curva generada con valores sintéticos por falta de datos originales" if using_synthetic_range else ""
-            model_info = create_model_hover_info(modelo)
-            fig.add_trace(go.Scatter(
-                x=x_range_norm,
-                y=predictions_norm,
-                mode='lines',
-                name=f'Curva - {predictor} ({modelo.get("tipo", "unknown")})' + (" [sintética]" if using_synthetic_range else ""),
-                line=dict(
-                    color=model_color, 
-                    width=line_width,
-                    dash=line_style
-                ),
-                opacity=opacity,
-                # Información personalizada para identificar el modelo en callbacks
-                customdata=[i] * len(predictions),  # Índice del modelo para identificarlo
-                text=[
-                    f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y normalizada: {yv:.3f}{hover_extra}<br>{model_info}" for xv, xn, yv in zip(x_range_orig, x_range_norm, predictions_norm)
-                ],
-                hovertemplate='%{text}<extra></extra>',
-                legendgroup=f'model_{i}',
-                showlegend=True,
-                # Configuración para hacer la línea más clickeable
-                connectgaps=True,
+            # Usar normalization_engine para generar curvas correctas
+            try:
+                normalizer = ModelNormalizationEngine()
+                
+                # Generar curva normalizada usando el motor de normalización
+                x_range_norm = np.linspace(0, 1, 100)
+                x_norm_result, y_norm_result, metadata = normalizer.generate_normalized_curve_from_model(
+                    modelo, x_range_normalized=x_range_norm, resolution=100
+                )
+                
+                if x_norm_result is not None and y_norm_result is not None:
+                    x_range_norm = np.asarray(x_norm_result).flatten()
+                    predictions_norm = np.asarray(y_norm_result).flatten()
+                    
+                    # Reconstruir x_range_orig para hover info
+                    if x_min is not None and x_max is not None and x_max != x_min:
+                        x_range_orig = x_range_norm * (x_max - x_min) + x_min
+                    else:
+                        x_range_orig = x_range_norm  # Fallback
+                    
+                    # Advertencias adicionales
+                    warnings_text = ""
+                    if metadata.get("synthetic_range", False):
+                        warnings_text += "<br><b>ADVERTENCIA:</b> Rango sintético utilizado por falta de datos"
+                        using_synthetic_range = True
+                    if metadata.get("multi_predictor_warning"):
+                        warnings_text += f"<br><b>INFO:</b> {metadata['multi_predictor_warning']}"
+                    if metadata.get("poly_fallback_warning"):
+                        warnings_text += f"<br><b>ADVERTENCIA:</b> {metadata['poly_fallback_warning']}"
+                    
+                    color_idx = i % len(COLORS['model_lines'])
+                    model_color = COLORS['selected_model'] if (highlight_model_idx is not None and i == highlight_model_idx) else COLORS['model_lines'][color_idx]
+                    line_width = 5 if (highlight_model_idx is not None and i == highlight_model_idx) else 2
+                    opacity = 1.0 if (highlight_model_idx is not None and i == highlight_model_idx) else (0.3 if highlight_model_idx is not None else 1.0)
+                    line_style = 'dash' if using_synthetic_range else 'solid'
+                    
+                    model_info = create_model_hover_info(modelo)
+                    fig.add_trace(go.Scatter(
+                        x=x_range_norm.tolist(),
+                        y=predictions_norm.tolist(),
+                        mode='lines',
+                        name=f'Curva - {predictor} ({modelo.get("tipo", "unknown")})' + (" [sintética]" if using_synthetic_range else ""),
+                        line=dict(
+                            color=model_color, 
+                            width=line_width,
+                            dash=line_style
+                        ),
+                        opacity=opacity,
+                        # Información personalizada para identificar el modelo en callbacks
+                        customdata=[i] * len(predictions_norm),  # Índice del modelo para identificarlo
+                        text=[
+                            f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y normalizada: {yv:.3f}{warnings_text}<br>{model_info}" 
+                            for xv, xn, yv in zip(x_range_orig.tolist(), x_range_norm.tolist(), predictions_norm.tolist())
+                        ],
+                        hovertemplate='%{text}<extra></extra>',
+                        legendgroup=f'model_{i}',
+                        showlegend=True,
+                        # Configuración para hacer la línea más clickeable
+                        connectgaps=True,
+                        # Información adicional para el callback
+                        meta=dict(
+                            model_idx=i,
+                            model_type=modelo.get("tipo", "unknown"),
+                            predictor=predictor,
+                            aeronave=aeronave,
+                            parametro=parametro,
+                            data_type='curve'
+                        )
+                    ))
+                else:
+                    # Fallback si falla la generación de curva
+                    logger.warning(f"No se pudo generar curva para modelo {i}: {metadata.get('error', 'Error desconocido')}")
+                    continue
+                    
+            except Exception as e:
+                logger.error(f"Error generando curva para modelo {i}: {e}")
+                # Fallback a la lógica anterior solo en caso de error crítico
+                if x_max != x_min:
+                    x_range_orig = np.linspace(x_min, x_max, 100)
+                    x_range_norm = (x_range_orig - x_min) / (x_max - x_min)
+                else:
+                    x_range_orig = np.array([x_min])
+                    x_range_norm = np.array([0.5])
+                x_range_orig = np.asarray(x_range_orig).flatten()
+                x_range_norm = np.asarray(x_range_norm).flatten()
+                predictions = get_model_predictions_safe(modelo, x_range_orig)
+                if predictions is None:
+                    continue
+                predictions = np.asarray(predictions).flatten()
+                # Normalizar predicciones
+                if y_min is not None and y_max is not None and y_max != y_min:
+                    predictions_norm = (predictions - y_min) / (y_max - y_min)
+                else:
+                    predictions_norm = np.full_like(predictions, 0.5, dtype=float)
+                color_idx = i % len(COLORS['model_lines'])
+                model_color = COLORS['selected_model'] if (highlight_model_idx is not None and i == highlight_model_idx) else COLORS['model_lines'][color_idx]
+                line_width = 5 if (highlight_model_idx is not None and i == highlight_model_idx) else 2
+                opacity = 1.0 if (highlight_model_idx is not None and i == highlight_model_idx) else (0.3 if highlight_model_idx is not None else 1.0)
+                line_style = 'dash' if using_synthetic_range else 'solid'
+                hover_extra = "<br><b>ADVERTENCIA:</b> Curva generada con valores sintéticos por falta de datos originales" if using_synthetic_range else ""
+                model_info = create_model_hover_info(modelo)
+                fig.add_trace(go.Scatter(
+                    x=x_range_norm.tolist(),
+                    y=predictions_norm.tolist(),
+                    mode='lines',
+                    name=f'Curva - {predictor} ({modelo.get("tipo", "unknown")})' + (" [sintética]" if using_synthetic_range else ""),
+                    line=dict(
+                        color=model_color, 
+                        width=line_width,
+                        dash=line_style
+                    ),
+                    opacity=opacity,
+                    # Información personalizada para identificar el modelo en callbacks
+                    customdata=[i] * len(predictions),  # Índice del modelo para identificarlo
+                    text=[
+                        f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y normalizada: {yv:.3f}{hover_extra}<br>{model_info}" for xv, xn, yv in zip(x_range_orig.tolist(), x_range_norm.tolist(), predictions_norm.tolist())
+                    ],
+                    hovertemplate='%{text}<extra></extra>',
+                    legendgroup=f'model_{i}',
+                    showlegend=True,
+                    # Configuración para hacer la línea más clickeable
+                    connectgaps=True,
                 # Información adicional para el callback
                 meta=dict(
                     model_idx=i,
@@ -386,17 +519,37 @@ def create_interactive_plot(
     # --- Agregar marcadores de imputación si hay detalles disponibles ---    # --- PUNTOS IMPUTADOS ---
     # Usar la nueva estructura de datos y filtrado por métodos
     if detalles_por_celda and celda_key in detalles_por_celda:
-        # Asegurar que y_min y y_max estén definidos
-        if 'y_min' not in locals() or 'y_max' not in locals() or y_min is None or y_max is None:
-            # Buscar en los modelos de 1 predictor
-            y_min, y_max = None, None
+        # Asegurar que y_min y y_max estén definidos correctamente
+        y_min, y_max = None, None
+        # Buscar en los modelos de 1 predictor (usando el DataFrame de la celda si es posible)
+        if detalles_por_celda[celda_key].get('df_original') is not None:
+            df_celda = detalles_por_celda[celda_key]['df_original']
+            if isinstance(df_celda, dict):
+                df_celda = pd.DataFrame(df_celda)
+            if isinstance(df_celda, pd.DataFrame) and parametro in df_celda.columns:
+                y_data = df_celda[parametro].dropna()
+                if len(y_data) > 0:
+                    y_min = y_data.min()
+                    y_max = y_data.max()
+        # Fallback: buscar en los modelos si no se encontró nada
+        if y_min is None or y_max is None:
             for modelo in modelos_1_pred:
-                df_original = get_model_original_data(modelo)
-                if df_original is not None and parametro in df_original.columns:
-                    y_data = df_original[parametro].dropna()
-                    if len(y_data) > 0:
-                        y_min = y_data.min() if y_min is None else min(y_min, y_data.min())
-                        y_max = y_data.max() if y_max is None else max(y_max, y_data.max())
+                # Usar solo DataFrame centralizado si está disponible
+                if detalles_por_celda and celda_key in detalles_por_celda:
+                    # Crear estructura completa de celda
+                    celda_completa = {
+                        'informacion_generica_celda': detalles_por_celda[celda_key],
+                        'informacion_modelos_celda': {'modelos': modelos_filtrados[celda_key]}
+                    }
+                    df_celda, warnings_df = get_full_dataframe_from_celda(celda_completa)
+                    if isinstance(df_celda, pd.DataFrame) and parametro in df_celda.columns:
+                        y_data = df_celda[parametro].dropna()
+                        if len(y_data) > 0:
+                            y_min = y_data.min() if y_min is None else min(y_min, y_data.min())
+                            y_max = y_data.max() if y_max is None else max(y_max, y_data.max())
+        # Si aún no están definidos, usar valores por defecto
+        if y_min is None or y_max is None or y_max == y_min:
+            y_min, y_max = 0.0, 1.0
         from .plot_model_curves import extract_imputed_values_from_details, filter_imputed_points_by_method
         methods_to_show = selected_imputation_methods or ['final', 'similitud', 'correlacion']
         imputed_points = extract_imputed_values_from_details(
@@ -410,10 +563,7 @@ def create_interactive_plot(
             x_norm = point.get('x_normalized', 0.5)
             y_value = point.get('y_value', 0)
             # Normalizar el valor imputado usando el mismo rango que los datos originales
-            if y_min is not None and y_max is not None and y_max != y_min:
-                y_value_norm = (y_value - y_min) / (y_max - y_min)
-            else:
-                y_value_norm = 0.5
+            y_value_norm = (y_value - y_min) / (y_max - y_min) if y_max != y_min else 0.5
             confidence = point.get('confidence', '')
             iteration = point.get('iteration', '')
             warning = point.get('warning', '')
@@ -507,6 +657,7 @@ def create_interactive_plot(
 def add_model_data_points(fig: go.Figure, 
                          modelos: List[Dict], 
                          parametro: str,
+                         detalles_por_celda: Optional[Dict] = None,
                          show_training_points: bool = True) -> None:
     """
     Añade puntos de datos originales y de entrenamiento para cada modelo de 1 predictor.
@@ -535,44 +686,48 @@ def add_model_data_points(fig: go.Figure,
         predictor = modelo.get('predictores', [None])[0]
         if not predictor:
             continue
-        # Obtener datos originales y de entrenamiento del modelo
-        df_original = get_model_original_data(modelo)
-        df_filtrado = get_model_training_data(modelo)
-        
-        if df_original is None or df_original.empty:
+        # Obtener datos originales y de entrenamiento del modelo usando helpers centralizados
+        df_original = None
+        df_filtrado = None
+        if detalles_por_celda:
+            celda_key = f"{modelo.get('Aeronave', '')}|{parametro}"
+            if celda_key in detalles_por_celda:
+                # Crear estructura completa de celda
+                celda_completa = {
+                    'informacion_generica_celda': detalles_por_celda[celda_key],
+                    'informacion_modelos_celda': {'modelos': [modelo]}
+                }
+                df_celda, warnings_df = get_full_dataframe_from_celda(celda_completa)
+                if isinstance(df_celda, pd.DataFrame) and predictor in df_celda.columns and parametro in df_celda.columns:
+                    mask = df_celda[predictor].notna() & df_celda[parametro].notna()
+                    x_orig_valid = df_celda.loc[mask, predictor]
+                    y_orig_valid = df_celda.loc[mask, parametro]
+                    df_original = df_celda.loc[mask, [predictor, parametro]].copy()
+                    # Para entrenamiento, puedes adaptar aquí si hay lógica especial
+                    x_train_valid = x_orig_valid.copy() if isinstance(x_orig_valid, (pd.Series, pd.DataFrame)) else x_orig_valid
+                    y_train_valid = y_orig_valid.copy() if isinstance(y_orig_valid, (pd.Series, pd.DataFrame)) else y_orig_valid
+                    df_filtrado = df_original.copy() if isinstance(df_original, (pd.Series, pd.DataFrame)) else df_original
+                else:
+                    x_orig_valid = pd.Series(dtype=float)
+                    y_orig_valid = pd.Series(dtype=float)
+                    x_train_valid = pd.Series(dtype=float)
+                    y_train_valid = pd.Series(dtype=float)
+            else:
+                x_orig_valid = pd.Series(dtype=float)
+                y_orig_valid = pd.Series(dtype=float)
+                x_train_valid = pd.Series(dtype=float)
+                y_train_valid = pd.Series(dtype=float)
+        else:
+            x_orig_valid = pd.Series(dtype=float)
+            y_orig_valid = pd.Series(dtype=float)
+            x_train_valid = pd.Series(dtype=float)
+            y_train_valid = pd.Series(dtype=float)
+
+        if df_original is None or (hasattr(df_original, 'empty') and df_original.empty) or len(x_orig_valid) == 0:
             models_without_data.append(f"{predictor} ({modelo.get('tipo', 'unknown')})")
             logger.warning(f"No se pudieron obtener datos originales para modelo con predictor {predictor}")
             continue
-        # Extraer datos válidos
-        if predictor in df_original.columns and parametro in df_original.columns:
-            # Crear máscaras para valores válidos (no NaN)
-            x_valid_mask = df_original[predictor].notna()
-            y_valid_mask = df_original[parametro].notna()
-            both_valid_mask = x_valid_mask & y_valid_mask
-            
-            x_orig_valid = df_original.loc[both_valid_mask, predictor]
-            y_orig_valid = df_original.loc[both_valid_mask, parametro]
-        else:
-            models_without_data.append(f"{predictor} ({modelo.get('tipo', 'unknown')})")
-            continue
-        if len(x_orig_valid) == 0:
-            models_without_data.append(f"{predictor} ({modelo.get('tipo', 'unknown')})")
-            continue
-        
-        # Datos de entrenamiento
-        x_train_valid = pd.Series(dtype=float)
-        y_train_valid = pd.Series(dtype=float)
-        
-        if show_training_points and df_filtrado is not None and df_filtrado.empty:
-            if predictor in df_filtrado.columns and parametro in df_filtrado.columns:
-                # Crear máscaras para valores válidos (no NaN) en datos de entrenamiento
-                x_train_valid_mask = df_filtrado[predictor].notna()
-                y_train_valid_mask = df_filtrado[parametro].notna()
-                both_train_valid_mask = x_train_valid_mask & y_train_valid_mask
-                
-                x_train_valid = df_filtrado.loc[both_train_valid_mask, predictor]
-                y_train_valid = df_filtrado.loc[both_train_valid_mask, parametro]
-        
+
         model_data.append({
             'modelo': modelo,
             'predictor': predictor,

@@ -11,6 +11,7 @@ Función principal:
 
 import os
 import sys
+import json
 from typing import Optional
 import logging
 
@@ -47,14 +48,18 @@ import pandas as pd
 
 # Manejo flexible de imports (relativos vs absolutos)
 try:
-    # Intentar imports relativos primero
+    from .json_data_helpers import (
+        get_modelos_por_celda,
+        get_detalles_por_celda,
+        extract_unique_values,
+        get_parametro_objetivo,
+        get_df_original,
+        get_metadata
+    )
     from .data_loader import (
-        load_models_data, 
-        extract_unique_values, 
         filter_models,
         get_parametros_for_aeronave
     )
-
     from .ui_components import (
         create_main_layout,
         create_aeronave_dropdown,
@@ -65,21 +70,24 @@ try:
         format_model_info,
         create_predictor_dropdown
     )
-
     from .plot_stability import (
         get_stable_plot_config,
         apply_stable_configuration,
         should_preserve_zoom
     )
 except ImportError:
-    # Fallback a imports absolutos
+    from json_data_helpers import (
+        get_modelos_por_celda,
+        get_detalles_por_celda,
+        extract_unique_values,
+        get_parametro_objetivo,
+        get_df_original,
+        get_metadata
+    )
     from data_loader import (
-        load_models_data, 
-        extract_unique_values, 
         filter_models,
         get_parametros_for_aeronave
     )
-
     from ui_components import (
         create_main_layout,
         create_aeronave_dropdown,
@@ -90,7 +98,6 @@ except ImportError:
         format_model_info,
         create_predictor_dropdown
     )
-
     from plot_stability import (
         get_stable_plot_config,
         apply_stable_configuration,
@@ -134,17 +141,24 @@ def main_visualizacion_modelos(json_path: Optional[str] = None,
     logger.info(f"Cargando datos desde: {json_path}")
     
     try:
-        # Cargar datos
-        modelos_por_celda, detalles_por_celda = load_models_data(json_path)
-        unique_values = extract_unique_values(modelos_por_celda)
-        
+        # Cargar JSON crudo
+        with open(json_path, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+        # Usar helpers robustos
+        modelos_por_celda, warn1 = get_modelos_por_celda(json_data)
+        detalles_por_celda, warn2 = get_detalles_por_celda(json_data)
+        unique_values, warn3 = extract_unique_values(json_data)
+        all_warnings = warn1 + warn2 + warn3
+        if all_warnings:
+            logger.warning("\n".join(all_warnings))
+            print("\nADVERTENCIAS AL CARGAR DATOS:")
+            for w in all_warnings:
+                print(f"  - {w}")
         logger.info("Datos cargados exitosamente")
-        
         if use_dash and DASH_AVAILABLE:
             _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, debug)
         else:
             _run_matplotlib_app(modelos_por_celda, detalles_por_celda, unique_values)
-            
     except Exception as e:
         logger.error(f"Error en la aplicación: {e}")
         print(f"Error ejecutando la aplicación: {e}")
@@ -231,7 +245,9 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         for m in modelos:
             if isinstance(m, dict):
                 all_preds.update(m.get('predictores', []))
-        return create_predictor_dropdown(sorted(all_preds))    # Callback principal: actualiza gráfica y tabla resumen según TODOS los filtros
+        return create_predictor_dropdown(sorted(all_preds))
+
+    # Callback principal: actualiza gráfica y tabla resumen según TODOS los filtros
     @app.callback(
         [Output('main-plot', 'children'),
          Output('summary-table-container', 'children')],
@@ -253,167 +269,179 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         prevent_initial_call=False
     )
     def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_curves, only_real_curves, show_without_loocv, hide_legend, imputation_methods, comparison_type, selected_model_data, plot_tab, models_data):
-        import copy
-        ctx = dash.callback_context
-        
-        # Detectar si el trigger fue solo el selected-model-store
-        triggered_only_selection = False
-        if ctx.triggered:
-            trigger_props = [t['prop_id'].split('.')[0] for t in ctx.triggered]
-            if len(trigger_props) == 1 and trigger_props[0] == 'selected-model-store':
-                triggered_only_selection = True
-        
-        logger.info(f"[DEBUG] Entrando a update_main_plot con aeronave={aeronave}, parametro={parametro}, predictor={predictor}")
-        logger.info(f"[DEBUG] triggered_only_selection: {triggered_only_selection}")
-        logger.info(f"[DEBUG] selected_model_data recibido: {selected_model_data}")
-        
-        if not aeronave or not parametro or not models_data:
+        try:
+            import copy
+            ctx = dash.callback_context
+
+            # Detectar si el trigger fue solo el selected-model-store
+            triggered_only_selection = False
+            if ctx.triggered:
+                trigger_props = [t['prop_id'].split('.')[0] for t in ctx.triggered]
+                if len(trigger_props) == 1 and trigger_props[0] == 'selected-model-store':
+                    triggered_only_selection = True
+
+            logger.info(f"[DEBUG] Entrando a update_main_plot con aeronave={aeronave}, parametro={parametro}, predictor={predictor}")
+            logger.info(f"[DEBUG] triggered_only_selection: {triggered_only_selection}")
+            logger.info(f"[DEBUG] selected_model_data recibido: {selected_model_data}")
+
+            if not aeronave or not parametro or not models_data:
+                empty_fig = go.Figure()
+                empty_fig.add_annotation(
+                    text="Seleccione aeronave y parámetro",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                    showarrow=False,
+                    font=dict(size=16, color="gray")
+                )
+                empty_fig.update_layout(height=600)
+                return dcc.Graph(id='plot-graph', figure=empty_fig), html.P("Sin datos")
+
+            # Filtro de predictores
+            if predictor == '__all__':
+                predictores = None
+            elif predictor:
+                predictores = [predictor]
+            else:
+                predictores = None
+
+            # Determinar si mostrar solo curvas con datos reales
+            only_real = 'only_real' in (only_real_curves or [])
+
+            # Determinar si requiere validación LOOCV (invertido porque el checkbox es "mostrar sin LOOCV")
+            require_loocv = 'show_without_loocv' not in (show_without_loocv or [])
+
+            modelos_filtrados = filter_models(
+                models_data['modelos'],
+                aeronave=aeronave,
+                parametro=parametro,
+                tipos_modelo=tipos_modelo,
+                predictores=predictores,
+                only_real_curves=only_real,
+                require_loocv=require_loocv,
+                comparison_type=comparison_type
+            )
+            celda_key = f"{aeronave}|{parametro}"
+            modelos_celda = modelos_filtrados.get(celda_key, [])
+
+            # Determinar modelo seleccionado desde el store
+            highlight_idx = None
+            if selected_model_data and isinstance(selected_model_data, dict):
+                stored_aeronave = selected_model_data.get('aeronave')
+                stored_parametro = selected_model_data.get('parametro')
+                stored_idx = selected_model_data.get('model_idx')
+                if (stored_aeronave == aeronave and stored_parametro == parametro and 
+                    stored_idx is not None and 0 <= stored_idx < len(modelos_celda)):
+                    highlight_idx = stored_idx
+
+            show_training_points = 'show' in (show_training or [])
+            show_model_curves = 'show' in (show_curves or [])
+            show_only_real = 'only_real' in (only_real_curves or [])
+
+            # --- Lógica de pestañas 2D/3D/Comparación/Métricas ---
+            if plot_tab == '3d-view':
+                # Filtrar solo modelos de 2 predictores (linear-2 o poly-2)
+                tipos_validos = ['linear-2', 'poly-2']
+                modelos_2_pred = [
+                    m for m in modelos_celda
+                    if isinstance(m, dict)
+                    and m.get('n_predictores', 0) == 2
+                    and m.get('tipo', '').lower() in tipos_validos
+                ]
+                try:
+                    from .plot_interactive import create_interactive_plot_3d
+                except ImportError:
+                    from plot_interactive import create_interactive_plot_3d
+                # Crear SIEMPRE una nueva figura para 3D
+                fig = create_interactive_plot_3d(
+                    modelos_2_pred,
+                    aeronave,
+                    parametro,
+                    show_training_points=show_training_points,
+                    show_model_curves=show_model_curves,
+                    highlight_model_idx=highlight_idx,
+                    detalles_por_celda=models_data.get('detalles') if models_data else None,
+                    selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
+                )
+                # Fondo blanco y título centrado
+                fig.update_layout(
+                    autosize=True,
+                    plot_bgcolor='white',
+                    paper_bgcolor='white',
+                    title_x=0.5
+                )
+                df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
+                summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
+                return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
+            elif plot_tab in ['comparison-view', 'metrics-view']:
+                # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área principal (main-plot)
+                if plot_tab == 'metrics-view':
+                    try:
+                        from .metrics_dashboard import generate_metrics_dashboard
+                        from .metrics_tab import find_missing_models
+                    except ImportError:
+                        from metrics_dashboard import generate_metrics_dashboard
+                        from metrics_tab import find_missing_models
+                    modelos_no_mostrados = find_missing_models(models_data['modelos'], models_data['detalles'])
+                    dashboard = generate_metrics_dashboard(
+                        modelos_por_celda=models_data['modelos'],
+                        detalles_por_celda=models_data['detalles'],
+                        modelos_filtrados=[m for ms in modelos_filtrados.values() for m in ms],
+                        modelos_mostrados=[m for ms in modelos_celda for m in [ms] if isinstance(ms, dict)],
+                        celda_seleccionada=celda_key,
+                        modelos_no_mostrados=modelos_no_mostrados
+                    )
+                    # El dashboard ya es un html.Div con estilos internos, solo lo devolvemos directamente
+                    return dashboard, dash.no_update
+                # Para comparación, puedes mantener el comportamiento anterior o ajustarlo según necesidades
+                fig = go.Figure()
+                fig.update_layout(
+                    autosize=True,
+                    plot_bgcolor='white',
+                    paper_bgcolor='white',
+                    title_x=0.5
+                )
+                return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), html.P("En desarrollo")
+            else:
+                # 2D (por defecto)
+                fig = create_interactive_plot(
+                    modelos_filtrados,
+                    aeronave,
+                    parametro,
+                    show_training_points=show_training_points,
+                    show_model_curves=show_model_curves,
+                    show_only_real_curves=show_only_real,
+                    highlight_model_idx=highlight_idx,
+                    detalles_por_celda=models_data.get('detalles') if models_data else None,
+                    selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
+                )
+                preserve_zoom = True
+                if ctx.triggered:
+                    triggered_ids = [t['prop_id'].split('.')[0] for t in ctx.triggered]
+                    trigger_info = {'triggered_ids': triggered_ids}
+                    current_selection = {'aeronave': aeronave, 'parametro': parametro}
+                    preserve_zoom = should_preserve_zoom(trigger_info, current_selection)
+                fig = apply_stable_configuration(fig, aeronave, parametro, preserve_zoom)
+                fig.update_layout(
+                    showlegend=('hide' not in (hide_legend or [])),
+                    autosize=True,
+                    plot_bgcolor='white',
+                    paper_bgcolor='white',
+                    title_x=0.5
+                )
+                df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
+                summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
+                return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
+        except Exception as e:
             empty_fig = go.Figure()
             empty_fig.add_annotation(
-                text="Seleccione aeronave y parámetro",
+                text=f"Error: {str(e)}",
                 xref="paper", yref="paper",
                 x=0.5, y=0.5, xanchor='center', yanchor='middle',
                 showarrow=False,
-                font=dict(size=16, color="gray")
+                font=dict(size=16, color="red")
             )
             empty_fig.update_layout(height=600)
-            return dcc.Graph(id='plot-graph', figure=empty_fig), html.P("Sin datos")
-
-        # Filtro de predictores
-        if predictor == '__all__':
-            predictores = None
-        elif predictor:
-            predictores = [predictor]
-        else:
-            predictores = None
-
-        # Determinar si mostrar solo curvas con datos reales
-        only_real = 'only_real' in (only_real_curves or [])
-        
-        # Determinar si requiere validación LOOCV (invertido porque el checkbox es "mostrar sin LOOCV")
-        require_loocv = 'show_without_loocv' not in (show_without_loocv or [])
-
-        modelos_filtrados = filter_models(
-            models_data['modelos'],
-            aeronave=aeronave,
-            parametro=parametro,
-            tipos_modelo=tipos_modelo,
-            predictores=predictores,
-            only_real_curves=only_real,
-            require_loocv=require_loocv,
-            comparison_type=comparison_type
-        )
-        celda_key = f"{aeronave}|{parametro}"
-        modelos_celda = modelos_filtrados.get(celda_key, [])
-
-        # Determinar modelo seleccionado desde el store
-        highlight_idx = None
-        if selected_model_data and isinstance(selected_model_data, dict):
-            stored_aeronave = selected_model_data.get('aeronave')
-            stored_parametro = selected_model_data.get('parametro')
-            stored_idx = selected_model_data.get('model_idx')
-            if (stored_aeronave == aeronave and stored_parametro == parametro and 
-                stored_idx is not None and 0 <= stored_idx < len(modelos_celda)):
-                highlight_idx = stored_idx
-
-        show_training_points = 'show' in (show_training or [])
-        show_model_curves = 'show' in (show_curves or [])
-        show_only_real = 'only_real' in (only_real_curves or [])
-
-        # --- Lógica de pestañas 2D/3D/Comparación/Métricas ---
-        if plot_tab == '3d-view':
-            # Filtrar solo modelos de 2 predictores (linear-2 o poly-2)
-            tipos_validos = ['linear-2', 'poly-2']
-            modelos_2_pred = [
-                m for m in modelos_celda
-                if isinstance(m, dict)
-                and m.get('n_predictores', 0) == 2
-                and m.get('tipo', '').lower() in tipos_validos
-            ]
-            try:
-                from .plot_interactive import create_interactive_plot_3d
-            except ImportError:
-                from plot_interactive import create_interactive_plot_3d
-            # Crear SIEMPRE una nueva figura para 3D
-            fig = create_interactive_plot_3d(
-                modelos_2_pred,
-                aeronave,
-                parametro,
-                show_training_points=show_training_points,
-                show_model_curves=show_model_curves,
-                highlight_model_idx=highlight_idx,
-                detalles_por_celda=models_data.get('detalles') if models_data else None,
-                selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
-            )
-            # Fondo blanco y título centrado
-            fig.update_layout(
-                autosize=True,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                title_x=0.5
-            )
-            df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
-            summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
-            return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
-        elif plot_tab in ['comparison-view', 'metrics-view']:
-            # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área principal (main-plot)
-            if plot_tab == 'metrics-view':
-                try:
-                    from .metrics_dashboard import generate_metrics_dashboard
-                    from .metrics_tab import find_missing_models
-                except ImportError:
-                    from metrics_dashboard import generate_metrics_dashboard
-                    from metrics_tab import find_missing_models
-                modelos_no_mostrados = find_missing_models(models_data['modelos'], models_data['detalles'])
-                dashboard = generate_metrics_dashboard(
-                    modelos_por_celda=models_data['modelos'],
-                    detalles_por_celda=models_data['detalles'],
-                    modelos_filtrados=[m for ms in modelos_filtrados.values() for m in ms],
-                    modelos_mostrados=[m for ms in modelos_celda for m in [ms] if isinstance(ms, dict)],
-                    celda_seleccionada=celda_key,
-                    modelos_no_mostrados=modelos_no_mostrados
-                )
-                # El dashboard ya es un html.Div con estilos internos, solo lo devolvemos directamente
-                return dashboard, dash.no_update
-            # Para comparación, puedes mantener el comportamiento anterior o ajustarlo según necesidades
-            fig = go.Figure()
-            fig.update_layout(
-                autosize=True,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                title_x=0.5
-            )
-            return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), html.P("En desarrollo")
-        else:
-            # 2D (por defecto)
-            fig = create_interactive_plot(
-                modelos_filtrados,
-                aeronave,
-                parametro,
-                show_training_points=show_training_points,
-                show_model_curves=show_model_curves,
-                show_only_real_curves=show_only_real,
-                highlight_model_idx=highlight_idx,
-                detalles_por_celda=models_data.get('detalles') if models_data else None,
-                selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
-            )
-            preserve_zoom = True
-            if ctx.triggered:
-                triggered_ids = [t['prop_id'].split('.')[0] for t in ctx.triggered]
-                trigger_info = {'triggered_ids': triggered_ids}
-                current_selection = {'aeronave': aeronave, 'parametro': parametro}
-                preserve_zoom = should_preserve_zoom(trigger_info, current_selection)
-            fig = apply_stable_configuration(fig, aeronave, parametro, preserve_zoom)
-            fig.update_layout(
-                showlegend=('hide' not in (hide_legend or [])),
-                autosize=True,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                title_x=0.5
-            )
-            df_summary = create_metrics_summary_table(modelos_filtrados, aeronave, parametro)
-            summary_table = create_summary_table(df_summary, highlight_idx) if not df_summary.empty else html.P("Sin datos")
-            return dcc.Graph(id='plot-graph', figure=fig, style={'width': '100%', 'height': '100%', 'background': 'white'}, config={'responsive': True}), summary_table
+            return dcc.Graph(id='plot-graph', figure=empty_fig), html.P(f"Error: {str(e)}")
 
     # Callback para el panel de información: hover/click, tabla seleccionada y filtros
     @app.callback(
