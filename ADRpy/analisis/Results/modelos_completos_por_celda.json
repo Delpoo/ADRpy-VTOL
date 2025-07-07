@@ -106,7 +106,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -171,7 +172,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -236,7 +238,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -301,7 +304,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -366,7 +370,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -431,7 +436,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -496,7 +502,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -561,7 +568,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -626,7 +634,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 920.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -691,7 +700,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 920.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -756,7 +766,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 920.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -821,7 +832,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 920.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -886,7 +898,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 41.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -951,7 +964,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 41.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -1016,7 +1030,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 41.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -1081,7 +1096,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 41.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -1150,7 +1166,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -1219,7 +1236,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -1288,7 +1306,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -1357,7 +1376,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 0.33,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -1427,7 +1447,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 0.33,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -1496,7 +1517,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 0.33,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -1565,7 +1587,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 0.33,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -1634,7 +1657,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 0.33,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -1703,7 +1727,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -1773,7 +1798,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -1842,7 +1868,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -1911,7 +1938,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -1980,7 +2008,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 1500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-2",
@@ -2056,7 +2085,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": 8.12
         },
         {
           "tipo": "linear-2",
@@ -2132,7 +2162,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": 920.0
         },
         {
           "tipo": "linear-2",
@@ -2208,7 +2239,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": 41.0
         },
         {
           "tipo": "linear-2",
@@ -2284,7 +2316,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": 0.33
         },
         {
           "tipo": "linear-2",
@@ -2360,7 +2393,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 46.0,
+          "variable_independiente_2": 1500.0
         },
         {
           "tipo": "linear-2",
@@ -2436,7 +2470,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": 920.0
         },
         {
           "tipo": "linear-2",
@@ -2512,7 +2547,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": 41.0
         },
         {
           "tipo": "linear-2",
@@ -2588,7 +2624,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": 0.33
         },
         {
           "tipo": "linear-2",
@@ -2664,7 +2701,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 8.12,
+          "variable_independiente_2": 1500.0
         },
         {
           "tipo": "linear-2",
@@ -2740,7 +2778,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 920.0,
+          "variable_independiente_2": 41.0
         },
         {
           "tipo": "linear-2",
@@ -2816,7 +2855,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 920.0,
+          "variable_independiente_2": 0.33
         },
         {
           "tipo": "linear-2",
@@ -2892,7 +2932,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 920.0,
+          "variable_independiente_2": 1500.0
         },
         {
           "tipo": "linear-2",
@@ -2968,7 +3009,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 41.0,
+          "variable_independiente_2": 0.33
         },
         {
           "tipo": "linear-2",
@@ -3044,7 +3086,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 41.0,
+          "variable_independiente_2": 1500.0
         },
         {
           "tipo": "linear-2",
@@ -3125,7 +3168,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 0.33,
+          "variable_independiente_2": 1500.0
         },
         {
           "tipo": "poly-2",
@@ -3209,7 +3253,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 63.15356565373054
+          "variable_independiente_1": 0.33,
+          "variable_independiente_2": 1500.0
         }
       ]
     }
@@ -3328,7 +3373,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -3393,7 +3439,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -3458,7 +3505,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -3523,7 +3571,8 @@
               "Potencia HP"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -3588,7 +3637,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -3653,7 +3703,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -3718,7 +3769,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -3783,7 +3835,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -3848,7 +3901,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 800.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -3913,7 +3967,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 800.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -3978,7 +4033,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 800.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -4043,7 +4099,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 800.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -4108,7 +4165,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 34.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -4173,7 +4231,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 34.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -4238,7 +4297,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 34.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -4303,7 +4363,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 34.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -4372,7 +4433,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -4441,7 +4503,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -4510,7 +4573,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -4579,7 +4643,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 0.24,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -4649,7 +4714,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 0.24,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -4718,7 +4784,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 0.24,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -4787,7 +4854,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 0.24,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -4856,7 +4924,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 0.24,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -4925,7 +4994,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -4995,7 +5065,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -5064,7 +5135,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -5133,7 +5205,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -5202,7 +5275,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 500.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-2",
@@ -5278,7 +5352,8 @@
               "Envergadura"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": 6.2
         },
         {
           "tipo": "linear-2",
@@ -5354,7 +5429,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": 800.0
         },
         {
           "tipo": "linear-2",
@@ -5430,7 +5506,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": 34.0
         },
         {
           "tipo": "linear-2",
@@ -5506,7 +5583,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": 0.24
         },
         {
           "tipo": "linear-2",
@@ -5582,7 +5660,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 31.0,
+          "variable_independiente_2": 500.0
         },
         {
           "tipo": "linear-2",
@@ -5658,7 +5737,8 @@
               "Alcance de la aeronave"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": 800.0
         },
         {
           "tipo": "linear-2",
@@ -5734,7 +5814,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": 34.0
         },
         {
           "tipo": "linear-2",
@@ -5810,7 +5891,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": 0.24
         },
         {
           "tipo": "linear-2",
@@ -5886,7 +5968,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 6.2,
+          "variable_independiente_2": 500.0
         },
         {
           "tipo": "linear-2",
@@ -5962,7 +6045,8 @@
               "Velocidad a la que se realiza el crucero (KTAS)"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 800.0,
+          "variable_independiente_2": 34.0
         },
         {
           "tipo": "linear-2",
@@ -6038,7 +6122,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 800.0,
+          "variable_independiente_2": 0.24
         },
         {
           "tipo": "linear-2",
@@ -6114,7 +6199,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 800.0,
+          "variable_independiente_2": 500.0
         },
         {
           "tipo": "linear-2",
@@ -6190,7 +6276,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 34.0,
+          "variable_independiente_2": 0.24
         },
         {
           "tipo": "linear-2",
@@ -6266,7 +6353,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 34.0,
+          "variable_independiente_2": 500.0
         },
         {
           "tipo": "linear-2",
@@ -6347,7 +6435,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 0.24,
+          "variable_independiente_2": 500.0
         },
         {
           "tipo": "poly-2",
@@ -6431,7 +6520,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 40.11822933813328
+          "variable_independiente_1": 0.24,
+          "variable_independiente_2": 500.0
         }
       ]
     }
@@ -6550,7 +6640,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -6615,7 +6706,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -6680,7 +6772,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -6745,7 +6838,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -6818,7 +6912,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -6891,7 +6986,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -6964,7 +7060,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -7037,7 +7134,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -7111,7 +7209,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -7184,7 +7283,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -7257,7 +7357,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -7330,7 +7431,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -7403,7 +7505,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -7477,7 +7580,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -7550,7 +7654,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -7623,7 +7728,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -7696,7 +7802,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-2",
@@ -7772,7 +7879,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 0.23
         },
         {
           "tipo": "linear-2",
@@ -7848,7 +7956,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "linear-2",
@@ -7934,7 +8043,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "poly-2",
@@ -8023,7 +8133,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 25.808068696143145
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         }
       ]
     }
@@ -8142,7 +8253,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -8207,7 +8319,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -8272,7 +8385,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -8337,7 +8451,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -8410,7 +8525,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -8483,7 +8599,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -8556,7 +8673,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -8629,7 +8747,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -8703,7 +8822,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -8776,7 +8896,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -8849,7 +8970,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -8922,7 +9044,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -8995,7 +9118,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -9069,7 +9193,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -9142,7 +9267,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -9215,7 +9341,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -9288,7 +9415,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-2",
@@ -9364,7 +9492,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 0.23
         },
         {
           "tipo": "linear-2",
@@ -9440,7 +9569,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "linear-2",
@@ -9526,7 +9656,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "poly-2",
@@ -9615,7 +9746,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 5.663185630063106
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         }
       ]
     }
@@ -9734,7 +9866,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -9799,7 +9932,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -9864,7 +9998,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -9929,7 +10064,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -10002,7 +10138,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -10075,7 +10212,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -10148,7 +10286,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -10221,7 +10360,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -10295,7 +10435,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -10368,7 +10509,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -10441,7 +10583,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -10514,7 +10657,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -10587,7 +10731,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -10661,7 +10806,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -10734,7 +10880,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -10807,7 +10954,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -10880,7 +11028,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-2",
@@ -10956,7 +11105,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 0.23
         },
         {
           "tipo": "linear-2",
@@ -11032,7 +11182,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "linear-2",
@@ -11118,7 +11269,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "poly-2",
@@ -11207,7 +11359,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 709.4589177544258
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         }
       ]
     }
@@ -11326,7 +11479,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -11391,7 +11545,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -11456,7 +11611,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -11521,7 +11677,8 @@
               "Payload"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -11594,7 +11751,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -11667,7 +11825,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -11740,7 +11899,8 @@
               "Cantidad de motores"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 1.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -11813,7 +11973,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -11887,7 +12048,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -11960,7 +12122,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -12033,7 +12196,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -12106,7 +12270,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-1",
@@ -12179,7 +12344,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "poly-1",
@@ -12253,7 +12419,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "log-1",
@@ -12326,7 +12493,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "pot-1",
@@ -12399,7 +12567,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "exp-1",
@@ -12472,7 +12641,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 20.0,
+          "variable_independiente_2": null
         },
         {
           "tipo": "linear-2",
@@ -12548,7 +12718,8 @@
               "Ancho del fuselaje"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 0.23
         },
         {
           "tipo": "linear-2",
@@ -12624,7 +12795,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 32.0,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "linear-2",
@@ -12710,7 +12882,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         },
         {
           "tipo": "poly-2",
@@ -12799,7 +12972,8 @@
               "Rango de comunicación"
             ]
           },
-          "valor_teorico_imputado": 39.391741813656274
+          "variable_independiente_1": 0.23,
+          "variable_independiente_2": 20.0
         }
       ]
     }

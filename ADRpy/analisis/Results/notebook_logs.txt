@@ -403,3 +403,11 @@
 2025-07-06 22:37:32 [MONITOR] Monitoreo iniciado
 2025-07-06 22:37:32 [LAUNCH] Aplicación lanzada exitosamente en modo debug
   Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 00:31:20 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 00:31:20 [MONITOR] Monitoreo iniciado
+2025-07-07 00:31:20 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 00:31:55 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-07 00:31:55 [MONITOR] Monitoreo iniciado
+2025-07-07 00:31:55 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 12}

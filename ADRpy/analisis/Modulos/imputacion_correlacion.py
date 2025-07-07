@@ -362,6 +362,25 @@ def entrenar_modelo(
         if suma_pesos > 0:
             pesos_predictores = [p / suma_pesos for p in pesos_predictores]
 
+        # Agregar valores de variables independientes para la aeronave objetivo
+        # Los valores siguen el mismo orden que los predictores
+        variable_independiente_1 = None
+        variable_independiente_2 = None
+        
+        if len(predictores) >= 1:
+            # Primera variable independiente (predictores[0])
+            try:
+                variable_independiente_1 = float(df_filtrado.at[idx, predictores[0]])
+            except Exception as e:
+                variable_independiente_1 = None
+                
+        if len(predictores) >= 2:
+            # Segunda variable independiente (predictores[1])
+            try:
+                variable_independiente_2 = float(df_filtrado.at[idx, predictores[1]])
+            except Exception as e:
+                variable_independiente_2 = None
+
         # Construir diccionario de retorno unificado
         resultado = {
             "descartado": False,
@@ -376,6 +395,9 @@ def entrenar_modelo(
             "coeficientes_originales": coef_original,
             "intercepto_original": intercepto_original,
             "Peso de predictores": pesos_predictores,
+            # Valores de variables independientes para cálculos futuros (orden coincide con predictores)
+            "variable_independiente_1": variable_independiente_1,
+            "variable_independiente_2": variable_independiente_2,
             # Ecuaciones
             "ecuacion_string": ecuacion_string,
             # Métricas (calculadas en escala original)
@@ -674,6 +696,8 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                         "Peso de predictores": m.get("Peso de predictores", []),
                         "intercepto_original": m["intercepto_original"],
                         "ecuacion_string": m.get("ecuacion_string"),
+                        "variable_independiente_1": m.get("variable_independiente_1"),
+                        "variable_independiente_2": m.get("variable_independiente_2"),
                         "mape": m["mape"],
                         "r2": m["r2"],
                         "corr": m["corr"],

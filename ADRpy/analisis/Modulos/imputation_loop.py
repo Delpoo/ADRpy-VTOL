@@ -489,17 +489,15 @@ def bucle_imputacion_similitud_correlacion(
                     "datos_entrenamiento": datos_ent
                 }
                 
-                # Valor teórico imputado (solo y/z, sin X_visualizacion)
-                if key in informacion_imputacion_por_celda:
-                    correlacion_info = informacion_imputacion_por_celda[key].get("correlacion", {})
-                    # Solo incluir el valor imputado (y o z)
-                    valor_imputado = correlacion_info.get("Valor imputado")
-                    if valor_imputado is not None:
-                        modelo_optimizado["valor_teorico_imputado"] = valor_imputado
-                    else:
-                        modelo_optimizado["valor_teorico_imputado"] = None
-                else:
-                    modelo_optimizado["valor_teorico_imputado"] = None
+                # Copiar campos de variables para cálculo futuro (creados en imputacion_correlacion.py)
+                # Orden coincide con orden de predictores: variable_independiente_1 = predictores[0], variable_independiente_2 = predictores[1]
+                if "variable_independiente_1" in modelo:
+                    modelo_optimizado["variable_independiente_1"] = modelo["variable_independiente_1"]
+                if "variable_independiente_2" in modelo:
+                    modelo_optimizado["variable_independiente_2"] = modelo["variable_independiente_2"]
+                
+                # Los valores de variables para cálculo futuro se agregan en imputacion_correlacion.py
+                # donde se tienen los datos correctos del entrenamiento
                     
                 modelos_celda.append(modelo_optimizado)
             
