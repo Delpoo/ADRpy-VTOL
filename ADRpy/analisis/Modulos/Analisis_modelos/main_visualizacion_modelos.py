@@ -104,8 +104,13 @@ except ImportError:
         should_preserve_zoom
     )
 
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
+# Configurar logging con formato más detallado
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+if debug := os.environ.get('DASH_DEBUG', 'False').lower() == 'true':
+    logging.basicConfig(level=logging.DEBUG, format=log_format)
+    print("🔍 Modo de depuración activado - Nivel de logging: DEBUG")
+else:
+    logging.basicConfig(level=logging.INFO, format=log_format)
 logger = logging.getLogger(__name__)
 
 
@@ -257,6 +262,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
          Input('predictor-dropdown', 'value'),
          Input('tipo-modelo-checklist', 'value'),
          Input('show-training-points', 'value'),
+         Input('show-theoretical-points', 'value'),
+         Input('show-imputation-points', 'value'),  # NUEVO: Puntos de imputación
          Input('show-model-curves', 'value'),
          Input('show-only-real-curves', 'value'),
          Input('show-models-without-loocv', 'value'),
@@ -268,7 +275,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
         [State('models-data-store', 'data')],
         prevent_initial_call=False
     )
-    def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_curves, only_real_curves, show_without_loocv, hide_legend, imputation_methods, comparison_type, selected_model_data, plot_tab, models_data):
+    def update_main_plot(n_clicks, aeronave, parametro, predictor, tipos_modelo, show_training, show_theoretical, show_imputation, show_curves, only_real_curves, show_without_loocv, hide_legend, imputation_methods, comparison_type, selected_model_data, plot_tab, models_data):
         try:
             import copy
             ctx = dash.callback_context
@@ -334,6 +341,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                     highlight_idx = stored_idx
 
             show_training_points = 'show' in (show_training or [])
+            show_theoretical_points = 'show' in (show_theoretical or [])
+            show_imputation_points = 'show' in (show_imputation or [])  # NUEVO: Puntos de imputación
             show_model_curves = 'show' in (show_curves or [])
             show_only_real = 'only_real' in (only_real_curves or [])
 
@@ -357,10 +366,13 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                     aeronave,
                     parametro,
                     show_training_points=show_training_points,
+                    show_theoretical_points=show_theoretical_points,
+                    show_imputation_points=show_imputation_points,  # NUEVO: Puntos de imputación
                     show_model_curves=show_model_curves,
                     highlight_model_idx=highlight_idx,
                     detalles_por_celda=models_data.get('detalles') if models_data else None,
-                    selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion']
+                    selected_imputation_methods=imputation_methods or ['final', 'similitud', 'correlacion'],
+                    modelos_filtrados=modelos_filtrados
                 )
                 # Fondo blanco y título centrado
                 fig.update_layout(
@@ -408,6 +420,8 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                     aeronave,
                     parametro,
                     show_training_points=show_training_points,
+                    show_theoretical_points=show_theoretical_points,
+                    show_imputation_points=show_imputation_points,
                     show_model_curves=show_model_curves,
                     show_only_real_curves=show_only_real,
                     highlight_model_idx=highlight_idx,

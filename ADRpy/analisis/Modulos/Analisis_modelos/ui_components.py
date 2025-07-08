@@ -149,6 +149,23 @@ def create_visualization_options() -> html.Div:
         ),
         
         dcc.Checklist(
+            id='show-theoretical-points',
+            options=[{'label': 'Mostrar puntos teóricos de imputación', 'value': 'show'}],
+            value=['show'],
+            style={'marginBottom': '10px'},
+            inputStyle={"marginRight": "5px"}
+        ),
+        
+        # NUEVO: Control para puntos de imputación reales
+        dcc.Checklist(
+            id='show-imputation-points',
+            options=[{'label': 'Mostrar puntos de imputación (similitud/correlación/final)', 'value': 'show'}],
+            value=['show'],
+            style={'marginBottom': '10px'},
+            inputStyle={"marginRight": "5px"}
+        ),
+        
+        dcc.Checklist(
             id='show-model-curves',
             options=[{'label': 'Mostrar curvas de modelos', 'value': 'show'}],
             value=['show'],

@@ -1,0 +1,258 @@
+[
+  {
+    "celda_key": "A7|Payload",
+    "imputacion": {
+      "correlacion": {
+        "Valor imputado": 63.15356565373054,
+        "variable_independiente_1": 46.0,
+        "variable_independiente_2": 8.12,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2",
+          "Advertencia"
+        ]
+      },
+      "final": {
+        "Valor imputado": 63.15356565373054,
+        "variable_independiente_1": 46.0,
+        "variable_independiente_2": 8.12,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2"
+        ]
+      }
+    }
+  },
+  {
+    "celda_key": "A5|Payload",
+    "imputacion": {
+      "similitud": {
+        "Valor imputado": 40.0,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": 6.39,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2",
+          "Advertencia"
+        ]
+      },
+      "correlacion": {
+        "Valor imputado": 40.11822933813328,
+        "variable_independiente_1": 31.0,
+        "variable_independiente_2": 6.2,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2",
+          "Advertencia"
+        ]
+      },
+      "final": {
+        "Valor imputado": 40.10511091356752,
+        "variable_independiente_1": 31.110957438930843,
+        "variable_independiente_2": 6.22108191339686,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2"
+        ]
+      }
+    }
+  },
+  {
+    "celda_key": "A3|Potencia HP",
+    "imputacion": {
+      "similitud": {
+        "Valor imputado": 24.0,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": 20.0,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2",
+          "Advertencia"
+        ]
+      },
+      "correlacion": {
+        "Valor imputado": 25.808068696143145,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": 20.0,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2",
+          "Advertencia"
+        ]
+      },
+      "final": {
+        "Valor imputado": 25.603211874706282,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": 19.999999999999996,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2"
+        ]
+      }
+    }
+  },
+  {
+    "celda_key": "A3|Envergadura",
+    "imputacion": {
+      "similitud": {
+        "Valor imputado": 5.64,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": null,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "Advertencia"
+        ]
+      },
+      "correlacion": {
+        "Valor imputado": 5.663185630063106,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": null,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "Advertencia"
+        ]
+      },
+      "final": {
+        "Valor imputado": 5.660635593677852,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": null,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1"
+        ]
+      }
+    }
+  },
+  {
+    "celda_key": "A3|Alcance de la aeronave",
+    "imputacion": {
+      "similitud": {
+        "Valor imputado": 700.0,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": null,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "Advertencia"
+        ]
+      },
+      "correlacion": {
+        "Valor imputado": 709.4589177544258,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": null,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "Advertencia"
+        ]
+      },
+      "final": {
+        "Valor imputado": 708.363171210734,
+        "variable_independiente_1": 32.0,
+        "variable_independiente_2": null,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1"
+        ]
+      }
+    }
+  },
+  {
+    "celda_key": "A3|Velocidad a la que se realiza el crucero (KTAS)",
+    "imputacion": {
+      "similitud": {
+        "Valor imputado": 38.0,
+        "variable_independiente_1": 0.21,
+        "variable_independiente_2": 20.0,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2",
+          "Advertencia"
+        ]
+      },
+      "correlacion": {
+        "Valor imputado": 39.391741813656274,
+        "variable_independiente_1": 0.23,
+        "variable_independiente_2": 20.0,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2",
+          "Advertencia"
+        ]
+      },
+      "final": {
+        "Valor imputado": 39.24247698888753,
+        "variable_independiente_1": 0.2278549925955503,
+        "variable_independiente_2": 20.0,
+        "campos": [
+          "Valor imputado",
+          "Confianza",
+          "Iteración imputación",
+          "Método predictivo",
+          "variable_independiente_1",
+          "variable_independiente_2"
+        ]
+      }
+    }
+  }
+]

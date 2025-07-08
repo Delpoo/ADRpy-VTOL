@@ -108,6 +108,8 @@ def create_interactive_plot(
     aeronave: str,
     parametro: str,
     show_training_points: bool = True,
+    show_theoretical_points: bool = True,
+    show_imputation_points: bool = True,
     show_model_curves: bool = True,
     show_synthetic_curves: bool = True,
     highlight_model_idx: Optional[int] = None,
@@ -550,53 +552,40 @@ def create_interactive_plot(
         # Si aún no están definidos, usar valores por defecto
         if y_min is None or y_max is None or y_max == y_min:
             y_min, y_max = 0.0, 1.0
-        from .plot_model_curves import extract_imputed_values_from_details, filter_imputed_points_by_method
-        methods_to_show = selected_imputation_methods or ['final', 'similitud', 'correlacion']
-        imputed_points = extract_imputed_values_from_details(
-            detalles_por_celda, 
-            celda_key, 
-            modelos_1_pred
-        )
-        filtered_points = filter_imputed_points_by_method(imputed_points, methods_to_show)
-        for point in filtered_points:
-            metodo = point.get('imputation_method', 'unknown')
-            x_norm = point.get('x_normalized', 0.5)
-            y_value = point.get('y_value', 0)
-            # Normalizar el valor imputado usando el mismo rango que los datos originales
-            y_value_norm = (y_value - y_min) / (y_max - y_min) if y_max != y_min else 0.5
-            confidence = point.get('confidence', '')
-            iteration = point.get('iteration', '')
-            warning = point.get('warning', '')
-            tooltip = f"Método: {metodo.capitalize()}<br>Valor Y normalizado: {y_value_norm:.3f}<br>Confianza: {confidence}<br>Iteración: {iteration}"
-            if warning:
-                tooltip += f"<br><b>Advertencia:</b> {warning}"
-            symbol = point.get('symbol', 'circle')
-            size = point.get('size', 10)
-            color_map = {
-                'final': 'black',
-                'similitud': 'orange', 
-                'correlacion': 'blue'
-            }
-            color = color_map.get(metodo, 'gray')
-            if warning:
-                symbol = 'x'
-                color = 'red'
-            fig.add_trace(go.Scatter(
-                x=[x_norm],
-                y=[y_value_norm],
-                mode='markers',
-                name=f'Imputación {metodo.capitalize()}',
-                marker=dict(
-                    color=color,
-                    size=size,
-                    symbol=symbol,
-                    line=dict(color='black', width=1)
-                ),
-                text=[tooltip],
-                hovertemplate='%{text}<extra></extra>',
-                legendgroup=f'imputacion_{metodo}',
-                showlegend=True
-            ))
+        
+    # --- PUNTOS TEÓRICOS DE IMPUTACIÓN ---
+    # Añadir puntos teóricos calculados usando los valores de las variables independientes
+    from .plot_model_curves import extract_theoretical_imputation_points, add_theoretical_imputation_points_to_plot
+    
+    # Extraer puntos teóricos para modelos de 1 predictor (para gráficos 2D)
+    theoretical_points = extract_theoretical_imputation_points(
+        modelos_1_pred, 
+        celda_key, 
+        n_predictores_filter=1,  # Solo modelos de 1 predictor para gráficos 2D
+        modelos_por_celda=modelos_filtrados  # Pasar datos completos para rangos globales
+    )
+    
+    # Añadir los puntos teóricos al gráfico
+    add_theoretical_imputation_points_to_plot(fig, theoretical_points, show_theoretical_points=show_theoretical_points)
+    
+    # --- AÑADIR PUNTOS DE IMPUTACIÓN ---
+    # Añadir puntos de imputación (similitud, correlación, final) usando coordenadas sin normalizar por ahora
+    if show_imputation_points and detalles_por_celda:
+        try:
+            from .plot_model_curves import add_normalized_imputation_points
+            # Por ahora pasar global_ranges=None para usar coordenadas originales
+            add_normalized_imputation_points(
+                fig=fig,
+                detalles_por_celda=detalles_por_celda,
+                celda_key=celda_key,
+                show_imputation_points=show_imputation_points,
+                n_predictores_filter=1,  # Solo modelos de 1 predictor para gráficos 2D
+                global_ranges=None,  # Sin rangos globales, usaremos los del mejor modelo
+                modelos_por_celda=modelos_filtrados  # Pasar modelos para encontrar el mejor
+            )
+        except Exception as e:
+            logger.error(f"Error añadiendo puntos de imputación: {e}")
+    
     fig.update_layout(
         title=f'Análisis de Modelos - {aeronave}: {parametro}',
         xaxis_title="X adimensional",
@@ -1013,15 +1002,22 @@ def create_interactive_plot_3d(
     aeronave: str,
     parametro: str,
     show_training_points: bool = True,
+    show_theoretical_points: bool = True,
+    show_imputation_points: bool = True,
     show_model_curves: bool = True,
     highlight_model_idx: Optional[int] = None,
     detalles_por_celda: Optional[Dict] = None,
-    selected_imputation_methods: Optional[list] = None
+    selected_imputation_methods: Optional[list] = None,
+    modelos_filtrados: Optional[Dict] = None
 ) -> go.Figure:
     """
     Visualización 3D de modelos de 2 predictores (lineales o polinómicos) para Dash.
     Utiliza la función create_3d_plot para graficar los modelos filtrados y normalizados.
     """
+    # Importar funciones necesarias para evitar circular imports
+    from .plot_model_curves import extract_theoretical_imputation_points
+    from .plot_3d import add_theoretical_points_3d
+    
     # Si no hay modelos, mostrar mensaje claro
     if not modelos_2_pred or len(modelos_2_pred) == 0:
         fig = go.Figure()
@@ -1045,8 +1041,43 @@ def create_interactive_plot_3d(
         modelos_2_pred,
         modelo_seleccionado_idx=highlight_model_idx,
         aeronave=aeronave,
-        parametro=parametro
+        parametro=parametro,
+        detalles_por_celda=detalles_por_celda
     )
+    
+    # --- AÑADIR PUNTOS TEÓRICOS 3D ---
+    # Añadir puntos teóricos para modelos de 2 predictores si está habilitado
+    if show_theoretical_points:
+        theoretical_points_3d = extract_theoretical_imputation_points(
+            modelos_2_pred, 
+            f"{aeronave}|{parametro}", 
+            n_predictores_filter=2,  # Solo modelos de 2 predictores para gráficos 3D
+            modelos_por_celda=modelos_filtrados  # Pasar datos completos para rangos globales
+        )
+        
+        # Añadir los puntos teóricos 3D al gráfico
+        add_theoretical_points_3d(fig, theoretical_points_3d, show_theoretical_points=show_theoretical_points)
+    
+    # --- AÑADIR PUNTOS DE IMPUTACIÓN 3D ---
+    # Añadir puntos de imputación (similitud, correlación, final) usando coordenadas sin normalizar por ahora para 3D
+    if show_imputation_points and detalles_por_celda:
+        try:
+            from .plot_model_curves import add_normalized_imputation_points
+            # Añadir puntos de imputación usando el mejor modelo para normalización
+            add_normalized_imputation_points(
+                fig=fig,
+                detalles_por_celda=detalles_por_celda,
+                celda_key=f"{aeronave}|{parametro}",
+                show_imputation_points=show_imputation_points,
+                n_predictores_filter=2,  # Solo modelos de 2 predictores para gráficos 3D
+                global_ranges=None,  # Sin rangos globales, usaremos los del mejor modelo
+                modelos_por_celda=modelos_filtrados  # Pasar modelos para encontrar el mejor
+            )
+        except Exception as e:
+            logger.error(f"Error añadiendo puntos de imputación 3D: {e}")
+    
+    # --- IMPUTED POINTS LOGIC REMOVED ---
+    
     # Título y ejes personalizados
     fig.update_layout(
         title=f"Modelos de 2 Predictores (3D) - {aeronave}: {parametro}",
@@ -1057,7 +1088,7 @@ def create_interactive_plot_3d(
     )
     return fig
 
-def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, parametro=None):
+def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, parametro=None, detalles_por_celda=None):
     """
     Genera un gráfico 3D interactivo con Plotly para modelos de 2 predictores (linear-2 y poly-2).
     Visualiza simultáneamente todos los modelos filtrados, mostrando su plano/superficie y puntos de entrenamiento normalizados.

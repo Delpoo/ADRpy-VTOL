@@ -230,83 +230,92 @@ def bucle_imputacion_similitud_correlacion(
                     "similitud": dict_similitud,
                     "correlacion": dict_correlacion
                 })
-            # === NUEVO: Cálculo robusto de X_visualizacion y final ===
-            # Determinar predictor relevante si correlacion existe
-            predictor_relevante = None
+            # === NUEVO: Cálculo de variable_independiente_1 y variable_independiente_2 para modelos 3D ===
+            # Determinar predictores del mejor modelo de correlación
+            predictor_1 = None
+            predictor_2 = None
             if dict_correlacion is not None:
                 predictores_corr = dict_correlacion.get("Predictores")
-                if predictores_corr and isinstance(predictores_corr, str):
-                    predictor_relevante = predictores_corr.split(",")[0].strip()
-                elif predictores_corr and isinstance(predictores_corr, (list, tuple)):
-                    predictor_relevante = predictores_corr[0]
-                else:
-                    predictor_relevante = None
-            # Calcular X_visualizacion para similitud si ambos existen
-            if dict_similitud is not None and predictor_relevante:
+                if predictores_corr:
+                    if isinstance(predictores_corr, str):
+                        predictores_list = [p.strip() for p in predictores_corr.split(",")]
+                    elif isinstance(predictores_corr, (list, tuple)):
+                        predictores_list = list(predictores_corr)
+                    else:
+                        predictores_list = []
+                    if len(predictores_list) >= 1:
+                        predictor_1 = predictores_list[0]
+                    if len(predictores_list) >= 2:
+                        predictor_2 = predictores_list[1]
+
+            # --- SIMILITUD ---
+            if dict_similitud is not None and predictor_1:
                 if "sim_vals" in dict_similitud and "vecinos_predictores" in dict_similitud:
                     sim_vals = np.array(dict_similitud["sim_vals"])
                     vecinos_predictores = dict_similitud["vecinos_predictores"]
-                    valores_x = np.array(vecinos_predictores.get(predictor_relevante, []), dtype=float)
+                    # variable_independiente_1 (primer predictor)
+                    valores_x = np.array(vecinos_predictores.get(predictor_1, []), dtype=float)
                     if len(valores_x) == len(sim_vals) and sim_vals.sum() > 0:
                         x_similitud = float(np.dot(sim_vals, valores_x) / sim_vals.sum())
-                        dict_similitud["X_visualizacion"] = x_similitud
+                        dict_similitud["variable_independiente_1"] = x_similitud
                     else:
-                        dict_similitud["X_visualizacion"] = None
-            # Calcular X_visualizacion para correlacion SIEMPRE que correlacion exista y haya predictor relevante
-            if dict_correlacion is not None and predictor_relevante:
+                        dict_similitud["variable_independiente_1"] = None
+                    # variable_independiente_2 (segundo predictor, solo si modelo 3D)
+                    if predictor_2:
+                        valores_y = np.array(vecinos_predictores.get(predictor_2, []), dtype=float)
+                        if len(valores_y) == len(sim_vals) and sim_vals.sum() > 0:
+                            y_similitud = float(np.dot(sim_vals, valores_y) / sim_vals.sum())
+                            dict_similitud["variable_independiente_2"] = y_similitud
+                        else:
+                            dict_similitud["variable_independiente_2"] = None
+
+            # --- CORRELACION ---
+            if dict_correlacion is not None and predictor_1:
                 try:
-                    predictores_corr = dict_correlacion.get("Predictores")
-                    coeficientes = dict_correlacion.get("Coeficientes")
-                    pesos_predictores = dict_correlacion.get("Peso de predictores")
-                    if predictores_corr and pesos_predictores and isinstance(pesos_predictores, (list, tuple)) and len(pesos_predictores) == len(predictores_corr):
-                        valores_predictores = []
-                        for pred in predictores_corr:
-                            try:
-                                valores_predictores.append(float(df_procesado_base.at[aeronave, pred]))
-                            except Exception:
-                                valores_predictores.append(np.nan)
-                        pesos_predictores = np.array(pesos_predictores, dtype=float)
-                        valores_predictores = np.array(valores_predictores, dtype=float)
-                        suma_pesos = pesos_predictores.sum()
-                        if not np.any(np.isnan(valores_predictores)) and suma_pesos > 0:
-                            pesos_normalizados = pesos_predictores / suma_pesos
-                            x_correlacion = float(np.dot(pesos_normalizados, valores_predictores))
-                        else:
-                            x_correlacion = None
-                    elif predictores_corr and coeficientes and isinstance(coeficientes, (list, tuple)) and len(coeficientes) == len(predictores_corr):
-                        valores_predictores = []
-                        for pred in predictores_corr:
-                            try:
-                                valores_predictores.append(float(df_procesado_base.at[aeronave, pred]))
-                            except Exception:
-                                valores_predictores.append(np.nan)
-                        coeficientes = np.array(coeficientes, dtype=float)
-                        valores_predictores = np.array(valores_predictores, dtype=float)
-                        if not np.any(np.isnan(valores_predictores)) and coeficientes.sum() != 0:
-                            x_correlacion = float(np.dot(coeficientes, valores_predictores) / coeficientes.sum())
-                        else:
-                            x_correlacion = None
-                    else:
-                        x_correlacion = float(df_procesado_base.at[aeronave, predictor_relevante])
+                    # variable_independiente_1: valor del predictor 1 de la aeronave objetivo
+                    x_correlacion = float(df_procesado_base.at[aeronave, predictor_1])
                 except Exception:
                     x_correlacion = None
-                dict_correlacion["X_visualizacion"] = x_correlacion            # Calcular X_visualizacion para final
-            x_s = dict_similitud.get("X_visualizacion") if dict_similitud is not None else None
-            x_c = dict_correlacion.get("X_visualizacion") if dict_correlacion is not None else None
+                dict_correlacion["variable_independiente_1"] = x_correlacion
+                # variable_independiente_2: valor del predictor 2 de la aeronave objetivo (solo si modelo 3D)
+                if predictor_2:
+                    try:
+                        y_correlacion = float(df_procesado_base.at[aeronave, predictor_2])
+                    except Exception:
+                        y_correlacion = None
+                    dict_correlacion["variable_independiente_2"] = y_correlacion
+
+            # --- FINAL (combinación por confianza) ---
+            x_s = dict_similitud.get("variable_independiente_1") if dict_similitud is not None else None
+            y_s = dict_similitud.get("variable_independiente_2") if dict_similitud is not None else None
+            x_c = dict_correlacion.get("variable_independiente_1") if dict_correlacion is not None else None
+            y_c = dict_correlacion.get("variable_independiente_2") if dict_correlacion is not None else None
             conf_s = dict_similitud.get("Confianza", 0) if dict_similitud is not None else 0
             conf_c = dict_correlacion.get("Confianza", 0) if dict_correlacion is not None else 0
-            
-            # Solo procesar X_visualizacion si hay elementos en detalles_iteracion
+
+            # Solo procesar variable_independiente_1/2 si hay elementos en detalles_iteracion
             if len(detalles_iteracion) > 0 and detalles_iteracion[-1].get("final") is not None:
+                # variable_independiente_1 (igual que antes)
                 if x_s is not None and x_c is not None and (conf_s + conf_c) > 0:
                     x_final = float((x_s * conf_s + x_c * conf_c) / (conf_s + conf_c))
-                    detalles_iteracion[-1]["final"]["X_visualizacion"] = x_final
+                    detalles_iteracion[-1]["final"]["variable_independiente_1"] = x_final
                 elif x_s is not None:
-                    detalles_iteracion[-1]["final"]["X_visualizacion"] = x_s
+                    detalles_iteracion[-1]["final"]["variable_independiente_1"] = x_s
                 elif x_c is not None:
-                    detalles_iteracion[-1]["final"]["X_visualizacion"] = x_c
+                    detalles_iteracion[-1]["final"]["variable_independiente_1"] = x_c
                 else:
-                    detalles_iteracion[-1]["final"]["X_visualizacion"] = None
+                    detalles_iteracion[-1]["final"]["variable_independiente_1"] = None
+                # variable_independiente_2 (solo si modelo 3D)
+                if predictor_2:
+                    if y_s is not None and y_c is not None and (conf_s + conf_c) > 0:
+                        y_final = float((y_s * conf_s + y_c * conf_c) / (conf_s + conf_c))
+                        detalles_iteracion[-1]["final"]["variable_independiente_2"] = y_final
+                    elif y_s is not None:
+                        detalles_iteracion[-1]["final"]["variable_independiente_2"] = y_s
+                    elif y_c is not None:
+                        detalles_iteracion[-1]["final"]["variable_independiente_2"] = y_c
+                    else:
+                        detalles_iteracion[-1]["final"]["variable_independiente_2"] = None
         # Aplicar las imputaciones finales al DataFrame base
         for imp in imputaciones_iteracion:
             parametro = imp["Parámetro"]
@@ -375,7 +384,7 @@ def bucle_imputacion_similitud_correlacion(
         
         # Estructura unificada: una sola entrada por celda con toda la información
         datos_unificados_por_celda = {}
-        
+
         # Procesar información de imputación primero
         informacion_imputacion_por_celda = {}
         for detalle in detalles_para_excel:
@@ -383,12 +392,15 @@ def bucle_imputacion_similitud_correlacion(
             parametro = detalle.get("Parámetro")
             if not aeronave or not parametro:
                 continue
-            
+
             key = f"{aeronave}|{parametro}"
-            
+
             # Extraer información de imputación directamente
-            campos_clave = ["Valor imputado", "Confianza", "Iteración imputación", "Método predictivo", "X_visualizacion"]
-            
+            campos_clave = [
+                "Valor imputado", "Confianza", "Iteración imputación", "Método predictivo",
+                "variable_independiente_1", "variable_independiente_2", "Advertencia"
+            ]
+
             def extraer_info_imputacion(dic):
                 if not dic:
                     return {}
@@ -396,10 +408,8 @@ def bucle_imputacion_similitud_correlacion(
                 for campo in campos_clave:
                     if campo in dic:
                         info[campo] = dic[campo]
-                if "Advertencia" in dic:
-                    info["Advertencia"] = dic["Advertencia"]
                 return info
-            
+
             informacion_imputacion_por_celda[key] = {
                 "final": extraer_info_imputacion(detalle.get("final")),
                 "similitud": extraer_info_imputacion(detalle.get("similitud")),
@@ -442,12 +452,8 @@ def bucle_imputacion_similitud_correlacion(
             if key in informacion_imputacion_por_celda:
                 imputacion_info = informacion_imputacion_por_celda[key]
                 celda_unificada["informacion_generica_celda"]["final"] = imputacion_info["final"]
-                celda_unificada["informacion_generica_celda"]["similitud"] = imputacion_info["similitud"] 
+                celda_unificada["informacion_generica_celda"]["similitud"] = imputacion_info["similitud"]
                 celda_unificada["informacion_generica_celda"]["correlacion"] = imputacion_info["correlacion"]
-                
-                # Agregar X_visualizacion a información genérica (es común para todos los modelos)
-                correlacion_info = imputacion_info.get("correlacion", {})
-                celda_unificada["informacion_generica_celda"]["X_visualizacion"] = correlacion_info.get("X_visualizacion")
             
             # Procesar todos los modelos de esta celda
             modelos_celda = []

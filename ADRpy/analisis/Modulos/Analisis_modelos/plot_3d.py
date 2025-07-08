@@ -177,7 +177,8 @@ def get_model_ranges(model: Dict[str, Any]) -> Tuple[Tuple[float, float], Tuple[
 
 def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro: str,
                    show_training_points: bool = True, show_model_surface: bool = True,
-                   highlight_model_idx: Optional[int] = None) -> go.Figure:
+                   highlight_model_idx: Optional[int] = None, 
+                   detalles_por_celda: Optional[Dict] = None) -> go.Figure:
     """
     Crea gráfico 3D interactivo para modelos con 2 predictores.
     
@@ -201,8 +202,10 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
     go.Figure
         Figura 3D de Plotly
     """
+    # Inicializar figura
+    fig = go.Figure()
+    
     if not modelos_2pred:
-        fig = go.Figure()
         fig.add_annotation(
             text="No hay modelos de 2 predictores disponibles",
             xref="paper", yref="paper",
@@ -211,9 +214,7 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
             font=dict(size=16, color="gray")
         )
         return fig
-    
-    fig = go.Figure()
-    
+        
     # Colores para diferentes tipos de modelo
     color_map = {
         'linear-2': '#1f77b4',  # Azul
@@ -308,6 +309,19 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
             else:
                 logger.warning(f"No se pudieron extraer coeficientes del modelo {idx}")
     
+    # --- AÑADIR PUNTOS TEÓRICOS 3D ---
+    # Extraer y añadir puntos teóricos de imputación para modelos de 2 predictores
+    from .plot_model_curves import extract_theoretical_imputation_points
+    
+    theoretical_points_3d = extract_theoretical_imputation_points(
+        modelos_2pred, 
+        f"{aeronave}|{parametro}", 
+        n_predictores_filter=2  # Solo modelos de 2 predictores para gráficos 3D
+    )
+    
+    # Añadir los puntos teóricos 3D al gráfico
+    add_theoretical_points_3d(fig, theoretical_points_3d, show_theoretical_points=True)
+    
     # Configurar layout 3D
     fig.update_layout(
         title=f"Vista 3D - {aeronave} | {parametro}",
@@ -376,3 +390,80 @@ def filter_models_for_3d(modelos_por_celda: Dict[str, List[Dict]], aeronave: str
             modelos_2pred.append(model)
     
     return modelos_2pred
+
+
+def add_theoretical_points_3d(fig: go.Figure, 
+                             theoretical_points_3d: List[Dict],
+                             show_theoretical_points: bool = True) -> None:
+    """
+    Añade puntos de imputación teóricos al gráfico 3D.
+    
+    Parameters:
+    -----------
+    fig : go.Figure
+        Figura 3D de Plotly donde añadir los puntos
+    theoretical_points_3d : List[Dict]
+        Lista de puntos teóricos 3D calculados
+    show_theoretical_points : bool
+        Si mostrar los puntos teóricos
+    """
+    if not show_theoretical_points or not theoretical_points_3d:
+        logger.info(f"Puntos teóricos 3D no mostrados: show_theoretical_points={show_theoretical_points}, len(theoretical_points_3d)={len(theoretical_points_3d) if theoretical_points_3d else 0}")
+        return
+        
+    logger.info(f"Añadiendo {len(theoretical_points_3d)} puntos teóricos 3D al gráfico")
+    
+    # Filtrar solo puntos 3D (modelos de 2 predictores)
+    points_3d = [p for p in theoretical_points_3d if p.get('n_predictores', 1) == 2]
+    
+    if not points_3d:
+        return
+    
+    # Extraer coordenadas
+    x_coords = [p['x'] for p in points_3d]  # Variable independiente 1 normalizada
+    y_coords = [p['y'] for p in points_3d]  # Variable independiente 2 normalizada  
+    z_coords = [p['z'] for p in points_3d]  # Variable objetivo normalizada
+    
+    # Crear texto de hover
+    hover_texts = []
+    for p in points_3d:
+        hover_parts = [
+            f"<b>Punto Teórico - Modelo {p['modelo_idx']+1}</b>",
+            f"<b>Predictor 1:</b> {p['predictor_1']}",
+            f"<b>Predictor 2:</b> {p['predictor_2']}",
+            f"<b>Tipo:</b> {p['tipo_modelo']}",
+            f"<b>X1 original:</b> {p['x_original']:.3f}",
+            f"<b>X2 original:</b> {p['y_original']:.3f}",
+            f"<b>Z calculado:</b> {p['z_original']:.3f}",
+            f"<b>Ecuación:</b> {p['ecuacion']}"
+        ]
+        
+        if p.get('r2') is not None:
+            hover_parts.append(f"<b>R²:</b> {p['r2']:.3f}")
+        if p.get('mape') is not None:
+            hover_parts.append(f"<b>MAPE:</b> {p['mape']:.1f}%")
+        if p.get('confianza') is not None:
+            hover_parts.append(f"<b>Confianza:</b> {p['confianza']:.3f}")
+            
+        hover_texts.append("<br>".join(hover_parts))
+    
+    # Añadir puntos teóricos al gráfico 3D
+    fig.add_trace(go.Scatter3d(
+        x=x_coords,
+        y=y_coords,
+        z=z_coords,
+        mode='markers',
+        name='Puntos Teóricos 3D',
+        marker=dict(
+            symbol='diamond',
+            size=8,
+            color='purple',
+            line=dict(width=1, color='darkviolet')
+        ),
+        hovertemplate='%{hovertext}<extra></extra>',
+        hovertext=hover_texts,
+        legendgroup='theoretical_3d',
+        showlegend=True
+    ))
+    
+    logger.info(f"Añadidos {len(points_3d)} puntos teóricos 3D al gráfico con coordenadas: x={x_coords[:3]}..., y={y_coords[:3]}..., z={z_coords[:3]}...")

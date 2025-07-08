@@ -411,3 +411,422 @@
 2025-07-07 00:31:55 [MONITOR] Monitoreo iniciado
 2025-07-07 00:31:55 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
   Detalles: {"port": 8055, "total_modelos": 12}
+2025-07-07 13:00:32 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 13:00:32 [MONITOR] Monitoreo iniciado
+2025-07-07 13:00:32 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 14:00:23 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 14:00:23 [MONITOR] Monitoreo iniciado
+2025-07-07 14:00:23 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 14:13:42 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 14:13:42 [MONITOR] Monitoreo iniciado
+2025-07-07 14:13:42 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 15:04:09 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 15:04:09 [MONITOR] Monitoreo iniciado
+2025-07-07 15:04:09 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 16:12:07 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 16:12:07 [MONITOR] Monitoreo iniciado
+2025-07-07 16:12:07 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 16:45:18 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 16:45:18 [MONITOR] Monitoreo iniciado
+2025-07-07 16:45:18 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 16:50:44 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 16:50:44 [MONITOR] Monitoreo iniciado
+2025-07-07 16:50:44 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 16:53:58 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 16:53:58 [MONITOR] Monitoreo iniciado
+2025-07-07 16:53:58 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 16:55:08 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 16:55:08 [MONITOR] Monitoreo iniciado
+2025-07-07 16:55:08 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 16:55:55 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 16:55:55 [MONITOR] Monitoreo iniciado
+2025-07-07 16:55:55 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:02:11 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:02:11 [MONITOR] Monitoreo iniciado
+2025-07-07 17:02:11 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:03:39 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:03:39 [MONITOR] Monitoreo iniciado
+2025-07-07 17:03:39 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:03:50 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:03:50 [MONITOR] Monitoreo iniciado
+2025-07-07 17:03:50 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:05:22 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:05:22 [MONITOR] Monitoreo iniciado
+2025-07-07 17:05:22 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:13:00 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:13:00 [MONITOR] Monitoreo iniciado
+2025-07-07 17:13:00 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:13:26 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:13:26 [MONITOR] Monitoreo iniciado
+2025-07-07 17:13:26 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:21:01 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:21:01 [MONITOR] Monitoreo iniciado
+2025-07-07 17:21:01 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:21:49 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:21:49 [MONITOR] Monitoreo iniciado
+2025-07-07 17:21:49 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:25:21 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:25:21 [MONITOR] Monitoreo iniciado
+2025-07-07 17:25:21 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:29:18 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:29:18 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-07 17:29:23 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:29:23 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-07 17:30:16 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:30:16 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-07 17:32:50 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:32:50 [MONITOR] Monitoreo iniciado
+2025-07-07 17:32:50 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:33:06 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:33:06 [MONITOR] Monitoreo iniciado
+2025-07-07 17:33:06 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:33:39 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:33:39 [MONITOR] Monitoreo iniciado
+2025-07-07 17:33:39 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:34:10 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:34:10 [MONITOR] Monitoreo iniciado
+2025-07-07 17:34:10 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:34:39 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:34:39 [MONITOR] Monitoreo iniciado
+2025-07-07 17:34:39 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:48:57 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:48:57 [MONITOR] Monitoreo iniciado
+2025-07-07 17:48:57 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 17:53:39 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 17:53:39 [MONITOR] Monitoreo iniciado
+2025-07-07 17:53:39 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:03:24 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:03:24 [MONITOR] Monitoreo iniciado
+2025-07-07 18:03:24 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:05:52 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:05:52 [MONITOR] Monitoreo iniciado
+2025-07-07 18:05:52 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:15:57 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:15:57 [MONITOR] Monitoreo iniciado
+2025-07-07 18:15:57 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:27:57 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:27:57 [MONITOR] Monitoreo iniciado
+2025-07-07 18:27:57 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:36:14 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:36:14 [MONITOR] Monitoreo iniciado
+2025-07-07 18:36:14 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:38:30 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:38:30 [MONITOR] Monitoreo iniciado
+2025-07-07 18:38:30 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:50:03 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:50:03 [MONITOR] Monitoreo iniciado
+2025-07-07 18:50:03 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:55:51 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:55:51 [MONITOR] Monitoreo iniciado
+2025-07-07 18:55:51 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 18:57:04 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 18:57:04 [MONITOR] Monitoreo iniciado
+2025-07-07 18:57:04 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 19:00:12 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 19:00:12 [MONITOR] Monitoreo iniciado
+2025-07-07 19:00:12 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 19:20:08 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 19:20:08 [MONITOR] Monitoreo iniciado
+2025-07-07 19:20:08 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 19:52:21 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 19:52:21 [MONITOR] Monitoreo iniciado
+2025-07-07 19:52:21 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 20:02:06 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 20:02:06 [MONITOR] Monitoreo iniciado
+2025-07-07 20:02:06 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 20:08:40 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 20:08:40 [MONITOR] Monitoreo iniciado
+2025-07-07 20:08:40 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 20:47:00 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 20:47:00 [MONITOR] Monitoreo iniciado
+2025-07-07 20:47:00 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 21:01:06 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 21:01:06 [MONITOR] Monitoreo iniciado
+2025-07-07 21:01:06 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 21:27:36 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 21:27:36 [MONITOR] Monitoreo iniciado
+2025-07-07 21:27:36 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 21:34:38 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 21:34:38 [MONITOR] Monitoreo iniciado
+2025-07-07 21:34:38 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 21:47:23 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 21:47:23 [MONITOR] Monitoreo iniciado
+2025-07-07 21:47:23 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 21:55:25 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 21:55:25 [MONITOR] Monitoreo iniciado
+2025-07-07 21:55:25 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 22:08:07 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 22:08:07 [MONITOR] Monitoreo iniciado
+2025-07-07 22:08:07 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 22:20:13 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 22:20:13 [MONITOR] Monitoreo iniciado
+2025-07-07 22:20:13 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 22:20:42 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 22:20:42 [MONITOR] Monitoreo iniciado
+2025-07-07 22:20:42 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 22:40:33 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 22:40:33 [MONITOR] Monitoreo iniciado
+2025-07-07 22:40:33 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 23:40:47 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 23:40:47 [MONITOR] Monitoreo iniciado
+2025-07-07 23:40:47 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 23:48:50 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 23:48:50 [MONITOR] Monitoreo iniciado
+2025-07-07 23:48:50 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 23:50:08 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 23:50:08 [MONITOR] Monitoreo iniciado
+2025-07-07 23:50:08 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-07 23:56:38 [LAUNCH] Intentando lanzar en modo debug
+2025-07-07 23:56:38 [MONITOR] Monitoreo iniciado
+2025-07-07 23:56:38 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:03:50 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:03:50 [MONITOR] Monitoreo iniciado
+2025-07-08 00:03:50 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:05:25 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:05:25 [MONITOR] Monitoreo iniciado
+2025-07-08 00:05:25 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:08:19 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:08:19 [MONITOR] Monitoreo iniciado
+2025-07-08 00:08:19 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:16:35 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:16:35 [MONITOR] Monitoreo iniciado
+2025-07-08 00:16:35 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:19:11 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:19:11 [MONITOR] Monitoreo iniciado
+2025-07-08 00:19:11 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:20:00 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:20:00 [MONITOR] Monitoreo iniciado
+2025-07-08 00:20:00 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:31:26 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:31:26 [MONITOR] Monitoreo iniciado
+2025-07-08 00:31:26 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:32:01 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:32:01 [MONITOR] Monitoreo iniciado
+2025-07-08 00:32:01 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:32:52 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:32:52 [MONITOR] Monitoreo iniciado
+2025-07-08 00:32:52 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:44:31 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:44:31 [MONITOR] Monitoreo iniciado
+2025-07-08 00:44:31 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:48:23 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:48:23 [MONITOR] Monitoreo iniciado
+2025-07-08 00:48:23 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:55:26 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:55:26 [MONITOR] Monitoreo iniciado
+2025-07-08 00:55:26 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:55:26 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:55:26 [MONITOR] Monitoreo iniciado
+2025-07-08 00:55:26 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:55:41 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:55:41 [MONITOR] Monitoreo iniciado
+2025-07-08 00:55:41 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 00:57:48 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 00:57:48 [MONITOR] Monitoreo iniciado
+2025-07-08 00:57:48 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:02:31 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:02:31 [MONITOR] Monitoreo iniciado
+2025-07-08 01:02:31 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:03:31 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:03:31 [MONITOR] Monitoreo iniciado
+2025-07-08 01:03:31 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:04:05 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:04:05 [MONITOR] Monitoreo iniciado
+2025-07-08 01:04:05 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:09:25 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:09:25 [MONITOR] Monitoreo iniciado
+2025-07-08 01:09:25 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:10:39 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:10:39 [MONITOR] Monitoreo iniciado
+2025-07-08 01:10:39 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:12:15 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:12:15 [MONITOR] Monitoreo iniciado
+2025-07-08 01:12:15 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:42:54 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:42:54 [MONITOR] Monitoreo iniciado
+2025-07-08 01:42:54 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:44:57 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:44:57 [MONITOR] Monitoreo iniciado
+2025-07-08 01:44:57 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:47:18 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:47:18 [MONITOR] Monitoreo iniciado
+2025-07-08 01:47:18 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 01:53:23 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 01:53:23 [MONITOR] Monitoreo iniciado
+2025-07-08 01:53:23 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:00:17 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:00:17 [MONITOR] Monitoreo iniciado
+2025-07-08 02:00:17 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:06:39 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:06:39 [MONITOR] Monitoreo iniciado
+2025-07-08 02:06:39 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:23:05 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:23:05 [MONITOR] Monitoreo iniciado
+2025-07-08 02:23:05 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:37:24 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:37:24 [MONITOR] Monitoreo iniciado
+2025-07-08 02:37:24 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:38:42 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:38:42 [MONITOR] Monitoreo iniciado
+2025-07-08 02:38:42 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:39:13 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:39:13 [MONITOR] Monitoreo iniciado
+2025-07-08 02:39:13 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:41:02 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:41:02 [MONITOR] Monitoreo iniciado
+2025-07-08 02:41:02 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:44:31 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:44:31 [MONITOR] Monitoreo iniciado
+2025-07-08 02:44:31 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 02:55:59 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:55:59 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-08 02:56:08 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:56:08 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-08 02:56:16 [LAUNCH] Intentando lanzar en modo produccion
+2025-07-08 02:56:16 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-08 02:56:45 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:56:45 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-08 02:57:21 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:57:21 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-08 02:59:41 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 02:59:41 [ERROR] Error lanzando aplicación: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"c:\\Users\\delpi\\OneDrive\\Tesis\\ADRpy-VTOL\\ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1447, in launch_app\n    raise Exception(f\"Módulos fallidos: {failed_modules}\")\nException: Módulos fallidos: ['Modulos.Analisis_modelos.plot_interactive']\n"}
+2025-07-08 03:05:59 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 03:05:59 [MONITOR] Monitoreo iniciado
+2025-07-08 03:05:59 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 03:10:15 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 03:10:15 [MONITOR] Monitoreo iniciado
+2025-07-08 03:10:15 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 03:19:40 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 03:19:40 [MONITOR] Monitoreo iniciado
+2025-07-08 03:19:40 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 03:33:47 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 03:33:47 [MONITOR] Monitoreo iniciado
+2025-07-08 03:33:47 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 03:38:06 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 03:38:06 [MONITOR] Monitoreo iniciado
+2025-07-08 03:38:06 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 03:41:31 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 03:41:31 [MONITOR] Monitoreo iniciado
+2025-07-08 03:41:31 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 04:39:57 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 04:39:57 [MONITOR] Monitoreo iniciado
+2025-07-08 04:39:57 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 04:43:24 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 04:43:24 [MONITOR] Monitoreo iniciado
+2025-07-08 04:43:24 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 04:58:31 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 04:58:31 [MONITOR] Monitoreo iniciado
+2025-07-08 04:58:31 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 05:02:55 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 05:02:55 [MONITOR] Monitoreo iniciado
+2025-07-08 05:02:55 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 13:16:07 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 13:16:07 [MONITOR] Monitoreo iniciado
+2025-07-08 13:16:07 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
