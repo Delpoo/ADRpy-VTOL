@@ -62,8 +62,7 @@ from Modulos.imputation_loop import bucle_imputacion_similitud_correlacion
 from Modulos.excel_export import exportar_excel_con_imputaciones
 from Modulos.html_utils import convertir_a_html
 from Modulos.data_processing import mostrar_celdas_faltantes_con_seleccion, generar_resumen_faltantes
-from Modulos.imputacion_similitud_flexible  import configurar_similitud 
-from Modulos.imputacion_similitud_flexible import imputar_por_similitud
+
 
 # Step 1: Configure environment for pandas display (limits rows/columns in output)
 configurar_entorno(max_rows=20, max_columns=10)
@@ -71,27 +70,27 @@ configurar_entorno(max_rows=20, max_columns=10)
 # Step 2: Load data from Excel file (path can be provided as argument)
 try:
     df_inicial, ruta_archivo = cargar_datos(ruta_archivo=args.ruta_archivo)
-    print(f"Data loaded successfully from: {ruta_archivo}")
+    print(f"✅ Data loaded successfully from: {ruta_archivo}")
 except ValueError as e:
-    print(f"Error loading data: {e}")
+    print(f"❌ Error loading data: {e}")
     exit(1)  # Detiene el programa si hay un error
 
 # Step 3: Validate loaded data to ensure it is not empty
-print("\n=== Validating loaded data ===")
+print("\n🔎 === Validating loaded data ===")
 if df_inicial.empty:
-    print("The loaded file contains no data. Please check the file and try again.")
+    print("❌ The loaded file contains no data. Please check the file and try again.")
     exit(1)
 
-print("\n=== Proceeding with data processing ===")
-print("\nInitial headers loaded:")
+print("\n➡️ === Proceeding with data processing ===")
+print("\n📋 Initial headers loaded:")
 print(df_inicial.columns.tolist())
 
 # Step 4: Show initial data in HTML for visual inspection
-print("\n=== Displaying initial data in HTML format ===")
+print("\n🌐 === Displaying initial data in HTML format ===")
 convertir_a_html(df_inicial, titulo="Initial Data", mostrar=True)
 
 # Step 5: Process data (handle duplicates, clean up, etc.)
-print("\n=== Processing data ===")
+print("\n⚙️ === Processing data ===")
 df_procesado = procesar_datos_y_manejar_duplicados(df_inicial)
 df_original_para_analisis = df_inicial.copy()  # ← NUEVO: Guardar para análisis visual
 
@@ -102,12 +101,12 @@ else:
     print("\n❌ Headers were modified during processing.")
 
 # Step 6: Show processed data in HTML for review
-print("\n=== Displaying processed data in HTML format ===")
+print("\n🌐 === Displaying processed data in HTML format ===")
 convertir_a_html(df_procesado, titulo="Processed Data", mostrar=True)
 
 # Step 7: Parameter selection (choose which columns to use for imputation)
 parameters_available = df_procesado.columns.tolist()
-print("Parameters available in df_procesado before selection:")
+print("🔎 Parameters available in df_procesado before selection:")
 print(parameters_available)
 
 # Preselect parameters of interest (can be customized)
@@ -144,15 +143,15 @@ parametros_preseleccionados = [p for p in parametros_preseleccionados if p in pa
 
 # Allow user to select parameters via command-line or GUI
 parametros_seleccionados = seleccionar_parametros_por_indices(parameters_available, parametros_preseleccionados, args.parametros)
-print("Parameters selected after filtering:")
+print("🔎 Parameters selected after filtering:")
 print(parametros_seleccionados)
 
 # Filter DataFrame by selected parameters
 try:
     df_filtrado = df_procesado[parametros_seleccionados]
 except KeyError as e:
-    print(f"Error filtering df_procesado: {e}")
-    print(f"Invalid selected parameters: {set(parametros_seleccionados) - set(df_procesado.index.tolist())}")
+    print(f"❌ Error filtering df_procesado: {e}")
+    print(f"⚠️ Invalid selected parameters: {set(parametros_seleccionados) - set(df_procesado.index.tolist())}")
     raise
 
 # Show filtered table in HTML with 3 significant digits (no scientific notation)
@@ -167,20 +166,45 @@ df_celdas_faltantes = mostrar_celdas_faltantes_con_seleccion(
 
 # If there are missing cells, display them in HTML
 if df_celdas_faltantes.empty:
-    print("No missing values found in the selected column.")
+    print("✅ No missing values found in the selected column.")
 else:
     convertir_a_html(df_celdas_faltantes, titulo="Missing Cells Identified in df_filtrado (df_celdas_faltantes)", mostrar=True)
 
 # Step 9: Generate summary of missing values by column
-print("\n=== Generating summary of missing values by column ===")
+print("\n📊 === Generating summary of missing values by column ===")
 generar_resumen_faltantes(df_filtrado, titulo="Summary of Missing Values in df_filtrado")
 
-# Step 10: Load similarity configuration (for flexible imputation)
-bloques_rasgos, filas_familia, capas_familia = configurar_similitud()
+
+# Step 10: Define family columns and layers directly (no dependency on old similarity script)
+filas_familia = [
+    "Misión",
+    "Despegue",
+    "Propulsión vertical",
+    "Propulsión horizontal"
+]
+capas_familia = [
+    ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal"],
+    ["Misión", "Despegue"],
+    ["Misión"]
+]
+# Si necesitas bloques_rasgos para la función, define aquí un stub o config actual
+bloques_rasgos = {}
+
+# Filter filas_familia to keep only columns that exist in df_procesado
+print(f"🔎 Columns requested for filas_familia: {filas_familia}")
+print(f"Columns available in df_procesado: {df_procesado.columns.tolist()}")
+
+filas_familia_existentes = [col for col in filas_familia if col in df_procesado.columns]
+print(f"Columns actually found for filas_familia: {filas_familia_existentes}")
 
 # Select columns for df_atributos and df_parametros
-df_atributos = df_procesado[filas_familia]
-df_parametros = df_procesado.drop(columns=filas_familia)
+if filas_familia_existentes:
+    df_atributos = df_procesado[filas_familia_existentes]
+    df_parametros = df_procesado.drop(columns=filas_familia_existentes)
+else:
+    print("⚠️ Warning: No family columns found, using empty DataFrame for df_atributos")
+    df_atributos = pd.DataFrame()
+    df_parametros = df_procesado.copy()
 
 
 df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel, modelos_por_celda = bucle_imputacion_similitud_correlacion(
@@ -195,18 +219,22 @@ df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_p
 # Step 12: Export results to Excel with color and comments for each imputed cell
 archivo_destino = args.archivo_destino
 if not archivo_destino:
-    archivo_destino = input("Enter the path where you want to save the file with imputations (include .xlsx): ")
+    archivo_destino = input("💾 Enter the path where you want to save the file with imputations (include .xlsx): ")
 if not archivo_destino:
     archivo_destino = r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx"
 
 # Call the export function with the correct parameter names
-exportar_excel_con_imputaciones(
-    source_file=ruta_archivo,
-    df_processed=df_procesado_actualizado,
-    details_for_excel=detalles_para_excel,
-    output_file=archivo_destino
-)
+try:
+    print(f"\n📤 === Exporting data to file: {archivo_destino} ===")
+    exportar_excel_con_imputaciones(
+        source_file=ruta_archivo,
+        df_processed=df_procesado_actualizado,
+        details_for_excel=detalles_para_excel,
+        output_file=archivo_destino
+    )
+except Exception as e:
+    print(f"❌ Error processing the file: {e}")
 
-print("\n=== Workflow completed. Please check the generated file. ===")
+print("\n🎉 === Workflow completed. Please check the generated file. ===")
 print("✅ Script finished.")
 

@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
+import logging
 from itertools import combinations
 from collections import defaultdict
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.model_selection import LeaveOneOut
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
+
+logger = logging.getLogger(__name__)
 
 class ModeloDescartado(Exception):
     """Modelo descartado por problemas numéricos."""
@@ -113,7 +116,7 @@ def seleccionar_predictores_validos(
         if col in df.columns:
             df = df.drop(columns=[col])
 
-    # 4) Validación ±15 %  (idéntica a tu lógica)
+    # 4) Validación estricta de rango: eliminar predictores si el valor objetivo está fuera del rango de entrenamiento
     columnas_a_eliminar = []
     for col in df.columns:
         if col == df.columns[0] or col == objetivo:
@@ -123,11 +126,15 @@ def seleccionar_predictores_validos(
         if valores.empty or valores.isna().all():
             columnas_a_eliminar.append(col)
             continue
-        mn, mx = valores.min(), valores.max()  # Obtener valores mínimo y máximo correctamente
-        rango_min, rango_max = mn * (1 - rango), mx * (1 + rango)
-        valor_objetivo = pd.to_numeric(df.at[idx_objetivo, col], errors='coerce')  # Asegurar conversión numérica
-        if not (pd.notna(valor_objetivo) and rango_min <= valor_objetivo <= rango_max):
+        
+        # Usar rango estricto del entrenamiento (sin tolerancia)
+        mn, mx = valores.min(), valores.max()
+        valor_objetivo = pd.to_numeric(df.at[idx_objetivo, col], errors='coerce')
+        
+        # CAMBIO CRÍTICO: Si el valor está fuera del rango de entrenamiento, eliminar el predictor completamente
+        if not (pd.notna(valor_objetivo) and mn <= valor_objetivo <= mx):
             columnas_a_eliminar.append(col)
+            logger.debug(f"Eliminando predictor '{col}': valor_objetivo={valor_objetivo} fuera del rango [{mn:.3f}, {mx:.3f}]")
 
     df = df.drop(columns=columnas_a_eliminar)
     return df, familia_usada, filtro_aplicado
@@ -291,6 +298,14 @@ def entrenar_modelo(
                 scaler_X = StandardScaler()
                 X_trans = scaler_X.fit_transform(X_poly)
                 tipo_transformacion = "polinómica+normalización"
+                
+                # DEBUG: Imprimir información sobre las features polinómicas
+                if hasattr(pf, 'powers_'):
+                    logger.debug(f"Modelo poly-{len(predictores)}: PolynomialFeatures powers_: {pf.powers_}")
+                    logger.debug(f"  Orden de features: {pf.get_feature_names_out(['x0', 'x1'][:len(predictores)])}")
+                else:
+                    logger.debug(f"Modelo poly-{len(predictores)}: PolynomialFeatures sin powers_")
+                    
             else:
                 scaler_X = StandardScaler()
                 X_trans = scaler_X.fit_transform(X_raw)
@@ -390,8 +405,10 @@ def entrenar_modelo(
             "tipo": tipo,
             "tipo_transformacion": tipo_transformacion,
             "n": len(df_train),
-            # Datos en unidades originales
+            "n_predictores": len(predictores),  # Agregar número de predictores
+            # Datos en unidades originales - USAR AMBOS NOMBRES PARA COMPATIBILIDAD
             "datos_originales": datos_originales,
+            "datos_entrenamiento": datos_originales,  # Alias para compatibilidad con visualización
             "coeficientes_originales": coef_original,
             "intercepto_original": intercepto_original,
             "Peso de predictores": pesos_predictores,
@@ -426,7 +443,31 @@ def entrenar_modelo(
 #! en ecuaciones polinomiales de 1 predictor solo no me salta el error de matriz singular, me da una ecuacion valida ver tabla de word
 def filtrar_mejores_modelos(modelos: list, top: int = 2) -> list:
     """Return top models per type based on Confianza."""
-    modelos = [m for m in modelos if m is not None and m["mape"] <= 7.5 and m["r2"] >= 0.6]
+    # Nueva lógica de robustez y descarte
+    modelos_filtrados = []
+    for m in modelos:
+        if m is None:
+            continue
+        mape = m.get("mape", np.inf)
+        r2 = m.get("r2", -np.inf)
+        # Descartar modelos inválidos
+        if mape > 18 or r2 < 0.4:
+            continue
+        # Etiquetar como no robusto si está en zona intermedia
+        motivo = ""
+        if (7.5 < mape <= 18) or (0.4 < r2 < 0.6):
+            motivo = "Modelo no robusto: "
+            if 7.5 < mape <= 18:
+                motivo += f"MAPE fuera de rango (>{7.5}%, <=18%) "
+            if 0.4 < r2 < 0.6:
+                motivo += f"R2 fuera de rango (>{0.4}, <0.6)"
+            m["motivo"] = motivo.strip()
+            m["no_robusto"] = True
+        else:
+            m["motivo"] = ""
+            m["no_robusto"] = False
+        modelos_filtrados.append(m)
+    modelos = modelos_filtrados
     grupos: defaultdict[str, list] = defaultdict(list)
     for m in modelos:
         grupos[m["tipo"]].append(m)
@@ -590,6 +631,7 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
     # Reemplazar valores inválidos por np.nan
     df.replace("", np.nan, inplace=True)
     df_original = df.copy()  # <- Copia del DF original antes de filtrar
+    df_completo = df.copy()  # NUEVO: DataFrame completo para exportar
     df_resultado = df_original.copy()
     reporte = []
     modelos_info = []  # Lista de modelos completos (solo descartado=False)
@@ -600,11 +642,13 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
             # Seleccionar predictores válidos para la celda actual y familia usada
             df_filtrado, familia_usada, filtro_aplicado = seleccionar_predictores_validos(df_original, objetivo, idx)
             if df_filtrado.empty:
+                print(f"❌ [ERROR] No se encontraron predictores válidos para {objetivo} en fila {idx}.")
                 continue
 
             # Excluir la primera columna explícitamente
             predictores = [col for col in df_filtrado.columns if col != df_filtrado.columns[0] and col != objetivo]
             if not predictores:
+                print(f"⚠️ [ADVERTENCIA] No hay predictores disponibles para {objetivo} en fila {idx}.")
                 # Agregar advertencia al reporte
                 reporte.append({
                     "Aeronave": idx,
@@ -618,7 +662,7 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                     "Corr": 0,
                     "Familia": familia_usada,
                     "Método predictivo": "Correlacion",
-                    "Advertencia": "No se pudo imputar por falta de parámetros válidos." + ("; modelo sin filtrado por familia" if not filtro_aplicado else ""),
+                    "Advertencia": "⚠️ No se pudo imputar por falta de parámetros válidos." + ("; ⚠️ modelo sin filtrado por familia" if not filtro_aplicado else ""),
                 })
                 continue
             modelos = []
@@ -631,13 +675,11 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                     modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="potencia"))
                     modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="exp"))
 
-            # Guardar todos los modelos NO descartados (sin filtrar por mape/r2)
-            # (Este bloque ha sido eliminado para evitar duplicados antes de LOOCV)
-
             # Solo pasar a LOOCV los modelos con MAPE <= 7.5% y R2 >= 0.6
             validos = [m for m in modelos if m is not None and not m["descartado"] and m["mape"] <= 7.5 and m["r2"] >= 0.6]
             descartados = [m for m in modelos if m is not None and m["descartado"]]
             if not validos:
+                print(f"❗ [ALERTA] No hay modelos válidos para {objetivo} en fila {idx} tras filtrar por MAPE y R2.")
                 # Clasificar motivos de descarte para cada modelo no válido
                 motivos_descartes = []
                 for m in modelos:
@@ -669,7 +711,7 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                             "Penalizacion_k": 0.0,
                             "Familia": familia_usada,
                             "Método predictivo": "Correlacion",
-                            "Advertencia": f"Modelo descartado: {motivo}" + ("; modelo sin filtrado por familia" if not filtro_aplicado else ""),
+                            "Advertencia": f"❌ Modelo descartado: {motivo}" + ("; ⚠️ modelo sin filtrado por familia" if not filtro_aplicado else ""),
                         })
                     continue
             # Validar con LOOCV y calcular confianza promedio
@@ -680,7 +722,6 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
             for m in modelos:
                 if m is not None and not m.get("descartado", False):
                     columnas_grafico = list(m["predictores"]) + [objetivo]
-                    df_original_graf = df_original[columnas_grafico].dropna().to_dict(orient="list")
                     df_filtrado_graf = df_filtrado[columnas_grafico].dropna().to_dict(orient="list")
                     modelos_info.append({
                         "Aeronave": idx,
@@ -712,26 +753,26 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
                         "indices_entrenamiento": m["datos_originales"]["X_original"],
                         "df_filtrado_shape": df_filtrado.shape,
                         "df_filtrado_columns": list(df_filtrado.columns),
-                        "df_original_shape": df_original.shape,
-                        "df_original_columns": list(df_original.columns),
-                        "df_original": df_original_graf,
+                        "df_original_shape": df_completo.shape,
+                        "df_original_columns": list(df_completo.columns),
+                        "df_original": df_completo.to_dict(orient="list"),
                         "df_filtrado": df_filtrado_graf,
                     })
             # Filtrar modelos robustos por LOOCV
             robustos = [m for m in validos if m["MAPE_LOOCV"] <= 15 and m["R2_LOOCV"] >= 0.6]
             if robustos:
                 mejor = max(robustos, key=lambda x: x["Confianza_promedio"])
-                warning_text = "Modelo robusto"
+                warning_text = "🟢 Modelo robusto"
             else:
                 mejor = max(validos, key=lambda x: x["Confianza_promedio"])
-                warning_text = "Modelo no robusto"
+                warning_text = "🟡 Modelo no robusto"
             if not filtro_aplicado:
-                warning_text += "; modelo sin filtrado por familia"
+                warning_text += "; ⚠️ modelo sin filtrado por familia"
             mejor["warning"] = warning_text
             mejor["Familia"] = familia_usada
             # Verificar si ya imputamos algo en esta fila/parámetro
             if not pd.isna(df_resultado.at[idx, objetivo]):
-                print(f"⚠️ Ya se imputó {objetivo} en fila {idx}. No debería ocurrir.")
+                print(f"⚠️ [ADVERTENCIA] Ya se imputó {objetivo} en fila {idx}. No debería ocurrir.")
             # Imputar el valor de la celda actual
             df_resultado, imputacion = imputar_valores_celda(df_resultado, df_filtrado, objetivo, mejor, idx)
             imputacion["Familia"] = familia_usada

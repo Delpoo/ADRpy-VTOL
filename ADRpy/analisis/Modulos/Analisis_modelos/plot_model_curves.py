@@ -693,6 +693,31 @@ def extract_theoretical_imputation_points(modelos: List[Dict],
                 logger.warning(f"Modelo {i+1}: variable_independiente_1 es None")
                 continue
                 
+            # 🔧 VALIDACIÓN DE RANGOS DE VARIABLES INDEPENDIENTES
+            # Verificar si las variables independientes están dentro de rangos razonables
+            rangos_x_temp, _ = normalization_engine.get_model_data_ranges(modelo)
+            if rangos_x_temp and len(rangos_x_temp) > 0:
+                x1_min, x1_max = rangos_x_temp[0]
+                x1_span = x1_max - x1_min
+                extrapolacion_factor = 3  # Factor más conservador para variables independientes
+                
+                x1_limite_inf = x1_min - extrapolacion_factor * x1_span
+                x1_limite_sup = x1_max + extrapolacion_factor * x1_span
+                
+                if var_indep_1 < x1_limite_inf or var_indep_1 > x1_limite_sup:
+                    logger.warning(f"Modelo {i+1}: variable_independiente_1 ({var_indep_1:.3f}) muy fuera del rango de entrenamiento [{x1_min:.3f}, {x1_max:.3f}]")
+                
+                # Verificar segunda variable si existe
+                if var_indep_2 is not None and len(rangos_x_temp) > 1:
+                    x2_min, x2_max = rangos_x_temp[1]
+                    x2_span = x2_max - x2_min
+                    
+                    x2_limite_inf = x2_min - extrapolacion_factor * x2_span
+                    x2_limite_sup = x2_max + extrapolacion_factor * x2_span
+                    
+                    if var_indep_2 < x2_limite_inf or var_indep_2 > x2_limite_sup:
+                        logger.warning(f"Modelo {i+1}: variable_independiente_2 ({var_indep_2:.3f}) muy fuera del rango de entrenamiento [{x2_min:.3f}, {x2_max:.3f}]")
+                
             # Obtener coeficientes y intercepto del modelo
             coeficientes = modelo.get('coeficientes_originales', [])
             intercepto = modelo.get('intercepto_original', 0)
@@ -764,16 +789,30 @@ def extract_theoretical_imputation_points(modelos: List[Dict],
                         continue
                         
                 elif tipo_modelo.startswith('poly-2'):
-                    # Modelo polinómico: y = intercepto + c1*x1 + c2*x2 + c3*x1² + c4*x2² + c5*x1*x2
+                    # Modelo polinómico de 2 predictores: y = intercepto + c1*x1 + c2*x2 + c3*x1² + c4*x1*x2 + c5*x2²
+                    # ORDEN CORRECTO según PolynomialFeatures(degree=2, include_bias=False):
+                    # Features: ['x1', 'x2', 'x1^2', 'x1 x2', 'x2^2']
+                    # Powers:   [[1,0], [0,1], [2,0], [1,1], [0,2]]
+                    # Por lo tanto: coeficientes = [c1, c2, c3, c4, c5] donde:
+                    # c1 = x1, c2 = x2, c3 = x1², c4 = x1*x2, c5 = x2²
                     if len(coeficientes) >= 5:
                         valor_y_teorico = (intercepto + 
-                                         coeficientes[0] * var_indep_1 + 
-                                         coeficientes[1] * var_indep_2 + 
-                                         coeficientes[2] * (var_indep_1 ** 2) + 
-                                         coeficientes[3] * (var_indep_2 ** 2) + 
-                                         coeficientes[4] * var_indep_1 * var_indep_2)
+                                         coeficientes[0] * var_indep_1 +           # c1*x1
+                                         coeficientes[1] * var_indep_2 +           # c2*x2  
+                                         coeficientes[2] * (var_indep_1 ** 2) +    # c3*x1²
+                                         coeficientes[3] * var_indep_1 * var_indep_2 +  # c4*x1*x2 (CORRECTO)
+                                         coeficientes[4] * (var_indep_2 ** 2))     # c5*x2² (CORRECTO)
+                        
+                        logger.debug(f"Modelo poly-2 {i+1}: intercepto={intercepto:.6f}")
+                        logger.debug(f"  x1={var_indep_1:.6f}, x2={var_indep_2:.6f}")
+                        logger.debug(f"  coef[0]*x1={coeficientes[0]:.6f}*{var_indep_1:.6f}={coeficientes[0]*var_indep_1:.6f}")
+                        logger.debug(f"  coef[1]*x2={coeficientes[1]:.6f}*{var_indep_2:.6f}={coeficientes[1]*var_indep_2:.6f}")
+                        logger.debug(f"  coef[2]*x1²={coeficientes[2]:.6f}*{var_indep_1**2:.6f}={coeficientes[2]*var_indep_1**2:.6f}")
+                        logger.debug(f"  coef[3]*x1*x2={coeficientes[3]:.6f}*{var_indep_1*var_indep_2:.6f}={coeficientes[3]*var_indep_1*var_indep_2:.6f}")
+                        logger.debug(f"  coef[4]*x2²={coeficientes[4]:.6f}*{var_indep_2**2:.6f}={coeficientes[4]*var_indep_2**2:.6f}")
+                        logger.debug(f"  valor_y_teorico={valor_y_teorico:.6f}")
                     else:
-                        logger.warning(f"Modelo {i+1}: modelo poly-2 sin suficientes coeficientes")
+                        logger.warning(f"Modelo {i+1}: modelo poly-2 sin suficientes coeficientes (necesita 5, tiene {len(coeficientes)})")
                         continue
                 else:
                     logger.warning(f"Modelo {i+1}: tipo de modelo 2D no reconocido: {tipo_modelo}")
@@ -784,6 +823,25 @@ def extract_theoretical_imputation_points(modelos: List[Dict],
                 
             if valor_y_teorico is None:
                 continue
+                
+            # 🔧 VALIDACIÓN DE EXTRAPOLACIÓN EXTREMA
+            # Verificar si el valor teórico está muy fuera del rango de entrenamiento
+            rangos_x, rango_y = normalization_engine.get_model_data_ranges(modelo)
+            if rangos_x and rango_y:
+                y_min, y_max = rango_y
+                rango_y_span = y_max - y_min
+                
+                # Considerar extrapolación extrema si está más de 10 veces fuera del rango
+                extrapolacion_factor = 10
+                limite_inferior = y_min - extrapolacion_factor * rango_y_span
+                limite_superior = y_max + extrapolacion_factor * rango_y_span
+                
+                if valor_y_teorico < limite_inferior or valor_y_teorico > limite_superior:
+                    logger.warning(f"Modelo {i+1}: valor teórico extremo {valor_y_teorico:.3f} fuera del rango de entrenamiento [{y_min:.3f}, {y_max:.3f}]")
+                    logger.warning(f"  Variables: x1={var_indep_1}, x2={var_indep_2 if var_indep_2 is not None else 'N/A'}")
+                    logger.warning(f"  Ecuación: {modelo.get('ecuacion_string', 'N/A')}")
+                    # Opcionalmente, saltar este punto si es demasiado extremo
+                    # continue  # Descomenta esta línea para omitir puntos extremos
                 
             # 🔧 OBTENER RANGOS PARA NORMALIZACIÓN (USAR RANGOS DEL MODELO INDIVIDUAL PARA COHERENCIA)
             # IMPORTANTE: Usar los mismos rangos que se usan para las curvas del modelo

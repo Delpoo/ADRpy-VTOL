@@ -519,8 +519,8 @@ def bucle_imputacion_similitud_correlacion(
         output_path = os.path.join(results_dir, 'modelos_completos_por_celda.json')
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(export_dict_unificado, f, ensure_ascii=False, indent=2, separators=(',', ': '))
-        print(f"[DEBUG] Archivo JSON unificado exportado a: {output_path}")
-        print(f"[DEBUG] Estructura: {len(datos_unificados_por_celda)} celdas con información completa")
+        print(f"📝 [DEBUG] Archivo JSON unificado exportado a: {output_path}")
+        print(f"📊 [DEBUG] Estructura: {len(datos_unificados_por_celda)} celdas con información completa")
         
     except Exception as e:
         print(f"[WARNING] No se pudo exportar el archivo JSON: {e}")

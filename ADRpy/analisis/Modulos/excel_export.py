@@ -130,19 +130,19 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
     """
     try:
         if not details_for_excel:
-            print("No imputations to export.")
+            print("⚠️ No imputations to export.")
             return
 
-        print(f"=== Exporting data to file: {output_file} ===")
+        print(f"📤 === Exporting data to file: {output_file} ===")
         wb = load_workbook(source_file)
         # Robust check for active sheet
         if wb.sheetnames:
             ws = wb.active
             if ws is None:
-                print("Error: Could not get the active sheet from the Excel file.")
+                print("❌ Error: Could not get the active sheet from the Excel file.")
                 return
         else:
-            print(f"Error: The file '{source_file}' contains no sheets.")
+            print(f"❌ Error: The file '{source_file}' contains no sheets.")
             return
 
         # Define fill colors for each imputation method
@@ -192,10 +192,23 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
                         if corr_comment:
                             comment += "\n" + corr_comment
                     if comment:
-                        cell.comment = Comment(comment, "System")
+                        # Estimate comment box size based on text length
+                        # Each line ~13px height, width ~7px per char, min/max limits
+                        lines = comment.count('\n') + 1
+                        max_line_length = max((len(line) for line in comment.split('\n')), default=40)
+                        # Convert px to points (Excel uses points: 1pt ≈ 1.33px for height, 1pt ≈ 7px for width)
+                        width_pt = min(max(120/7, int(max_line_length * 7 * 5)), 3500/7)  # 5x wider, in points
+                        height_pt = min(max(40/1.33, lines * 15 * 4 / 1.33), 1200/1.33)  # 4x taller, in points, higher max
+                        cell_comment = Comment(comment, "System")
+                        try:
+                            cell_comment.width = width_pt
+                            cell_comment.height = height_pt
+                        except Exception:
+                            pass  # Fallback if openpyxl version does not support
+                        cell.comment = cell_comment
         wb.save(output_file)
-        print(f"Export completed. File saved as '{output_file}'.")
+        print(f"✅ Export completed. File saved as '{output_file}'.")
     except FileNotFoundError:
-        print(f"Error: File '{source_file}' or {output_file} not found.")
+        print(f"❌ Error: File '{source_file}' or {output_file} not found.")
     except Exception as e:
-        print(f"Error processing the file: {e}")
+        print(f"❌ Error processing the file: {e}")

@@ -4,42 +4,204 @@
       "parametro_objetivo": "Payload",
       "idx_objetivo": "A7",
       "df_original": {
-        "Potencia HP": [
-          18.0,
-          24.0,
-          32.0,
-          39.0,
-          44.0,
-          53.0,
-          42.0
+        "Peso máximo al despegue (MTOW)": [
+          100,
+          150,
+          150,
+          200,
+          250,
+          300,
+          200,
+          300,
+          350,
+          350
         ],
         "Payload": [
           20.0,
           32.0,
+          32.0,
           40.0,
           52.0,
+          NaN,
+          NaN,
           61.0,
           70.0,
           55.0
+        ],
+        "Potencia HP": [
+          18.0,
+          24.0,
+          NaN,
+          32.0,
+          39.0,
+          46.0,
+          31.0,
+          44.0,
+          53.0,
+          42.0
+        ],
+        "Envergadura": [
+          4.52,
+          5.64,
+          NaN,
+          6.39,
+          7.36,
+          8.12,
+          6.2,
+          7.7,
+          8.11,
+          7.0
+        ],
+        "Alcance de la aeronave": [
+          600.0,
+          700.0,
+          NaN,
+          790.0,
+          870.0,
+          920.0,
+          800.0,
+          910.0,
+          960.0,
+          800.0
+        ],
+        "Velocidad a la que se realiza el crucero (KTAS)": [
+          40.0,
+          38.0,
+          NaN,
+          34.0,
+          42.0,
+          41.0,
+          34.0,
+          40.0,
+          40.0,
+          45.0
+        ],
+        "Cantidad de motores": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "Ancho del fuselaje": [
+          0.25,
+          0.21,
+          0.23,
+          0.26,
+          0.24,
+          0.33,
+          0.24,
+          0.31,
+          0.28,
+          0.28
+        ],
+        "Rango de comunicación": [
+          100,
+          20,
+          20,
+          500,
+          2500,
+          1500,
+          500,
+          2500,
+          800,
+          500
+        ],
+        "Misión": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          3
+        ],
+        "Despegue": [
+          1,
+          1,
+          1,
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          1
+        ],
+        "Propulsión horizontal": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "Propulsión vertical": [
+          5,
+          5,
+          5,
+          1,
+          5,
+          1,
+          1,
+          5,
+          5,
+          5
+        ],
+        "Cantidad de motores propulsión vertical": [
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0,
+          0
+        ],
+        "Cantidad de motores propulsión horizontal": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
         ]
       },
       "final": {
-        "Valor imputado": 63.15356565373054,
-        "Confianza": 0.410037002063676,
+        "Valor imputado": 61.83565829818852,
+        "Confianza": 0.3971592296551966,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
         "variable_independiente_1": 46.0,
-        "variable_independiente_2": 8.12
+        "variable_independiente_2": 920.0
       },
       "similitud": {},
       "correlacion": {
-        "Valor imputado": 63.15356565373054,
-        "Confianza": 0.410037002063676,
+        "Valor imputado": 61.83565829818852,
+        "Confianza": 0.3971592296551966,
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
         "variable_independiente_1": 46.0,
-        "variable_independiente_2": 8.12,
-        "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
+        "variable_independiente_2": 920.0,
+        "Advertencia": "🟢 Modelo robusto; ⚠️ modelo sin filtrado por familia"
       }
     },
     "informacion_modelos_celda": {
@@ -306,270 +468,6 @@
             ]
           },
           "variable_independiente_1": 46.0,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "linear-1",
-          "predictores": [
-            "Envergadura"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            13.614954149728332
-          ],
-          "intercepto_original": -43.72723683932967,
-          "ecuacion_string": "y = -43.72723683932967 + 13.614954149728332*x0",
-          "mape": 6.025192222020353,
-          "r2": 0.9673276120218998,
-          "corr": 0.782824065276938,
-          "Confianza": 0.34629415526937585,
-          "Confianza_LOOCV": 0.2806030928499668,
-          "Corr_LOOCV": 0.6343244624016869,
-          "MAPE_LOOCV": 9.928132767057278,
-          "R2_LOOCV": 0.9305244426071924,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52
-              ],
-              [
-                5.64
-              ],
-              [
-                6.39
-              ],
-              [
-                7.36
-              ],
-              [
-                7.7
-              ],
-              [
-                8.11
-              ],
-              [
-                7.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura"
-            ]
-          },
-          "variable_independiente_1": 8.12,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "log-1",
-          "predictores": [
-            "Envergadura"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            82.76739025536544
-          ],
-          "intercepto_original": -108.57120132037983,
-          "ecuacion_string": "y = -108.571 + 82.7674*log(Envergadura)",
-          "mape": 8.74323185597826,
-          "r2": 0.9440573192338959,
-          "corr": 0.6805875977510059,
-          "Confianza": 0.3010682958074636,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "logarítmica",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52
-              ],
-              [
-                5.64
-              ],
-              [
-                6.39
-              ],
-              [
-                7.36
-              ],
-              [
-                7.7
-              ],
-              [
-                8.11
-              ],
-              [
-                7.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura"
-            ]
-          },
-          "variable_independiente_1": 8.12,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "pot-1",
-          "predictores": [
-            "Envergadura"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            2.112185474818412
-          ],
-          "intercepto_original": 0.8248399886815326,
-          "ecuacion_string": "y = 0.82484*Envergadura**2.11219",
-          "mape": 3.3129548562203515,
-          "r2": 0.9769761547075811,
-          "corr": 0.8780562488131122,
-          "Confianza": 0.38842156296531954,
-          "Confianza_LOOCV": 0.2806030928499668,
-          "Corr_LOOCV": 0.6343244624016869,
-          "MAPE_LOOCV": 9.928132767057278,
-          "R2_LOOCV": 0.9305244426071924,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "potencia",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52
-              ],
-              [
-                5.64
-              ],
-              [
-                6.39
-              ],
-              [
-                7.36
-              ],
-              [
-                7.7
-              ],
-              [
-                8.11
-              ],
-              [
-                7.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura"
-            ]
-          },
-          "variable_independiente_1": 8.12,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "exp-1",
-          "predictores": [
-            "Envergadura"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            0.34214729800914256
-          ],
-          "intercepto_original": 4.470927951535939,
-          "ecuacion_string": "y = 4.47093*exp(0.342147*Envergadura)",
-          "mape": 4.470763829491414,
-          "r2": 0.9699389683218884,
-          "corr": 0.8359440231778971,
-          "Confianza": 0.36979257817842354,
-          "Confianza_LOOCV": 0.2806030928499668,
-          "Corr_LOOCV": 0.6343244624016869,
-          "MAPE_LOOCV": 9.928132767057278,
-          "R2_LOOCV": 0.9305244426071924,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "exponencial",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52
-              ],
-              [
-                5.64
-              ],
-              [
-                6.39
-              ],
-              [
-                7.36
-              ],
-              [
-                7.7
-              ],
-              [
-                8.11
-              ],
-              [
-                7.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura"
-            ]
-          },
-          "variable_independiente_1": 8.12,
           "variable_independiente_2": null
         },
         {
@@ -1313,357 +1211,6 @@
         {
           "tipo": "linear-1",
           "predictores": [
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 8,
-          "coeficientes_originales": [
-            371.3286713286712
-          ],
-          "intercepto_original": -50.36713286713284,
-          "ecuacion_string": "y = -50.36713286713284 + 371.3286713286712*x0",
-          "mape": 26.069187998462617,
-          "r2": 0.4886630098526008,
-          "corr": -0.12464142835578684,
-          "Confianza": 0,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                0.25
-              ],
-              [
-                0.21
-              ],
-              [
-                0.23
-              ],
-              [
-                0.26
-              ],
-              [
-                0.24
-              ],
-              [
-                0.31
-              ],
-              [
-                0.28
-              ],
-              [
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 0.33,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "poly-1",
-          "predictores": [
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 8,
-          "coeficientes_originales": [
-            -270.7494172048601,
-            1235.4301219092436
-          ],
-          "intercepto_original": 31.947070737950327,
-          "ecuacion_string": "y = 31.947070737950327 + -270.7494172048601*x0 + 1235.4301219092436*x1",
-          "mape": 25.139474480623814,
-          "r2": 0.4942003438120671,
-          "corr": -0.09088231078142689,
-          "Confianza": 0,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "polinómica+normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                0.25
-              ],
-              [
-                0.21
-              ],
-              [
-                0.23
-              ],
-              [
-                0.26
-              ],
-              [
-                0.24
-              ],
-              [
-                0.31
-              ],
-              [
-                0.28
-              ],
-              [
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 0.33,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "log-1",
-          "predictores": [
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 8,
-          "coeficientes_originales": [
-            94.42389810394224
-          ],
-          "intercepto_original": 173.9960693438739,
-          "ecuacion_string": "y = 173.996 + 94.4239*log(Ancho del fuselaje)",
-          "mape": 26.64277470255797,
-          "r2": 0.47885320681477195,
-          "corr": -0.1486658866778796,
-          "Confianza": 0,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "logarítmica",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                0.25
-              ],
-              [
-                0.21
-              ],
-              [
-                0.23
-              ],
-              [
-                0.26
-              ],
-              [
-                0.24
-              ],
-              [
-                0.31
-              ],
-              [
-                0.28
-              ],
-              [
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 0.33,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "pot-1",
-          "predictores": [
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 8,
-          "coeficientes_originales": [
-            2.099029238491982
-          ],
-          "intercepto_original": 737.8641309579939,
-          "ecuacion_string": "y = 737.864*Ancho del fuselaje**2.09903",
-          "mape": 24.43001099665054,
-          "r2": 0.4789717439472213,
-          "corr": -0.0748478279147407,
-          "Confianza": 0,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "potencia",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                0.25
-              ],
-              [
-                0.21
-              ],
-              [
-                0.23
-              ],
-              [
-                0.26
-              ],
-              [
-                0.24
-              ],
-              [
-                0.31
-              ],
-              [
-                0.28
-              ],
-              [
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 0.33,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "exp-1",
-          "predictores": [
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 1,
-          "n_muestras_entrenamiento": 8,
-          "coeficientes_originales": [
-            8.287309969428735
-          ],
-          "intercepto_original": 4.99167425626046,
-          "ecuacion_string": "y = 4.99167*exp(8.28731*Ancho del fuselaje)",
-          "mape": 24.186941654917156,
-          "r2": 0.4778106686403315,
-          "corr": -0.06732605417707277,
-          "Confianza": 0,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            1.0
-          ],
-          "transformacion": "exponencial",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                0.25
-              ],
-              [
-                0.21
-              ],
-              [
-                0.23
-              ],
-              [
-                0.26
-              ],
-              [
-                0.24
-              ],
-              [
-                0.31
-              ],
-              [
-                0.28
-              ],
-              [
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 0.33,
-          "variable_independiente_2": null
-        },
-        {
-          "tipo": "linear-1",
-          "predictores": [
             "Rango de comunicación"
           ],
           "n_predictores": 1,
@@ -2016,83 +1563,6 @@
           "tipo": "linear-2",
           "predictores": [
             "Potencia HP",
-            "Envergadura"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            1.030671329178493,
-            3.9454512384999303
-          ],
-          "intercepto_original": -16.294379545099574,
-          "ecuacion_string": "y = -16.294379545099574 + 1.030671329178493*x0 + 3.9454512384999303*x1",
-          "mape": 2.118852530438767,
-          "r2": 0.995095994846898,
-          "corr": 0.9269195797421568,
-          "Confianza": 0.410037002063676,
-          "Confianza_LOOCV": 0.3910405090024805,
-          "Corr_LOOCV": 0.8839765739250289,
-          "MAPE_LOOCV": 3.324589739376744,
-          "R2_LOOCV": 0.9895924638085075,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.20712338073685066,
-            0.7928766192631493
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                18.0,
-                4.52
-              ],
-              [
-                24.0,
-                5.64
-              ],
-              [
-                32.0,
-                6.39
-              ],
-              [
-                39.0,
-                7.36
-              ],
-              [
-                44.0,
-                7.7
-              ],
-              [
-                53.0,
-                8.11
-              ],
-              [
-                42.0,
-                7.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Potencia HP",
-              "Envergadura"
-            ]
-          },
-          "variable_independiente_1": 46.0,
-          "variable_independiente_2": 8.12
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Potencia HP",
             "Alcance de la aeronave"
           ],
           "n_predictores": 2,
@@ -2247,83 +1717,6 @@
           "tipo": "linear-2",
           "predictores": [
             "Potencia HP",
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            1.4381996137475863,
-            -5.374721092006857
-          ],
-          "intercepto_original": -3.227223295145599,
-          "ecuacion_string": "y = -3.227223295145599 + 1.4381996137475863*x0 + -5.374721092006857*x1",
-          "mape": 3.4691683203170856,
-          "r2": 0.990776750569426,
-          "corr": 0.8797494312741435,
-          "Confianza": 0.3891705680305283,
-          "Confianza_LOOCV": 0.3226062607040518,
-          "Corr_LOOCV": 0.72927579240166,
-          "MAPE_LOOCV": 7.47184675551137,
-          "R2_LOOCV": 0.9566747018374114,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.21109883350511185,
-            0.7889011664948882
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                18.0,
-                0.25
-              ],
-              [
-                24.0,
-                0.21
-              ],
-              [
-                32.0,
-                0.26
-              ],
-              [
-                39.0,
-                0.24
-              ],
-              [
-                44.0,
-                0.31
-              ],
-              [
-                53.0,
-                0.28
-              ],
-              [
-                42.0,
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Potencia HP",
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 46.0,
-          "variable_independiente_2": 0.33
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Potencia HP",
             "Rango de comunicación"
           ],
           "n_predictores": 2,
@@ -2395,314 +1788,6 @@
             ]
           },
           "variable_independiente_1": 46.0,
-          "variable_independiente_2": 1500.0
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Envergadura",
-            "Alcance de la aeronave"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            18.73761313844903,
-            -0.05235561487213969
-          ],
-          "intercepto_original": -35.80845344259891,
-          "ecuacion_string": "y = -35.80845344259891 + 18.73761313844903*x0 + -0.05235561487213969*x1",
-          "mape": 5.793448257556175,
-          "r2": 0.9700504817480966,
-          "corr": 0.7919102989555091,
-          "Confianza": 0.35031358920845357,
-          "Confianza_LOOCV": 0.20072967184183158,
-          "Corr_LOOCV": 0.45376456790238084,
-          "MAPE_LOOCV": 13.720403673957945,
-          "R2_LOOCV": 0.8222227140686247,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.9972136401310999,
-            0.0027863598689000326
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52,
-                600.0
-              ],
-              [
-                5.64,
-                700.0
-              ],
-              [
-                6.39,
-                790.0
-              ],
-              [
-                7.36,
-                870.0
-              ],
-              [
-                7.7,
-                910.0
-              ],
-              [
-                8.11,
-                960.0
-              ],
-              [
-                7.0,
-                800.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura",
-              "Alcance de la aeronave"
-            ]
-          },
-          "variable_independiente_1": 8.12,
-          "variable_independiente_2": 920.0
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Envergadura",
-            "Velocidad a la que se realiza el crucero (KTAS)"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            13.28111172201865,
-            0.4672400044437247
-          ],
-          "intercepto_original": -60.12192869893007,
-          "ecuacion_string": "y = -60.12192869893007 + 13.28111172201865*x0 + 0.4672400044437247*x1",
-          "mape": 4.001564506225021,
-          "r2": 0.9750198738650292,
-          "corr": 0.8541244533916805,
-          "Confianza": 0.3778349685475657,
-          "Confianza_LOOCV": 0.3131889186856555,
-          "Corr_LOOCV": 0.7079871802470319,
-          "MAPE_LOOCV": 7.846100582139494,
-          "R2_LOOCV": 0.9390477326366968,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.9660148348151149,
-            0.03398516518488515
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52,
-                40.0
-              ],
-              [
-                5.64,
-                38.0
-              ],
-              [
-                6.39,
-                34.0
-              ],
-              [
-                7.36,
-                42.0
-              ],
-              [
-                7.7,
-                40.0
-              ],
-              [
-                8.11,
-                40.0
-              ],
-              [
-                7.0,
-                45.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura",
-              "Velocidad a la que se realiza el crucero (KTAS)"
-            ]
-          },
-          "variable_independiente_1": 8.12,
-          "variable_independiente_2": 41.0
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Envergadura",
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            12.660624115525703,
-            61.94949782469354
-          ],
-          "intercepto_original": -53.55313424236427,
-          "ecuacion_string": "y = -53.55313424236427 + 12.660624115525703*x0 + 61.94949782469354*x1",
-          "mape": 4.919633612051221,
-          "r2": 0.9758522237538904,
-          "corr": 0.8239383248085712,
-          "Confianza": 0.36448167454166086,
-          "Confianza_LOOCV": 0.2913839781773251,
-          "Corr_LOOCV": 0.6586954670831899,
-          "MAPE_LOOCV": 9.280200045184715,
-          "R2_LOOCV": 0.9360709371786942,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.1696904359125686,
-            0.8303095640874313
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52,
-                0.25
-              ],
-              [
-                5.64,
-                0.21
-              ],
-              [
-                6.39,
-                0.26
-              ],
-              [
-                7.36,
-                0.24
-              ],
-              [
-                7.7,
-                0.31
-              ],
-              [
-                8.11,
-                0.28
-              ],
-              [
-                7.0,
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura",
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 8.12,
-          "variable_independiente_2": 0.33
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Envergadura",
-            "Rango de comunicación"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            14.805892330190545,
-            -0.002166547613591077
-          ],
-          "intercepto_original": -49.5341114543503,
-          "ecuacion_string": "y = -49.5341114543503 + 14.805892330190545*x0 + -0.002166547613591077*x1",
-          "mape": 6.073701984066459,
-          "r2": 0.977518712701251,
-          "corr": 0.7863026235484102,
-          "Confianza": 0.3478329485329026,
-          "Confianza_LOOCV": 0.24539168080200865,
-          "Corr_LOOCV": 0.5547264088276028,
-          "MAPE_LOOCV": 12.151660765642728,
-          "R2_LOOCV": 0.9195635353647208,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.9998536913155553,
-            0.00014630868444469279
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                4.52,
-                100.0
-              ],
-              [
-                5.64,
-                20.0
-              ],
-              [
-                6.39,
-                500.0
-              ],
-              [
-                7.36,
-                2500.0
-              ],
-              [
-                7.7,
-                2500.0
-              ],
-              [
-                8.11,
-                800.0
-              ],
-              [
-                7.0,
-                500.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Envergadura",
-              "Rango de comunicación"
-            ]
-          },
-          "variable_independiente_1": 8.12,
           "variable_independiente_2": 1500.0
         },
         {
@@ -2786,83 +1871,6 @@
           "tipo": "linear-2",
           "predictores": [
             "Alcance de la aeronave",
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            0.12382163394056477,
-            75.28638483480991
-          ],
-          "intercepto_original": -72.12712619044024,
-          "ecuacion_string": "y = -72.12712619044024 + 0.12382163394056477*x0 + 75.28638483480991*x1",
-          "mape": 6.713635998957644,
-          "r2": 0.9470896389877362,
-          "corr": 0.7497569528619467,
-          "Confianza": 0.3316664141601447,
-          "Confianza_LOOCV": 0.24772115676877676,
-          "Corr_LOOCV": 0.5599923650053842,
-          "MAPE_LOOCV": 11.515491532959455,
-          "R2_LOOCV": 0.8876841655413987,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.0016419744718757093,
-            0.9983580255281242
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                600.0,
-                0.25
-              ],
-              [
-                700.0,
-                0.21
-              ],
-              [
-                790.0,
-                0.26
-              ],
-              [
-                870.0,
-                0.24
-              ],
-              [
-                910.0,
-                0.31
-              ],
-              [
-                960.0,
-                0.28
-              ],
-              [
-                800.0,
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Alcance de la aeronave",
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 920.0,
-          "variable_independiente_2": 0.33
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Alcance de la aeronave",
             "Rango de comunicación"
           ],
           "n_predictores": 2,
@@ -2940,83 +1948,6 @@
           "tipo": "linear-2",
           "predictores": [
             "Velocidad a la que se realiza el crucero (KTAS)",
-            "Ancho del fuselaje"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 7,
-          "coeficientes_originales": [
-            0.9990868542127628,
-            330.4779966986266
-          ],
-          "intercepto_original": -79.07428089769252,
-          "ecuacion_string": "y = -79.07428089769252 + 0.9990868542127628*x0 + 330.4779966986266*x1",
-          "mape": 26.250127846067095,
-          "r2": 0.47435205760492183,
-          "corr": -0.13782823273310896,
-          "Confianza": 0,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.003014045023880218,
-            0.9969859549761199
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                40.0,
-                0.25
-              ],
-              [
-                38.0,
-                0.21
-              ],
-              [
-                34.0,
-                0.26
-              ],
-              [
-                42.0,
-                0.24
-              ],
-              [
-                40.0,
-                0.31
-              ],
-              [
-                40.0,
-                0.28
-              ],
-              [
-                45.0,
-                0.28
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Velocidad a la que se realiza el crucero (KTAS)",
-              "Ancho del fuselaje"
-            ]
-          },
-          "variable_independiente_1": 41.0,
-          "variable_independiente_2": 0.33
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Velocidad a la que se realiza el crucero (KTAS)",
             "Rango de comunicación"
           ],
           "n_predictores": 2,
@@ -3089,173 +2020,6 @@
           },
           "variable_independiente_1": 41.0,
           "variable_independiente_2": 1500.0
-        },
-        {
-          "tipo": "linear-2",
-          "predictores": [
-            "Ancho del fuselaje",
-            "Rango de comunicación"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 8,
-          "coeficientes_originales": [
-            280.5944589437919,
-            0.005604748324422345
-          ],
-          "intercepto_original": -31.865192349462816,
-          "ecuacion_string": "y = -31.865192349462816 + 280.5944589437919*x0 + 0.005604748324422345*x1",
-          "mape": 22.06443809376342,
-          "r2": 0.5782937180505219,
-          "corr": 0.053665589233146904,
-          "Confianza": 0.028416865426827514,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.9999800258479964,
-            1.997415200365764e-05
-          ],
-          "transformacion": "normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                0.25,
-                100.0
-              ],
-              [
-                0.21,
-                20.0
-              ],
-              [
-                0.23,
-                20.0
-              ],
-              [
-                0.26,
-                500.0
-              ],
-              [
-                0.24,
-                2500.0
-              ],
-              [
-                0.31,
-                2500.0
-              ],
-              [
-                0.28,
-                800.0
-              ],
-              [
-                0.28,
-                500.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Ancho del fuselaje",
-              "Rango de comunicación"
-            ]
-          },
-          "variable_independiente_1": 0.33,
-          "variable_independiente_2": 1500.0
-        },
-        {
-          "tipo": "poly-2",
-          "predictores": [
-            "Ancho del fuselaje",
-            "Rango de comunicación"
-          ],
-          "n_predictores": 2,
-          "n_muestras_entrenamiento": 8,
-          "coeficientes_originales": [
-            -6050.529513403274,
-            0.12140772213036305,
-            12295.837512594115,
-            -0.2286508163153355,
-            -2.1296073834762425e-05
-          ],
-          "intercepto_original": 762.383022155478,
-          "ecuacion_string": "y = 762.383022155478 + -6050.529513403274*x0 + 0.12140772213036305*x1 + 12295.837512594115*x2 + -0.2286508163153355*x3 + -2.1296073834762425e-05*x4",
-          "mape": 11.025267724926477,
-          "r2": 0.9064233004852346,
-          "corr": 0.5857027260784013,
-          "Confianza": 0.31013980811405634,
-          "Confianza_LOOCV": null,
-          "Corr_LOOCV": null,
-          "MAPE_LOOCV": null,
-          "R2_LOOCV": null,
-          "Advertencia": null,
-          "Peso de predictores": [
-            0.9999809189039329,
-            1.908109606704854e-05
-          ],
-          "transformacion": "polinómica+normalización",
-          "metodo_imputacion": "correlacion",
-          "datos_entrenamiento": {
-            "X_original": [
-              [
-                0.25,
-                100.0
-              ],
-              [
-                0.21,
-                20.0
-              ],
-              [
-                0.23,
-                20.0
-              ],
-              [
-                0.26,
-                500.0
-              ],
-              [
-                0.24,
-                2500.0
-              ],
-              [
-                0.31,
-                2500.0
-              ],
-              [
-                0.28,
-                800.0
-              ],
-              [
-                0.28,
-                500.0
-              ]
-            ],
-            "y_original": [
-              20.0,
-              32.0,
-              32.0,
-              40.0,
-              52.0,
-              61.0,
-              70.0,
-              55.0
-            ],
-            "columnas_predictores": [
-              "Ancho del fuselaje",
-              "Rango de comunicación"
-            ]
-          },
-          "variable_independiente_1": 0.33,
-          "variable_independiente_2": 1500.0
         }
       ]
     }
@@ -3265,23 +2029,185 @@
       "parametro_objetivo": "Payload",
       "idx_objetivo": "A5",
       "df_original": {
-        "Potencia HP": [
-          18.0,
-          24.0,
-          32.0,
-          39.0,
-          44.0,
-          53.0,
-          42.0
+        "Peso máximo al despegue (MTOW)": [
+          100,
+          150,
+          150,
+          200,
+          250,
+          300,
+          200,
+          300,
+          350,
+          350
         ],
         "Payload": [
           20.0,
           32.0,
+          32.0,
           40.0,
           52.0,
+          NaN,
+          NaN,
           61.0,
           70.0,
           55.0
+        ],
+        "Potencia HP": [
+          18.0,
+          24.0,
+          NaN,
+          32.0,
+          39.0,
+          46.0,
+          31.0,
+          44.0,
+          53.0,
+          42.0
+        ],
+        "Envergadura": [
+          4.52,
+          5.64,
+          NaN,
+          6.39,
+          7.36,
+          8.12,
+          6.2,
+          7.7,
+          8.11,
+          7.0
+        ],
+        "Alcance de la aeronave": [
+          600.0,
+          700.0,
+          NaN,
+          790.0,
+          870.0,
+          920.0,
+          800.0,
+          910.0,
+          960.0,
+          800.0
+        ],
+        "Velocidad a la que se realiza el crucero (KTAS)": [
+          40.0,
+          38.0,
+          NaN,
+          34.0,
+          42.0,
+          41.0,
+          34.0,
+          40.0,
+          40.0,
+          45.0
+        ],
+        "Cantidad de motores": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "Ancho del fuselaje": [
+          0.25,
+          0.21,
+          0.23,
+          0.26,
+          0.24,
+          0.33,
+          0.24,
+          0.31,
+          0.28,
+          0.28
+        ],
+        "Rango de comunicación": [
+          100,
+          20,
+          20,
+          500,
+          2500,
+          1500,
+          500,
+          2500,
+          800,
+          500
+        ],
+        "Misión": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          3
+        ],
+        "Despegue": [
+          1,
+          1,
+          1,
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          1
+        ],
+        "Propulsión horizontal": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "Propulsión vertical": [
+          5,
+          5,
+          5,
+          1,
+          5,
+          1,
+          1,
+          5,
+          5,
+          5
+        ],
+        "Cantidad de motores propulsión vertical": [
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0,
+          0
+        ],
+        "Cantidad de motores propulsión horizontal": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
         ]
       },
       "final": {
@@ -3308,7 +2234,7 @@
         "Método predictivo": "Correlacion",
         "variable_independiente_1": 31.0,
         "variable_independiente_2": 6.2,
-        "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
+        "Advertencia": "🟢 Modelo robusto; ⚠️ modelo sin filtrado por familia"
       }
     },
     "informacion_modelos_celda": {
@@ -6534,11 +5460,26 @@
       "parametro_objetivo": "Potencia HP",
       "idx_objetivo": "A3",
       "df_original": {
+        "Peso máximo al despegue (MTOW)": [
+          100,
+          150,
+          150,
+          200,
+          250,
+          300,
+          200,
+          300,
+          350,
+          350
+        ],
         "Payload": [
           20.0,
           32.0,
+          32.0,
           40.0,
           52.0,
+          NaN,
+          NaN,
           61.0,
           70.0,
           55.0
@@ -6546,11 +5487,158 @@
         "Potencia HP": [
           18.0,
           24.0,
+          NaN,
           32.0,
           39.0,
+          46.0,
+          31.0,
           44.0,
           53.0,
           42.0
+        ],
+        "Envergadura": [
+          4.52,
+          5.64,
+          NaN,
+          6.39,
+          7.36,
+          8.12,
+          6.2,
+          7.7,
+          8.11,
+          7.0
+        ],
+        "Alcance de la aeronave": [
+          600.0,
+          700.0,
+          NaN,
+          790.0,
+          870.0,
+          920.0,
+          800.0,
+          910.0,
+          960.0,
+          800.0
+        ],
+        "Velocidad a la que se realiza el crucero (KTAS)": [
+          40.0,
+          38.0,
+          NaN,
+          34.0,
+          42.0,
+          41.0,
+          34.0,
+          40.0,
+          40.0,
+          45.0
+        ],
+        "Cantidad de motores": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "Ancho del fuselaje": [
+          0.25,
+          0.21,
+          0.23,
+          0.26,
+          0.24,
+          0.33,
+          0.24,
+          0.31,
+          0.28,
+          0.28
+        ],
+        "Rango de comunicación": [
+          100,
+          20,
+          20,
+          500,
+          2500,
+          1500,
+          500,
+          2500,
+          800,
+          500
+        ],
+        "Misión": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          3
+        ],
+        "Despegue": [
+          1,
+          1,
+          1,
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          1
+        ],
+        "Propulsión horizontal": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "Propulsión vertical": [
+          5,
+          5,
+          5,
+          1,
+          5,
+          1,
+          1,
+          5,
+          5,
+          5
+        ],
+        "Cantidad de motores propulsión vertical": [
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0,
+          0
+        ],
+        "Cantidad de motores propulsión horizontal": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
         ]
       },
       "final": {
@@ -6577,7 +5665,7 @@
         "Método predictivo": "Correlacion",
         "variable_independiente_1": 32.0,
         "variable_independiente_2": 20.0,
-        "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
+        "Advertencia": "🟢 Modelo robusto; ⚠️ modelo sin filtrado por familia"
       }
     },
     "informacion_modelos_celda": {
@@ -8149,23 +7237,185 @@
       "parametro_objetivo": "Envergadura",
       "idx_objetivo": "A3",
       "df_original": {
+        "Peso máximo al despegue (MTOW)": [
+          100,
+          150,
+          150,
+          200,
+          250,
+          300,
+          200,
+          300,
+          350,
+          350
+        ],
         "Payload": [
           20.0,
           32.0,
+          32.0,
           40.0,
           52.0,
+          NaN,
+          NaN,
           61.0,
           70.0,
           55.0
         ],
+        "Potencia HP": [
+          18.0,
+          24.0,
+          NaN,
+          32.0,
+          39.0,
+          46.0,
+          31.0,
+          44.0,
+          53.0,
+          42.0
+        ],
         "Envergadura": [
           4.52,
           5.64,
+          NaN,
           6.39,
           7.36,
+          8.12,
+          6.2,
           7.7,
           8.11,
           7.0
+        ],
+        "Alcance de la aeronave": [
+          600.0,
+          700.0,
+          NaN,
+          790.0,
+          870.0,
+          920.0,
+          800.0,
+          910.0,
+          960.0,
+          800.0
+        ],
+        "Velocidad a la que se realiza el crucero (KTAS)": [
+          40.0,
+          38.0,
+          NaN,
+          34.0,
+          42.0,
+          41.0,
+          34.0,
+          40.0,
+          40.0,
+          45.0
+        ],
+        "Cantidad de motores": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "Ancho del fuselaje": [
+          0.25,
+          0.21,
+          0.23,
+          0.26,
+          0.24,
+          0.33,
+          0.24,
+          0.31,
+          0.28,
+          0.28
+        ],
+        "Rango de comunicación": [
+          100,
+          20,
+          20,
+          500,
+          2500,
+          1500,
+          500,
+          2500,
+          800,
+          500
+        ],
+        "Misión": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          3
+        ],
+        "Despegue": [
+          1,
+          1,
+          1,
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          1
+        ],
+        "Propulsión horizontal": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "Propulsión vertical": [
+          5,
+          5,
+          5,
+          1,
+          5,
+          1,
+          1,
+          5,
+          5,
+          5
+        ],
+        "Cantidad de motores propulsión vertical": [
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0,
+          0
+        ],
+        "Cantidad de motores propulsión horizontal": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
         ]
       },
       "final": {
@@ -8189,7 +7439,7 @@
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
         "variable_independiente_1": 32.0,
-        "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
+        "Advertencia": "🟢 Modelo robusto; ⚠️ modelo sin filtrado por familia"
       }
     },
     "informacion_modelos_celda": {
@@ -9761,23 +9011,185 @@
       "parametro_objetivo": "Alcance de la aeronave",
       "idx_objetivo": "A3",
       "df_original": {
+        "Peso máximo al despegue (MTOW)": [
+          100,
+          150,
+          150,
+          200,
+          250,
+          300,
+          200,
+          300,
+          350,
+          350
+        ],
         "Payload": [
           20.0,
           32.0,
+          32.0,
           40.0,
           52.0,
+          NaN,
+          NaN,
           61.0,
           70.0,
           55.0
         ],
+        "Potencia HP": [
+          18.0,
+          24.0,
+          NaN,
+          32.0,
+          39.0,
+          46.0,
+          31.0,
+          44.0,
+          53.0,
+          42.0
+        ],
+        "Envergadura": [
+          4.52,
+          5.64,
+          NaN,
+          6.39,
+          7.36,
+          8.12,
+          6.2,
+          7.7,
+          8.11,
+          7.0
+        ],
         "Alcance de la aeronave": [
           600.0,
           700.0,
+          NaN,
           790.0,
           870.0,
+          920.0,
+          800.0,
           910.0,
           960.0,
           800.0
+        ],
+        "Velocidad a la que se realiza el crucero (KTAS)": [
+          40.0,
+          38.0,
+          NaN,
+          34.0,
+          42.0,
+          41.0,
+          34.0,
+          40.0,
+          40.0,
+          45.0
+        ],
+        "Cantidad de motores": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "Ancho del fuselaje": [
+          0.25,
+          0.21,
+          0.23,
+          0.26,
+          0.24,
+          0.33,
+          0.24,
+          0.31,
+          0.28,
+          0.28
+        ],
+        "Rango de comunicación": [
+          100,
+          20,
+          20,
+          500,
+          2500,
+          1500,
+          500,
+          2500,
+          800,
+          500
+        ],
+        "Misión": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          3
+        ],
+        "Despegue": [
+          1,
+          1,
+          1,
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          1
+        ],
+        "Propulsión horizontal": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "Propulsión vertical": [
+          5,
+          5,
+          5,
+          1,
+          5,
+          1,
+          1,
+          5,
+          5,
+          5
+        ],
+        "Cantidad de motores propulsión vertical": [
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0,
+          0
+        ],
+        "Cantidad de motores propulsión horizontal": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
         ]
       },
       "final": {
@@ -9801,7 +9213,7 @@
         "Iteración imputación": 1,
         "Método predictivo": "Correlacion",
         "variable_independiente_1": 32.0,
-        "Advertencia": "Modelo robusto; modelo sin filtrado por familia"
+        "Advertencia": "🟢 Modelo robusto; ⚠️ modelo sin filtrado por familia"
       }
     },
     "informacion_modelos_celda": {
@@ -11373,23 +10785,185 @@
       "parametro_objetivo": "Velocidad a la que se realiza el crucero (KTAS)",
       "idx_objetivo": "A3",
       "df_original": {
+        "Peso máximo al despegue (MTOW)": [
+          100,
+          150,
+          150,
+          200,
+          250,
+          300,
+          200,
+          300,
+          350,
+          350
+        ],
         "Payload": [
           20.0,
           32.0,
+          32.0,
           40.0,
           52.0,
+          NaN,
+          NaN,
           61.0,
           70.0,
           55.0
         ],
+        "Potencia HP": [
+          18.0,
+          24.0,
+          NaN,
+          32.0,
+          39.0,
+          46.0,
+          31.0,
+          44.0,
+          53.0,
+          42.0
+        ],
+        "Envergadura": [
+          4.52,
+          5.64,
+          NaN,
+          6.39,
+          7.36,
+          8.12,
+          6.2,
+          7.7,
+          8.11,
+          7.0
+        ],
+        "Alcance de la aeronave": [
+          600.0,
+          700.0,
+          NaN,
+          790.0,
+          870.0,
+          920.0,
+          800.0,
+          910.0,
+          960.0,
+          800.0
+        ],
         "Velocidad a la que se realiza el crucero (KTAS)": [
           40.0,
           38.0,
+          NaN,
           34.0,
           42.0,
+          41.0,
+          34.0,
           40.0,
           40.0,
           45.0
+        ],
+        "Cantidad de motores": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "Ancho del fuselaje": [
+          0.25,
+          0.21,
+          0.23,
+          0.26,
+          0.24,
+          0.33,
+          0.24,
+          0.31,
+          0.28,
+          0.28
+        ],
+        "Rango de comunicación": [
+          100,
+          20,
+          20,
+          500,
+          2500,
+          1500,
+          500,
+          2500,
+          800,
+          500
+        ],
+        "Misión": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          3
+        ],
+        "Despegue": [
+          1,
+          1,
+          1,
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          1
+        ],
+        "Propulsión horizontal": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "Propulsión vertical": [
+          5,
+          5,
+          5,
+          1,
+          5,
+          1,
+          1,
+          5,
+          5,
+          5
+        ],
+        "Cantidad de motores propulsión vertical": [
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0,
+          0
+        ],
+        "Cantidad de motores propulsión horizontal": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
         ]
       },
       "final": {
@@ -11416,7 +10990,7 @@
         "Método predictivo": "Correlacion",
         "variable_independiente_1": 0.23,
         "variable_independiente_2": 20.0,
-        "Advertencia": "Modelo no robusto; modelo sin filtrado por familia"
+        "Advertencia": "🟡 Modelo no robusto; ⚠️ modelo sin filtrado por familia"
       }
     },
     "informacion_modelos_celda": {
