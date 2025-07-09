@@ -19,6 +19,12 @@ from typing import List, Dict, Optional, Any, Tuple
 import re
 import logging
 
+# Importar configuración de colores
+try:
+    from .plot_config import COLORS
+except ImportError:
+    from plot_config import COLORS
+
 logger = logging.getLogger(__name__)
 
 
@@ -154,7 +160,8 @@ def normalize_training_data(X_original: List[List[float]], y_original: List[floa
     # Normalizar cada predictor
     x0_norm = (X_array[:, 0] - x0_range[0]) / (x0_range[1] - x0_range[0])
     x1_norm = (X_array[:, 1] - x1_range[0]) / (x1_range[1] - x1_range[0])
-    y_norm = (y_array - y_range[0]) / (y_range[1] - y_range[0])
+    # 🔧 CAMBIO: No normalizar variable dependiente (Y) para mostrar valores originales
+    y_norm = y_array  # Mantener valores originales
     
     return x0_norm, x1_norm, y_norm
 
@@ -244,7 +251,8 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
         # Normalizar datos de entrenamiento
         x0_norm = (X_array[:, 0] - x0_range[0]) / (x0_range[1] - x0_range[0]) if x0_range[1] > x0_range[0] else X_array[:, 0]
         x1_norm = (X_array[:, 1] - x1_range[0]) / (x1_range[1] - x1_range[0]) if x1_range[1] > x1_range[0] else X_array[:, 1]
-        y_norm = (y_array - y_range[0]) / (y_range[1] - y_range[0]) if y_range[1] > y_range[0] else y_array
+        # 🔧 CAMBIO: No normalizar variable dependiente (Y) para mostrar valores originales
+        y_norm = y_array  # Mantener valores originales
         is_highlighted = (highlight_model_idx is not None and idx == highlight_model_idx)
         color = color_map.get(tipo, '#2ca02c')
         opacity = 1.0 if is_highlighted else 0.7
@@ -298,7 +306,7 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
                             f"Modelo {idx+1}: {tipo}<br>" +
                             f"X0 (norm): %{{x:.3f}}<br>" +
                             f"X1 (norm): %{{y:.3f}}<br>" +
-                            f"Y (norm): %{{z:.3f}}<br>" +
+                            f"Y (escala original): %{{z:.3f}}<br>" +
                             f"R²: {model.get('r2', 0):.3f}<br>" +
                             f"MAPE: {model.get('mape', 0):.2f}%<br>" +
                             "<extra></extra>"
@@ -467,3 +475,208 @@ def add_theoretical_points_3d(fig: go.Figure,
     ))
     
     logger.info(f"Añadidos {len(points_3d)} puntos teóricos 3D al gráfico con coordenadas: x={x_coords[:3]}..., y={y_coords[:3]}..., z={z_coords[:3]}...")
+
+
+# =============================================================================
+# 🔧 FUNCIONES PARA SUPERFICIES CON ECUACIONES NORMALIZADAS
+# =============================================================================
+
+def generate_normalized_surface_3d(ecuacion_original: str, rango_x: Tuple[float, float], 
+                                   rango_y: Tuple[float, float], pred_names: List[str],
+                                   resolution: int = 50) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Genera superficie 3D usando ecuación normalizada (estilo asdasd.py).
+    
+    La metodología es:
+    1. Crear malla normalizada [0,1] x [0,1] para X*, Y*
+    2. Crear ecuación que acepta X*, Y* y desnormaliza internamente
+    3. Evaluar ecuación para obtener Z en escala original
+    4. Retornar X*, Y* normalizadas y Z original para gráfico coherente
+    
+    Parameters:
+    -----------
+    ecuacion_original : str
+        Ecuación que usa variables en escala original
+    rango_x : Tuple[float, float]
+        Rango [min, max] del primer predictor
+    rango_y : Tuple[float, float]
+        Rango [min, max] del segundo predictor
+    pred_names : List[str]
+        Nombres de los predictores [pred_x, pred_y]
+    resolution : int
+        Resolución de la malla
+        
+    Returns:
+    --------
+    Tuple[np.ndarray, np.ndarray, np.ndarray]
+        Arrays X*, Y* normalizados y Z original para superficie coherente
+    """
+    try:
+        # Importar funciones de normalización
+        try:
+            from .normalization_engine import (
+                create_normalized_equation_3d, 
+                evaluate_normalized_equation_3d
+            )
+        except ImportError:
+            from normalization_engine import (
+                create_normalized_equation_3d, 
+                evaluate_normalized_equation_3d
+            )
+        
+        # Crear malla normalizada [0,1] x [0,1]
+        x_star = np.linspace(0, 1, resolution)
+        y_star = np.linspace(0, 1, resolution)
+        X_star, Y_star = np.meshgrid(x_star, y_star)
+        
+        # Crear ecuación normalizada que acepta x_star, y_star
+        ecuacion_normalizada = create_normalized_equation_3d(
+            ecuacion_original, rango_x, rango_y, pred_names
+        )
+        
+        # Evaluar ecuación normalizada para obtener Z en escala original
+        Z_original = evaluate_normalized_equation_3d(
+            ecuacion_normalizada, X_star, Y_star
+        )
+        
+        logger.info(f"Superficie 3D normalizada generada: "
+                   f"X*=[0,1], Y*=[0,1], Z=[{np.nanmin(Z_original):.3f}, {np.nanmax(Z_original):.3f}]")
+        
+        return X_star, Y_star, Z_original
+        
+    except Exception as e:
+        logger.error(f"Error generando superficie normalizada 3D: {e}")
+        # Fallback a método tradicional
+        return generate_model_surface_fallback(rango_x, rango_y, resolution)
+
+
+def generate_model_surface_fallback(rango_x: Tuple[float, float], 
+                                   rango_y: Tuple[float, float], 
+                                   resolution: int = 50) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Superficie de fallback en caso de error.
+    """
+    x_star = np.linspace(0, 1, resolution)
+    y_star = np.linspace(0, 1, resolution)
+    X_star, Y_star = np.meshgrid(x_star, y_star)
+    Z_fallback = np.zeros_like(X_star)
+    
+    logger.warning("Usando superficie de fallback (plana)")
+    return X_star, Y_star, Z_fallback
+
+
+def update_3d_plot_with_normalized_equations(fig, modelos_por_celda, celda_key, 
+                                            highlight_model_idx=None):
+    """
+    Actualiza un gráfico 3D existente para usar ecuaciones normalizadas coherentes.
+    
+    Esta función reemplaza las superficies existentes con versiones que usan
+    la metodología normalizada (estilo asdasd.py) para máxima coherencia visual.
+    
+    Parameters:
+    -----------
+    fig : plotly.graph_objects.Figure
+        Figura 3D existente para actualizar
+    modelos_por_celda : dict
+        Datos de modelos
+    celda_key : str
+        Clave de la celda (ej: "A7|Payload")
+    highlight_model_idx : int, optional
+        Índice del modelo a destacar
+        
+    Returns:
+    --------
+    plotly.graph_objects.Figure
+        Figura actualizada con superficies normalizadas
+    """
+    try:
+        # Obtener datos de la celda
+        if celda_key not in modelos_por_celda:
+            logger.warning(f"Celda {celda_key} no encontrada")
+            return fig
+        
+        celda_data = modelos_por_celda[celda_key]
+        modelos = celda_data.get('modelos', [])
+        
+        if not modelos:
+            logger.warning(f"No hay modelos en celda {celda_key}")
+            return fig
+        
+        # Obtener rangos de la celda
+        try:
+            from .plot_model_curves import get_best_model_ranges
+        except ImportError:
+            from plot_model_curves import get_best_model_ranges
+            
+        rango_x, rango_y, rango_z, pred_names = get_best_model_ranges(
+            modelos_por_celda, celda_key
+        )
+        
+        # Actualizar cada modelo con superficie normalizada
+        traces_to_remove = []
+        traces_to_add = []
+        
+        for trace_idx, trace in enumerate(fig.data):
+            # Buscar trazas de superficie para reemplazar
+            if hasattr(trace, 'type') and trace.type == 'surface':
+                model_name = getattr(trace, 'name', '')
+                if 'Modelo' in model_name:
+                    traces_to_remove.append(trace_idx)
+        
+        # Remover trazas de superficie antiguas
+        for idx in reversed(traces_to_remove):
+            fig.data = list(fig.data[:idx]) + list(fig.data[idx+1:])
+        
+        # Añadir nuevas superficies normalizadas
+        for i, modelo in enumerate(modelos):
+            try:
+                ecuacion_original = modelo.get('ecuacion_string', '')
+                if not ecuacion_original:
+                    continue
+                
+                # Generar superficie normalizada
+                X_star, Y_star, Z_original = generate_normalized_surface_3d(
+                    ecuacion_original, rango_x, rango_y, pred_names
+                )
+                
+                # Configuración visual
+                opacity = 0.7 if highlight_model_idx is None or i == highlight_model_idx else 0.3
+                color = COLORS['model_lines'][i % len(COLORS['model_lines'])]
+                
+                # Añadir superficie normalizada
+                fig.add_trace(go.Surface(
+                    x=X_star,  # Coordenadas normalizadas [0,1]
+                    y=Y_star,  # Coordenadas normalizadas [0,1]
+                    z=Z_original,  # Valores en escala original
+                    opacity=opacity,
+                    colorscale=[[0, color], [1, color]],
+                    showscale=False,
+                    name=f'Modelo {i+1} (Normalizado)',
+                    hovertemplate=(
+                        f"<b>Modelo {i+1}</b><br>"
+                        f"X* (norm): %{{x:.3f}}<br>"
+                        f"Y* (norm): %{{y:.3f}}<br>"
+                        f"Z (escala original): %{{z:.3f}}<br>"
+                        f"<b>Ecuación normalizada activa</b>"
+                        "<extra></extra>"
+                    )
+                ))
+                
+                logger.info(f"Superficie normalizada añadida para Modelo {i+1}")
+                
+            except Exception as e:
+                logger.error(f"Error añadiendo superficie normalizada para modelo {i}: {e}")
+        
+        # Actualizar título para indicar uso de ecuaciones normalizadas
+        current_title = fig.layout.title.text if fig.layout.title else ""
+        if "Ecuaciones Normalizadas" not in current_title:
+            fig.update_layout(
+                title=f"{current_title} - Ecuaciones Normalizadas Activas"
+            )
+        
+        logger.info(f"Gráfico 3D actualizado con {len(modelos)} superficies normalizadas")
+        return fig
+        
+    except Exception as e:
+        logger.error(f"Error actualizando gráfico 3D con ecuaciones normalizadas: {e}")
+        return fig

@@ -262,10 +262,8 @@ def create_interactive_plot(
                 x_orig_norm = (x_orig - x_min) / (x_max - x_min)
             else:
                 x_orig_norm = np.full_like(x_orig, 0.5, dtype=float)
-            if y_max != y_min:
-                y_orig_norm = (y_orig - y_min) / (y_max - y_min)
-            else:
-                y_orig_norm = np.full_like(y_orig, 0.5, dtype=float)
+            # 🔧 CAMBIO: No normalizar variable dependiente (Y) para mostrar valores originales
+            y_orig_norm = y_orig  # Mantener valores originales
             x_orig_list = x_orig.tolist()
             x_orig_norm_list = x_orig_norm.tolist()
             y_orig_norm_list = y_orig_norm.tolist()
@@ -284,7 +282,7 @@ def create_interactive_plot(
                 # Información personalizada para identificar el modelo en callbacks
                 customdata=[i] * len(x_orig_norm_list),
                 text=[
-                    f"Aeronave: {aeronave}<br>Parámetro: {parametro}<br>Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y normalizado: {yn:.3f}" for xv, xn, yn in zip(x_orig_list, x_orig_norm_list, y_orig_norm_list)
+                    f"Aeronave: {aeronave}<br>Parámetro: {parametro}<br>Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y (escala original): {yn:.3f}" for xv, xn, yn in zip(x_orig_list, x_orig_norm_list, y_orig_norm_list)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
@@ -322,10 +320,8 @@ def create_interactive_plot(
                 x_train_norm = (x_train - x_min) / (x_max - x_min)
             else:
                 x_train_norm = np.full_like(x_train, 0.5, dtype=float)
-            if y_max != y_min:
-                y_train_norm = (y_train - y_min) / (y_max - y_min)
-            else:
-                y_train_norm = np.full_like(y_train, 0.5, dtype=float)
+            # 🔧 CAMBIO: No normalizar variable dependiente (Y) para mostrar valores originales
+            y_train_norm = y_train  # Mantener valores originales
             x_train_list = x_train.tolist()
             x_train_norm_list = x_train_norm.tolist()
             y_train_norm_list = y_train_norm.tolist()
@@ -347,7 +343,7 @@ def create_interactive_plot(
                 # Información personalizada para identificar el modelo en callbacks
                 customdata=[i] * len(x_train_norm_list),
                 text=[
-                    f"Aeronave: {aeronave}<br>Parámetro: {parametro}<br>Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y normalizado: {yn:.3f}" for xv, xn, yn in zip(x_train_list, x_train_norm_list, y_train_norm_list)
+                    f"Aeronave: {aeronave}<br>Parámetro: {parametro}<br>Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Y (escala original): {yn:.3f}" for xv, xn, yn in zip(x_train_list, x_train_norm_list, y_train_norm_list)
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{i}',
@@ -1012,7 +1008,7 @@ def create_interactive_plot_3d(
 ) -> go.Figure:
     """
     Visualización 3D de modelos de 2 predictores (lineales o polinómicos) para Dash.
-    Utiliza la función create_3d_plot para graficar los modelos filtrados y normalizados.
+    Utiliza la función create_3d_plot para graficar los modelos filtrados con Z en escala original.
     """
     # Importar funciones necesarias para evitar circular imports
     from .plot_model_curves import extract_theoretical_imputation_points
@@ -1082,7 +1078,7 @@ def create_interactive_plot_3d(
     fig.update_layout(
         title=f"Modelos de 2 Predictores (3D) - {aeronave}: {parametro}",
         scene=dict(
-            zaxis_title=f"{parametro} (normalizado)",
+            zaxis_title=f"{parametro} (escala original)",
         ),
         uirevision=f"{aeronave}_{parametro}_3d"  # <-- Forzar uirevision único para 3D
     )
@@ -1141,10 +1137,8 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
         if y_train is not None and len(y_train) > 0:
             y_train = np.array(y_train)
             y_min, y_max = np.min(y_train), np.max(y_train)
-            if y_max != y_min:
-                Z_norm = (Z - y_min) / (y_max - y_min)
-            else:
-                Z_norm = np.full_like(Z, 0.5)
+            # 🔧 CAMBIO: No normalizar Z para mostrar valores originales
+            Z_norm = Z  # Mantener valores originales de la superficie
         else:
             # Si no hay datos de entrenamiento, no normalizar
             Z_norm = Z
@@ -1163,7 +1157,7 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
             f"<b>Ecuación:</b> {ecuacion_string}<br>"
             f"<b>MAPE:</b> {mape:.3f}%<br>"
             f"<b>R²:</b> {r2:.3f}<br>"
-            f"<b>Z normalizado:</b> %{{z:.3f}}"
+            f"<b>Z (escala original):</b> %{{z:.3f}}"
         )
         fig.add_trace(go.Surface(
             x=X0, y=X1, z=Z_norm,
@@ -1193,9 +1187,8 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
             x1_min, x1_max = np.min(x1_vals), np.max(x1_vals)
             x0_norm = (x0_vals - x0_min) / (x0_max - x0_min) if x0_max != x0_min else np.full_like(x0_vals, 0.5)
             x1_norm = (x1_vals - x1_min) / (x1_max - x1_min) if x1_max != x1_min else np.full_like(x1_vals, 0.5)
-            # Normalización del eje z (y_train)
-            y_min, y_max = np.min(y_train), np.max(y_train)
-            y_train_norm = (y_train - y_min) / (y_max - y_min) if y_max != y_min else np.full_like(y_train, 0.5)
+            # 🔧 CAMBIO: No normalizar eje Z (y_train) para mostrar valores originales
+            y_train_norm = y_train  # Mantener valores originales
             fig.add_trace(go.Scatter3d(
                 x=x0_norm, y=x1_norm, z=y_train_norm,
                 mode='markers',
@@ -1231,7 +1224,7 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
         scene=dict(
             xaxis_title=f"{x0_name} (normalizado)",
             yaxis_title=f"{x1_name} (normalizado)",
-            zaxis_title=f"{safe_parametro} (normalizado)",
+            zaxis_title=f"{safe_parametro} (escala original)",
             camera=dict(
                 eye=dict(x=1.2, y=1.2, z=0.8)
             )

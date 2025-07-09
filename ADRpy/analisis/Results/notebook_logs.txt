@@ -830,3 +830,35 @@
 2025-07-08 13:16:07 [MONITOR] Monitoreo iniciado
 2025-07-08 13:16:07 [LAUNCH] Aplicación lanzada exitosamente en modo debug
   Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 13:43:29 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 13:43:29 [MONITOR] Monitoreo iniciado
+2025-07-08 13:43:29 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 13:52:57 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 13:52:57 [MONITOR] Monitoreo iniciado
+2025-07-08 13:52:57 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 14:04:15 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 14:04:15 [MONITOR] Monitoreo iniciado
+2025-07-08 14:04:15 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 20:30:28 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 20:30:28 [MONITOR] Monitoreo iniciado
+2025-07-08 20:30:28 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 20:40:50 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 20:40:50 [MONITOR] Monitoreo iniciado
+2025-07-08 20:40:50 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 23:37:15 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 23:37:15 [MONITOR] Monitoreo iniciado
+2025-07-08 23:37:15 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-08 23:50:09 [LAUNCH] Intentando lanzar en modo debug
+2025-07-08 23:50:09 [MONITOR] Monitoreo iniciado
+2025-07-08 23:50:09 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}
+2025-07-09 00:24:46 [LAUNCH] Intentando lanzar en modo debug
+2025-07-09 00:24:46 [MONITOR] Monitoreo iniciado
+2025-07-09 00:24:46 [LAUNCH] Aplicación lanzada exitosamente en modo debug
+  Detalles: {"port": 8054, "total_modelos": 12}

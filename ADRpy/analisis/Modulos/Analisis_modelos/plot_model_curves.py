@@ -42,6 +42,7 @@ def _confianza_promedio(modelo):
 def normalize_imputation_point(point, rango_x, rango_y, rango_z):
     """
     Normaliza un punto de imputación usando los rangos del modelo.
+    MODIFICADO: No normaliza la coordenada Z (variable dependiente) para mostrar valores originales.
     
     Parameters:
     -----------
@@ -56,7 +57,7 @@ def normalize_imputation_point(point, rango_x, rango_y, rango_z):
     Returns:
     --------
     Tuple[float, float, float]
-        Coordenadas normalizadas
+        Coordenadas: X normalizada, Y normalizada, Z original (no normalizada)
     """
     # Buscar valor de X: preferir variable_independiente_1, si no existe usar x_original
     x_orig = point.get('variable_independiente_1')
@@ -119,12 +120,9 @@ def normalize_imputation_point(point, rango_x, rango_y, rango_z):
     
     if y_orig is not None:
         try:
-            if rango_y[1] != rango_y[0]:
-                y_norm = (y_orig - rango_y[0]) / (rango_y[1] - rango_y[0])
-                print(f"   y_norm calculado: {y_norm}")
-            else:
-                y_norm = 0.5
-                print("   ⚠️ Rango Y constante, y_norm=0.5")
+            # 🔧 CAMBIO: No normalizar variable dependiente (Y) para mostrar valores originales
+            y_norm = y_orig  # Mantener valores originales
+            print(f"   y_norm (sin normalizar): {y_norm}")
         except Exception as e:
             y_norm = None
             print(f"   ❌ ERROR al normalizar Y: {e}")
@@ -132,17 +130,14 @@ def normalize_imputation_point(point, rango_x, rango_y, rango_z):
         y_norm = None
         print("   ⚠️ Y es None, y_norm=None")
 
-    print("\n🔎 [NORMALIZACIÓN Z] Normalizando variable_dependiente (Z):")
-    print(f"   Z valor usado: {z_orig}")
-    print(f"   rango_z: {rango_z}")
-    if rango_z[1] != rango_z[0]:
-        z_norm = (z_orig - rango_z[0]) / (rango_z[1] - rango_z[0])
-        print(f"   z_norm calculado: {z_norm}")
-    else:
-        z_norm = 0.5
-        print("   ⚠️ Rango Z constante, z_norm=0.5")
+    print("\n🔎 [SIN NORMALIZACIÓN Z] Manteniendo variable_dependiente (Z) en escala original:")
+    print(f"   Z valor original usado: {z_orig}")
+    print(f"   ✅ Z se mantiene sin normalizar para mostrar valores reales")
+    
+    # 🔧 CAMBIO PRINCIPAL: NO normalizar Z, mantener valor original
+    z_original = z_orig  # Usar directamente el valor original
 
-    return x_norm, y_norm, z_norm
+    return x_norm, y_norm, z_original
 
 # Control de debug global
 DEBUG_NORMALIZATION = False  # Cambiar a True para debug detallado
@@ -807,19 +802,20 @@ def extract_theoretical_imputation_points(modelos: List[Dict],
                     # MODELO 2D: 1 variable independiente + 1 parámetro objetivo
                     # Usar índice 0 para el primer (y único) predictor
                     x_normalized = normalization_engine.normalize_x_values([var_indep_1], rangos_x, 0)[0]
-                    y_normalized = normalization_engine.normalize_y_values([valor_y_teorico], rango_y)[0]
+                    # 🔧 CAMBIO: NO normalizar Y para mostrar valores originales de la variable dependiente
+                    y_original = valor_y_teorico  # Mantener valor original de la variable dependiente
                     
                     predictor_name = modelo.get('predictores', [None])[0] or f"predictor_{i+1}"
                     logger.debug(f"Modelo {i+1} 2D: predictor={predictor_name}")
                     logger.debug(f"Modelo {i+1} 2D: x_original={var_indep_1} -> x_norm={x_normalized}")
-                    logger.debug(f"Modelo {i+1} 2D: y_original={valor_y_teorico} -> y_norm={y_normalized}")
+                    logger.debug(f"Modelo {i+1} 2D: y_original={valor_y_teorico} -> y_original={y_original} (SIN NORMALIZAR)")
                     
                     # Crear punto teórico para gráfico 2D
                     tipo_modelo = modelo.get('tipo', 'unknown')
                     
                     punto_teorico = {
                         'x': x_normalized,
-                        'y': y_normalized,
+                        'y': y_original,  # 🔧 CAMBIO: usar valor original en lugar de normalizado
                         'x_original': var_indep_1,
                         'y_original': valor_y_teorico,
                         'modelo_idx': i,
@@ -844,7 +840,7 @@ def extract_theoretical_imputation_points(modelos: List[Dict],
                     # Usar índices 0 y 1 para los dos predictores
                     x1_normalized = normalization_engine.normalize_x_values([var_indep_1], rangos_x, 0)[0]
                     x2_normalized = normalization_engine.normalize_x_values([var_indep_2], rangos_x, 1)[0] if var_indep_2 is not None and len(rangos_x) > 1 else 0
-                    z_normalized = normalization_engine.normalize_y_values([valor_y_teorico], rango_y)[0]
+                    z_original = valor_y_teorico  # 🔧 CAMBIO: Mantener valor original de la variable dependiente
                     
                     predictores = modelo.get('predictores', [])
                     predictor_1_name = predictores[0] if len(predictores) > 0 else f"predictor_1_{i+1}"
@@ -853,7 +849,7 @@ def extract_theoretical_imputation_points(modelos: List[Dict],
                     logger.debug(f"Modelo {i+1} 3D: predictor_1={predictor_1_name}, predictor_2={predictor_2_name}")
                     logger.debug(f"Modelo {i+1} 3D: x1_original={var_indep_1} -> x1_norm={x1_normalized}")
                     logger.debug(f"Modelo {i+1} 3D: x2_original={var_indep_2} -> x2_norm={x2_normalized}")
-                    logger.debug(f"Modelo {i+1} 3D: z_original={valor_y_teorico} -> z_norm={z_normalized}")
+                    logger.debug(f"Modelo {i+1} 3D: z_original={valor_y_teorico} -> z_original={z_original} (SIN NORMALIZAR)")
                     
                     # Crear punto teórico para gráfico 3D
                     tipo_modelo = modelo.get('tipo', 'unknown')
@@ -861,7 +857,7 @@ def extract_theoretical_imputation_points(modelos: List[Dict],
                     punto_teorico = {
                         'x': x1_normalized,        # Variable independiente 1 normalizada
                         'y': x2_normalized,        # Variable independiente 2 normalizada  
-                        'z': z_normalized,         # Parámetro objetivo normalizado
+                        'z': z_original,           # 🔧 CAMBIO: Parámetro objetivo en valor original (sin normalizar)
                         'x_original': var_indep_1, # Variable independiente 1 original
                         'y_original': var_indep_2, # Variable independiente 2 original
                         'z_original': valor_y_teorico, # Parámetro objetivo calculado
@@ -927,7 +923,7 @@ def add_theoretical_imputation_points_to_plot(fig: go.Figure,
     # Añadir puntos 2D (para gráficos 2D)
     if points_2d:
         x_coords = [p['x'] for p in points_2d]  # Variable independiente normalizada
-        y_coords = [p['y'] for p in points_2d]  # Parámetro objetivo normalizado
+        y_coords = [p['y'] for p in points_2d]  # 🔧 CAMBIO: Parámetro objetivo en escala original
         
         # Crear texto de hover
         hover_texts = []
@@ -937,7 +933,7 @@ def add_theoretical_imputation_points_to_plot(fig: go.Figure,
                 f"<b>Predictor:</b> {p['predictor']}",
                 f"<b>Tipo:</b> {p['tipo_modelo']}",
                 f"<b>X original:</b> {p['x_original']:.3f}",
-                f"<b>Y calculado:</b> {p['y_original']:.3f}",
+                f"<b>Y calculado (escala original):</b> {p['y_original']:.3f}",
                 f"<b>Ecuación:</b> {p['ecuacion']}"
             ]
             
@@ -974,7 +970,7 @@ def add_theoretical_imputation_points_to_plot(fig: go.Figure,
     if points_3d:
         x_coords = [p['x'] for p in points_3d]  # Variable independiente 1 normalizada
         y_coords = [p['y'] for p in points_3d]  # Variable independiente 2 normalizada
-        z_coords = [p['z'] for p in points_3d]  # Parámetro objetivo normalizado
+        z_coords = [p['z'] for p in points_3d]  # 🔧 CAMBIO: Parámetro objetivo en escala original
         
         # Crear texto de hover
         hover_texts = []
@@ -986,7 +982,7 @@ def add_theoretical_imputation_points_to_plot(fig: go.Figure,
                 f"<b>Tipo:</b> {p['tipo_modelo']}",
                 f"<b>X1 original:</b> {p['x_original']:.3f}",
                 f"<b>X2 original:</b> {p['y_original']:.3f}",
-                f"<b>Z calculado:</b> {p['z_original']:.3f}",
+                f"<b>Z calculado (escala original):</b> {p['z_original']:.3f}",
                 f"<b>Ecuación:</b> {p['ecuacion']}"
             ]
             
@@ -1704,16 +1700,16 @@ def add_normalized_imputation_points(fig: go.Figure,
                     subdic_name = point.get('subdic_name', 'unknown')
                     config = method_config.get(subdic_name, method_config['final'])
                     
-                    # APLICAR NORMALIZACIÓN
-                    x_norm, y_norm, z_norm = normalize_imputation_point(point, rango_x, rango_y, rango_z)
+                    # APLICAR NORMALIZACIÓN (X, Y normalizadas, Z original)
+                    x_norm, y_norm, z_original = normalize_imputation_point(point, rango_x, rango_y, rango_z)
                     
-                    # Para gráficos 2D: X normalizada, Z normalizada (como Y)
+                    # Para gráficos 2D: X normalizada, Z original (como Y)
                     x_val = x_norm
-                    y_val = z_norm
+                    y_val = z_original  # 🔧 CAMBIO: usar valor original de Z en lugar de normalizado
                     
-                    logger.info(f"🔍 DEBUG: Punto 2D {subdic_name}: ORIGINAL ({point.get('x_original')}, {point.get('valor_imputado')}) → NORMALIZADO ({x_val:.3f}, {y_val:.3f})")
+                    logger.info(f"🔍 DEBUG: Punto 2D {subdic_name}: ORIGINAL ({point.get('x_original')}, {point.get('valor_imputado')}) → X_NORM={x_val:.3f}, Z_ORIGINAL={y_val}")
                     
-                    print(f"🔍 AÑADIENDO TRAZA 2D: {subdic_name} en ({x_val:.3f}, {y_val:.3f})")
+                    print(f"🔍 AÑADIENDO TRAZA 2D: {subdic_name} en ({x_val:.3f}, {y_val})")
                     
                     # 🔧 MEJORA: Obtener información detallada para tooltip
                     # Obtener nombres reales de predictores
@@ -1750,8 +1746,7 @@ def add_normalized_imputation_points(fig: go.Figure,
                                       f"  Rango usado: [{rango_x[0]:.3f}, {rango_x[1]:.3f}]<br>" +
                                       f"<b>Valor Imputado:</b><br>" +
                                       f"  Valor original: {valor_original_z}<br>" +
-                                      f"  Valor normalizado: {y_val:.4f}<br>" +
-                                      f"  Rango usado: [{rango_z[0]:.3f}, {rango_z[1]:.3f}]<br>" +
+                                      f"  ✅ Mostrado en escala original (no normalizado)<br>" +
                                       "<extra></extra>",
                         showlegend=True
                     ))
@@ -1779,19 +1774,19 @@ def add_normalized_imputation_points(fig: go.Figure,
                     subdic_name = point.get('subdic_name', 'unknown')
                     config = method_config.get(subdic_name, method_config['final'])
                     
-                    # APLICAR NORMALIZACIÓN
-                    x_norm, y_norm, z_norm = normalize_imputation_point(point, rango_x, rango_y, rango_z)
+                    # APLICAR NORMALIZACIÓN (X, Y normalizadas, Z original)
+                    x_norm, y_norm, z_original = normalize_imputation_point(point, rango_x, rango_y, rango_z)
                     
                     # 🔧 DEBUG ESPECÍFICO PARA PROBLEMA CON Y EN 3D
                     print(f"🔍 DEBUG 3D - {subdic_name}:")
                     print(f"   Punto original: x={point.get('x_original')}, y={point.get('y_original')}, z={point.get('valor_imputado')}")
                     print(f"   Rangos usados: X={rango_x}, Y={rango_y}, Z={rango_z}")
-                    print(f"   Normalización: x_norm={x_norm:.4f}, y_norm={y_norm}, z_norm={z_norm:.4f}")
+                    print(f"   Resultado: x_norm={x_norm:.4f}, y_norm={y_norm}, z_original={z_original} (Z SIN NORMALIZAR)")
                     
-                    # Para gráficos 3D: todas las coordenadas normalizadas
+                    # Para gráficos 3D: X, Y normalizadas, Z original
                     x_val = x_norm
                     y_val = y_norm if y_norm is not None else 0.5
-                    z_val = z_norm
+                    z_val = z_original  # 🔧 CAMBIO: usar valor original de Z
                     
                     # 🔧 DEBUG ADICIONAL: Verificar si Y no se normaliza
                     if y_norm is None:
@@ -1804,8 +1799,8 @@ def add_normalized_imputation_points(fig: go.Figure,
                         print(f"   rango_y: {rango_y}")
                         print(f"   ¿y_original está fuera del rango del modelo?")
                     
-                    logger.info(f"🔍 DEBUG: Punto 3D {subdic_name}: ORIGINAL ({point.get('x_original')}, {point.get('y_original')}, {point.get('valor_imputado')}) → NORMALIZADO ({x_val:.3f}, {y_val:.3f}, {z_val:.3f})")
-                    print(f"🔍 AÑADIENDO TRAZA 3D: {subdic_name} en ({x_val:.3f}, {y_val:.3f}, {z_val:.3f})")
+                    logger.info(f"🔍 DEBUG: Punto 3D {subdic_name}: ORIGINAL ({point.get('x_original')}, {point.get('y_original')}, {point.get('valor_imputado')}) → X_NORM={x_val:.3f}, Y_NORM={y_val:.3f}, Z_ORIGINAL={z_val}")
+                    print(f"🔍 AÑADIENDO TRAZA 3D: {subdic_name} en ({x_val:.3f}, {y_val:.3f}, {z_val})")
                     
                     # 🔧 MEJORA: Obtener información detallada para tooltip 3D
                     # Obtener nombres reales de predictores
@@ -1856,8 +1851,7 @@ def add_normalized_imputation_points(fig: go.Figure,
                                       f"  Rango usado: [{rango_y[0]:.3f}, {rango_y[1]:.3f}]<br>" +
                                       f"<b>Valor Imputado (Z):</b><br>" +
                                       f"  Valor original: {valor_original_z}<br>" +
-                                      f"  Valor normalizado: {z_val:.4f}<br>" +
-                                      f"  Rango usado: [{rango_z[0]:.3f}, {rango_z[1]:.3f}]<br>" +
+                                      f"  ✅ Mostrado en escala original (no normalizado)<br>" +
                                       "<extra></extra>",
                         showlegend=True
                     ))

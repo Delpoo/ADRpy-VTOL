@@ -307,8 +307,8 @@ class ModelNormalizationEngine:
                 y_original = intercepto + coeficientes[0] * x_original
                 metadata.update({"unknown_type_warning": f"Tipo de modelo desconocido '{tipo}', usando aproximación lineal"})
             
-            # Normalizar Y usando el rango del modelo
-            y_normalized = self.normalize_y_values(y_original, rango_y)
+            # 🔧 CAMBIO: No normalizar Y para mostrar valores originales de la variable dependiente
+            y_normalized = y_original  # Mantener valores originales
             
             # Validar resultados
             if np.any(np.isnan(y_normalized)) or np.any(np.isinf(y_normalized)):
@@ -367,12 +367,14 @@ class ModelNormalizationEngine:
                     x_values = X_original
                 
                 x_normalized = self.normalize_x_values(x_values, rangos_x, 0)
-                y_normalized = self.normalize_y_values(y_original, rango_y)
+                # 🔧 CAMBIO: No normalizar variable dependiente (Y) para mostrar valores originales
+                y_normalized = np.array(y_original)  # Mantener valores originales
                 
                 metadata = {
                     "n_predictores": 1,
                     "n_points": len(x_values),
-                    "ranges_used": {"x": rangos_x[0], "y": rango_y}
+                    "ranges_used": {"x": rangos_x[0], "y": rango_y},
+                    "y_normalized": False  # 🔧 Indicar que Y no está normalizado
                 }
                 
                 return x_normalized, y_normalized, metadata
