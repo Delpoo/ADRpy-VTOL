@@ -1092,6 +1092,7 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
     """
     import plotly.graph_objects as go
     import numpy as np
+    from .symbiotic_surface import generate_symbiotic_surface_3d
 
     fig = go.Figure()
     colores = [
@@ -1103,11 +1104,7 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
     n_colores = len(colores)
     n_modelos = len(modelos)
     x0_name, x1_name = None, None
-    # Malla normalizada
     grid_n = 30
-    x0_grid = np.linspace(0, 1, grid_n)
-    x1_grid = np.linspace(0, 1, grid_n)
-    X0, X1 = np.meshgrid(x0_grid, x1_grid)
     # Graficar cada modelo
     for idx, modelo in enumerate(modelos):
         tipo = modelo.get('tipo', '').lower()
@@ -1122,75 +1119,69 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
         if coefs is None or intercepto is None or len(predictores) != 2:
             continue
         x0_name, x1_name = predictores[0], predictores[1]
-        # Calcular Z para la malla
-        if tipo.startswith('linear-2') and len(coefs) >= 2:
-            Z = intercepto + coefs[0]*X0 + coefs[1]*X1
-        elif tipo.startswith('poly-2') and len(coefs) >= 5:
-            Z = (intercepto + coefs[0]*X0 + coefs[1]*X1 +
-                 coefs[2]*X0**2 + coefs[3]*X0*X1 + coefs[4]*X1**2)
-        else:
-            continue
-        # Normalizar Z usando el mismo rango que los puntos de entrenamiento
+        # Obtener datos de entrenamiento para rangos
         datos_entrenamiento = modelo.get('datos_entrenamiento', {})
         X_train = datos_entrenamiento.get('X_original')
         y_train = datos_entrenamiento.get('y_original')
-        if y_train is not None and len(y_train) > 0:
-            y_train = np.array(y_train)
-            y_min, y_max = np.min(y_train), np.max(y_train)
-            # 🔧 CAMBIO: No normalizar Z para mostrar valores originales
-            Z_norm = Z  # Mantener valores originales de la superficie
-        else:
-            # Si no hay datos de entrenamiento, no normalizar
-            Z_norm = Z
-        # Color y opacidad
-        color = colores[idx % n_colores]
-        opacity = 0.85 if idx == modelo_seleccionado_idx else 0.45
-        # Hover info
-        aeronave = modelo.get('Aeronave', 'N/A')
-        parametro_obj = modelo.get('Parámetro', modelo.get('parametro', 'N/A'))
-        ecuacion_string = modelo.get('ecuacion_string', '')
-        hovertext = (
-            f"<b>Aeronave:</b> {aeronave}<br>"
-            f"<b>Parámetro:</b> {parametro_obj}<br>"
-            f"<b>Tipo:</b> {modelo.get('tipo','')}<br>"
-            f"<b>Predictores:</b> {x0_name}, {x1_name}<br>"
-            f"<b>Ecuación:</b> {ecuacion_string}<br>"
-            f"<b>MAPE:</b> {mape:.3f}%<br>"
-            f"<b>R²:</b> {r2:.3f}<br>"
-            f"<b>Z (escala original):</b> %{{z:.3f}}"
-        )
-        fig.add_trace(go.Surface(
-            x=X0, y=X1, z=Z_norm,
-            name=f"{modelo.get('tipo','')} [{x0_name}, {x1_name}]",
-            showscale=False,
-            opacity=opacity,
-            surfacecolor=None,
-            hovertemplate=hovertext + "<extra></extra>",
-            legendgroup=f"modelo_{idx}",
-            visible=True,
-            colorscale=[[0, color], [1, color]],
-            # Para click: customdata con el índice
-            customdata=np.full(X0.shape, idx)
-        ))
-        # Puntos de entrenamiento
-        datos_entrenamiento = modelo.get('datos_entrenamiento', {})
-        X_train = datos_entrenamiento.get('X_original')
-        y_train = datos_entrenamiento.get('y_original')
-        if X_train is not None and y_train is not None and len(X_train) > 0 and len(y_train) == len(X_train):
-            # Normalizar X_train por columna (igual que en 2D)
+        if X_train is not None and len(X_train) > 0:
             X_train = np.array(X_train)
-            y_train = np.array(y_train)
-            # Normalización por predictor
+            x0_min, x0_max = np.min(X_train[:,0]), np.max(X_train[:,0])
+            x1_min, x1_max = np.min(X_train[:,1]), np.max(X_train[:,1])
+        else:
+            x0_min, x0_max = 0, 1
+            x1_min, x1_max = 0, 1
+        # --- SUPERFICIE: usar lógica simbiotica ---
+        try:
+            # Determinar qué datos pasar según el tipo de modelo
+            if tipo.startswith('poly-'):
+                # Para modelos polinomiales, pasar el diccionario completo
+                model_data = modelo
+            else:
+                # Para modelos lineales, pasar la ecuación string
+                model_data = ecuacion_string
+            
+            X_surf, Y_surf, Z_surf = generate_symbiotic_surface_3d(
+                model_data,
+                (x0_min, x0_max),
+                (x1_min, x1_max),
+                [x0_name, x1_name],
+                resolution=grid_n
+            )
+            color = colores[idx % n_colores]
+            opacity = 0.85 if idx == modelo_seleccionado_idx else 0.45
+            hovertext = (
+                f"<b>Aeronave:</b> {modelo.get('Aeronave','N/A')}<br>"
+                f"<b>Parámetro:</b> {modelo.get('Parámetro', modelo.get('parametro','N/A'))}<br>"
+                f"<b>Tipo:</b> {modelo.get('tipo','')}<br>"
+                f"<b>Predictores:</b> {x0_name}, {x1_name}<br>"
+                f"<b>Ecuación:</b> {ecuacion_string}<br>"
+                f"<b>MAPE:</b> {mape:.3f}%<br>"
+                f"<b>R²:</b> {r2:.3f}<br>"
+                f"<b>Z (escala original):</b> %{{z:.3f}}"
+            )
+            fig.add_trace(go.Surface(
+                x=X_surf, y=Y_surf, z=Z_surf,
+                name=f"{modelo.get('tipo','')} [{x0_name}, {x1_name}]",
+                showscale=False,
+                opacity=opacity,
+                surfacecolor=None,
+                hovertemplate=hovertext + "<extra></extra>",
+                legendgroup=f"modelo_{idx}",
+                visible=True,
+                colorscale=[[0, color], [1, color]],
+                customdata=np.full(X_surf.shape, idx)
+            ))
+        except Exception as e:
+            print(f"Error generando superficie simbiotica para modelo {idx}: {e}")
+        # --- PUNTOS DE ENTRENAMIENTO ---
+        if X_train is not None and y_train is not None and len(X_train) > 0 and len(y_train) == len(X_train):
             x0_vals = X_train[:,0]
             x1_vals = X_train[:,1]
-            x0_min, x0_max = np.min(x0_vals), np.max(x0_vals)
-            x1_min, x1_max = np.min(x1_vals), np.max(x1_vals)
             x0_norm = (x0_vals - x0_min) / (x0_max - x0_min) if x0_max != x0_min else np.full_like(x0_vals, 0.5)
             x1_norm = (x1_vals - x1_min) / (x1_max - x1_min) if x1_max != x1_min else np.full_like(x1_vals, 0.5)
-            # 🔧 CAMBIO: No normalizar eje Z (y_train) para mostrar valores originales
-            y_train_norm = y_train  # Mantener valores originales
+            y_train = np.array(y_train)
             fig.add_trace(go.Scatter3d(
-                x=x0_norm, y=x1_norm, z=y_train_norm,
+                x=x0_norm, y=x1_norm, z=y_train,
                 mode='markers',
                 name=f"Entrenamiento {idx+1}",
                 marker=dict(
@@ -1198,7 +1189,6 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
                     color=color,
                     opacity=1.0 if idx == modelo_seleccionado_idx else 0.7
                 ),
-                # Información personalizada para identificar el modelo en callbacks
                 customdata=np.full(X_train.shape[0], idx),
                 text=[
                     f"Predictor 1: {x0_name}<br>Predictor 2: {x1_name}<br>" +
@@ -1209,15 +1199,13 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
                     f"MAPE: {mape:.3f}%<br>" +
                     f"R²: {r2:.3f}<br>" +
                     f"Fuente de datos: entrenamiento"
-                    for i in range(len(y_train_norm))
+                    for i in range(len(y_train))
                 ],
                 hovertemplate='%{text}<extra></extra>',
                 legendgroup=f'model_{idx}',
                 showlegend=True
             ))
-
     # Ajustes finales de la figura
-    # Usar los argumentos recibidos, o valores por defecto si no se pasan
     safe_parametro = parametro if parametro else 'Parámetro'
     safe_aeronave = aeronave if aeronave else 'Aeronave'
     fig.update_layout(
@@ -1234,5 +1222,4 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
         uirevision=f"{safe_aeronave}_{safe_parametro}_3d",
         template='plotly_white'
     )
-
     return fig

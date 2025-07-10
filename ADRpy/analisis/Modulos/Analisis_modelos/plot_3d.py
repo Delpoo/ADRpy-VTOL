@@ -95,39 +95,7 @@ def extract_coefficients_from_model(modelo: Dict[str, Any]) -> Optional[List[flo
         return None
 
 
-def generate_model_surface(coefficients: List[float], x_range: Tuple[float, float], 
-                          y_range: Tuple[float, float], resolution: int = 50) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Genera superficie 3D del modelo usando los coeficientes.
-    
-    Parameters:
-    -----------
-    coefficients : List[float]
-        Coeficientes [c0, c1, c2, c3, c4, c5] donde:
-        y = c0 + c1*x0 + c2*x1 + c3*x0² + c4*x1² + c5*x0*x1
-    x_range : Tuple[float, float]
-        Rango para el primer predictor (x0)
-    y_range : Tuple[float, float]
-        Rango para el segundo predictor (x1)
-    resolution : int
-        Resolución de la malla
-        
-    Returns:
-    --------
-    Tuple[np.ndarray, np.ndarray, np.ndarray]
-        Arrays X, Y, Z para la superficie
-    """
-    c0, c1, c2, c3, c4, c5 = coefficients
-    
-    # Crear malla
-    x = np.linspace(x_range[0], x_range[1], resolution)
-    y = np.linspace(y_range[0], y_range[1], resolution)
-    X, Y = np.meshgrid(x, y)
-    
-    # Calcular Z usando la ecuación polinómica
-    Z = c0 + c1*X + c2*Y + c3*X**2 + c4*Y**2 + c5*X*Y
-    
-    return X, Y, Z
+
 
 
 def normalize_training_data(X_original: List[List[float]], y_original: List[float], 
@@ -284,38 +252,49 @@ def create_3d_plot(modelos_2pred: List[Dict[str, Any]], aeronave: str, parametro
                 showlegend=True
             ))
         if show_model_surface:
-            coefficients = extract_coefficients_from_model(model)
-            if coefficients:
-                try:
-                    X_surf, Y_surf, Z_surf = generate_model_surface(
-                        coefficients,
-                        x_range=(0, 1),
-                        y_range=(0, 1),
-                        resolution=30
+            ecuacion_original = model.get('ecuacion_string', '')
+            pred_names = model.get('predictores', [])
+            x0_range = (X_array[:, 0].min(), X_array[:, 0].max())
+            x1_range = (X_array[:, 1].min(), X_array[:, 1].max())
+            try:
+                from .symbiotic_surface import generate_symbiotic_surface_3d
+                
+                # Determinar qué datos pasar según el tipo de modelo
+                if tipo.startswith('poly-'):
+                    # Para modelos polinomiales, pasar el diccionario completo
+                    model_data = model
+                else:
+                    # Para modelos lineales, pasar la ecuación string
+                    model_data = ecuacion_original
+                
+                X_surf, Y_surf, Z_surf = generate_symbiotic_surface_3d(
+                    model_data,
+                    x0_range,
+                    x1_range,
+                    pred_names,
+                    resolution=30
+                )
+                surf_opacity = 0.6 if is_highlighted else 0.3
+                fig.add_trace(go.Surface(
+                    x=X_surf,
+                    y=Y_surf,
+                    z=Z_surf,
+                    colorscale='Viridis',
+                    opacity=surf_opacity,
+                    name=f"Superficie {tipo} (Modelo {idx+1})",
+                    showscale=is_highlighted,
+                    hovertemplate=(
+                        f"Modelo {idx+1}: {tipo}<br>" +
+                        f"X0 (norm): %{{x:.3f}}<br>" +
+                        f"X1 (norm): %{{y:.3f}}<br>" +
+                        f"Y (escala original): %{{z:.3f}}<br>" +
+                        f"R²: {model.get('r2', 0):.3f}<br>" +
+                        f"MAPE: {model.get('mape', 0):.2f}%<br>" +
+                        "<extra></extra>"
                     )
-                    surf_opacity = 0.6 if is_highlighted else 0.3
-                    fig.add_trace(go.Surface(
-                        x=X_surf,
-                        y=Y_surf,
-                        z=Z_surf,
-                        colorscale='Viridis',
-                        opacity=surf_opacity,
-                        name=f"Superficie {tipo} (Modelo {idx+1})",
-                        showscale=is_highlighted,
-                        hovertemplate=(
-                            f"Modelo {idx+1}: {tipo}<br>" +
-                            f"X0 (norm): %{{x:.3f}}<br>" +
-                            f"X1 (norm): %{{y:.3f}}<br>" +
-                            f"Y (escala original): %{{z:.3f}}<br>" +
-                            f"R²: {model.get('r2', 0):.3f}<br>" +
-                            f"MAPE: {model.get('mape', 0):.2f}%<br>" +
-                            "<extra></extra>"
-                        )
-                    ))
-                except Exception as e:
-                    logger.warning(f"Error creando superficie para modelo {idx}: {e}")
-            else:
-                logger.warning(f"No se pudieron extraer coeficientes del modelo {idx}")
+                ))
+            except Exception as e:
+                logger.warning(f"Error creando superficie normalizada para modelo {idx}: {e}")
     
     # --- AÑADIR PUNTOS TEÓRICOS 3D ---
     # Extraer y añadir puntos teóricos de imputación para modelos de 2 predictores

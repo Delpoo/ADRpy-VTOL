@@ -1,3 +1,51 @@
+# =============================================
+# Funciones para ecuaciones normalizadas 3D
+# =============================================
+import numpy as np
+from typing import Callable, Tuple, List
+
+def create_normalized_equation_3d(equation_string: str, rango_x: Tuple[float, float], rango_y: Tuple[float, float], pred_names: List[str]) -> Callable:
+    """
+    Devuelve una función que acepta (x_star, y_star) normalizados, los desnormaliza y evalúa la ecuación del modelo en escala original.
+    Soporta modelos lineales y polinómicos de 2 predictores con ecuación tipo:
+    Y = c0 + c1*X + c2*Y + c3*X^2 + c4*Y^2 + c5*X*Y
+    """
+    # Extraer coeficientes del string (espera formato: c0 + c1*X + c2*Y + ...)
+    # Si equation_string es vacía, retorna función constante cero
+    if not equation_string or not isinstance(equation_string, str):
+        return lambda x_star, y_star: np.zeros_like(x_star)
+
+    # Buscar coeficientes en el string (asume formato Python evaluable)
+    # Ejemplo: '1.2 + 2.3*x + 3.4*y + 0.5*x**2 + 0.7*y**2 + 0.9*x*y'
+    # Si no es evaluable, retorna función constante cero
+    def normalized_func(x_star, y_star):
+        # Desnormalizar
+        x0_min, x0_max = rango_x
+        x1_min, x1_max = rango_y
+        x = x_star * (x0_max - x0_min) + x0_min
+        y = y_star * (x1_max - x1_min) + x1_min
+        # Variables para eval
+        local_vars = {pred_names[0]: x, pred_names[1]: y, 'x': x, 'y': y,
+                      'np': np, 'pow': np.power}
+        # Permitir x, y, x1, x2, etc.
+        try:
+            # Reemplazar potencias comunes para compatibilidad
+            eq = equation_string.replace('^', '**')
+            # Evaluar la ecuación vectorizada
+            return eval(eq, {"__builtins__": {}}, local_vars)
+        except Exception:
+            # Si falla, retorna ceros
+            return np.zeros_like(x_star)
+    return normalized_func
+
+def evaluate_normalized_equation_3d(normalized_func: Callable, X_star: np.ndarray, Y_star: np.ndarray) -> np.ndarray:
+    """
+    Evalúa la función normalizada sobre la malla X_star, Y_star.
+    """
+    try:
+        return normalized_func(X_star, Y_star)
+    except Exception:
+        return np.zeros_like(X_star)
 """
 normalization_engine.py
 
