@@ -388,11 +388,9 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
                 # Para la pestaña de métricas, mostrar SOLO el dashboard visual en el área principal (main-plot)
                 if plot_tab == 'metrics-view':
                     try:
-                        from .metrics_dashboard import generate_metrics_dashboard
-                        from .metrics_tab import find_missing_models
+                        from .metrics_dashboard import generate_metrics_dashboard, find_missing_models
                     except ImportError:
-                        from metrics_dashboard import generate_metrics_dashboard
-                        from metrics_tab import find_missing_models
+                        from metrics_dashboard import generate_metrics_dashboard, find_missing_models
                     modelos_no_mostrados = find_missing_models(models_data['modelos'], models_data['detalles'])
                     dashboard = generate_metrics_dashboard(
                         modelos_por_celda=models_data['modelos'],

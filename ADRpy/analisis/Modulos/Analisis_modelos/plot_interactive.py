@@ -14,12 +14,12 @@ import plotly.graph_objects as go
 import logging
 try:
     from .plot_config import COLORS, SYMBOLS, _ensure_list
-    from .plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
+    from .plot_model_curves import add_normalized_model_curves, create_model_hover_info
     from .json_data_helpers import get_full_dataframe_from_celda
     from .normalization_engine import ModelNormalizationEngine
 except ImportError:
     from plot_config import COLORS, SYMBOLS, _ensure_list
-    from plot_model_curves import get_model_predictions_safe, add_normalized_model_curves, create_model_hover_info
+    from plot_model_curves import add_normalized_model_curves, create_model_hover_info
     from json_data_helpers import get_full_dataframe_from_celda
     from normalization_engine import ModelNormalizationEngine
 
@@ -456,15 +456,26 @@ def create_interactive_plot(
                     x_range_norm = np.array([0.5])
                 x_range_orig = np.asarray(x_range_orig).flatten()
                 x_range_norm = np.asarray(x_range_norm).flatten()
-                predictions = get_model_predictions_safe(modelo, x_range_orig)
-                if predictions is None:
+                
+                # Use normalized model data instead of obsolete function
+                try:
+                    from .normalization_engine import get_normalized_model_data
+                    vis_data = get_normalized_model_data(modelo)
+                    curva_data = vis_data.get('curva', {})
+                    predictions = np.array(curva_data.get('y_normalized', []))
+                    if len(predictions) == 0:
+                        continue
+                except:
                     continue
+                    
                 predictions = np.asarray(predictions).flatten()
-                # Normalizar predicciones
-                if y_min is not None and y_max is not None and y_max != y_min:
-                    predictions_norm = (predictions - y_min) / (y_max - y_min)
-                else:
-                    predictions_norm = np.full_like(predictions, 0.5, dtype=float)
+                # 🔧 CORRECCIÓN: No normalizar predicciones Y para mostrar valores originales
+                # if y_min is not None and y_max is not None and y_max != y_min:
+                #     predictions_norm = (predictions - y_min) / (y_max - y_min)
+                # else:
+                #     predictions_norm = np.full_like(predictions, 0.5, dtype=float)
+                # Usar valores originales de Y directamente
+                predictions_norm = predictions
                 color_idx = i % len(COLORS['model_lines'])
                 model_color = COLORS['selected_model'] if (highlight_model_idx is not None and i == highlight_model_idx) else COLORS['model_lines'][color_idx]
                 line_width = 5 if (highlight_model_idx is not None and i == highlight_model_idx) else 2
@@ -486,7 +497,7 @@ def create_interactive_plot(
                     # Información personalizada para identificar el modelo en callbacks
                     customdata=[i] * len(predictions),  # Índice del modelo para identificarlo
                     text=[
-                        f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y normalizada: {yv:.3f}{hover_extra}<br>{model_info}" for xv, xn, yv in zip(x_range_orig.tolist(), x_range_norm.tolist(), predictions_norm.tolist())
+                        f"Predictor: {predictor}<br>Valor original X: {xv:.3f}<br>X adimensional: {xn:.3f}<br>Predicción Y (original): {yv:.3f}{hover_extra}<br>{model_info}" for xv, xn, yv in zip(x_range_orig.tolist(), x_range_norm.tolist(), predictions_norm.tolist())
                     ],
                     hovertemplate='%{text}<extra></extra>',
                     legendgroup=f'model_{i}',
@@ -1092,7 +1103,7 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
     """
     import plotly.graph_objects as go
     import numpy as np
-    from .symbiotic_surface import generate_symbiotic_surface_3d
+    from .plot_3d import generate_symbiotic_surface_3d
 
     fig = go.Figure()
     colores = [
@@ -1130,6 +1141,10 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
         else:
             x0_min, x0_max = 0, 1
             x1_min, x1_max = 0, 1
+        # Definir color por defecto para este modelo
+        color = colores[idx % n_colores]
+        opacity = 0.85 if idx == modelo_seleccionado_idx else 0.45
+        
         # --- SUPERFICIE: usar lógica simbiotica ---
         try:
             # Determinar qué datos pasar según el tipo de modelo
@@ -1147,8 +1162,6 @@ def create_3d_plot(modelos, modelo_seleccionado_idx=None, aeronave=None, paramet
                 [x0_name, x1_name],
                 resolution=grid_n
             )
-            color = colores[idx % n_colores]
-            opacity = 0.85 if idx == modelo_seleccionado_idx else 0.45
             hovertext = (
                 f"<b>Aeronave:</b> {modelo.get('Aeronave','N/A')}<br>"
                 f"<b>Parámetro:</b> {modelo.get('Parámetro', modelo.get('parametro','N/A'))}<br>"

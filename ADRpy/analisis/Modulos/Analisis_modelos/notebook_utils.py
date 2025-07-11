@@ -872,130 +872,6 @@ class ClickDebugger:
             return None
     
     @staticmethod
-    def comprehensive_click_test():
-        """🔬 TEST COMPLETO Y MEJORADO DE FUNCIONALIDAD DE CLICKS"""
-        print("🖱️ DEPURADOR ESPECÍFICO DE CLICKS - VERSIÓN MEJORADA")
-        print("=" * 60)
-        
-        # 1. Test de datos base
-        print("1️⃣ VERIFICANDO DATOS BASE...")
-        data_result, error = DataManager.load_models_data()
-        if error:
-            print(f"❌ Error en datos: {error}")
-            return False
-        
-        print(f"✅ Datos cargados: {data_result.get('total_modelos', 0)} modelos")
-        
-        # 2. Verificar arquitectura de IDs (NUEVO - basado en tu solución)
-        print("\n2️⃣ VERIFICANDO ARQUITECTURA DE IDs...")
-        id_analysis = ClickDebugger._analyze_graph_id_architecture()
-        if isinstance(id_analysis, dict) and id_analysis.get('status') == 'error':
-            print(f"❌ PROBLEMA CRÍTICO DETECTADO:")
-            for issue in id_analysis.get('issues', []):
-                print(f"   • {issue}")
-            print(f"🔧 SOLUCIÓN: {id_analysis.get('fix')}")
-            return False
-        elif isinstance(id_analysis, dict):
-            print(f"✅ {id_analysis.get('message', '')}")
-        else:
-            print(f"❌ Error inesperado en análisis de IDs: {id_analysis}")
-            return False
-        
-        # 3. Test de función de plotting
-        print("\n3️⃣ VERIFICANDO FUNCIÓN DE PLOTTING...")
-        try:
-            from Modulos.Analisis_modelos.plot_interactive import create_interactive_plot
-            print("✅ Función de plotting importada correctamente")
-        except ImportError as e:
-            print(f"❌ Error importando plotting: {e}")
-            return False
-        
-        # 4. Test detallado de customdata
-        print("\n4️⃣ TEST DETALLADO DE CUSTOMDATA...")
-        if data_result and 'modelos_por_celda' in data_result:
-            modelos_data = data_result['modelos_por_celda']
-            celda_ejemplo = list(modelos_data.keys())[0]
-            
-            # Extraer info de celda
-            if '|' in celda_ejemplo:
-                aeronave, parametro = celda_ejemplo.split('|', 1)
-            else:
-                aeronave, parametro = "TestAeronave", "TestParametro"
-            
-            print(f"   📝 Celda de prueba: {celda_ejemplo}")
-            print(f"   ✈️  Aeronave: {aeronave}")
-            print(f"   📊 Parámetro: {parametro}")
-            
-            # Crear figura test con diferentes cantidades de modelos
-            modelos_test = modelos_data[celda_ejemplo][:3]
-            modelos_filtrados = {celda_ejemplo: modelos_test}
-            
-            try:
-                fig = create_interactive_plot(
-                    modelos_filtrados=modelos_filtrados,
-                    aeronave=aeronave,
-                    parametro=parametro,
-                    show_training_points=True,
-                    show_model_curves=True,
-                    detalles_por_celda=data_result.get('detalles_por_celda', {})
-                )
-                
-                # Analizar customdata
-                customdata_analysis = ClickDebugger._analyze_customdata(fig)
-                if customdata_analysis['status'] == 'ok':
-                    print(f"   ✅ CustomData: {customdata_analysis['message']}")
-                else:
-                    print(f"   ❌ CustomData: {customdata_analysis['message']}")
-                    if customdata_analysis.get('fix'):
-                        print(f"   🔧 Solución: {customdata_analysis['fix']}")
-                        
-            except Exception as e:
-                print(f"   ❌ Error creando figura: {e}")
-        
-        # 5. Test de estructura de callbacks de Dash
-        print("\n5️⃣ VERIFICANDO CALLBACKS DE DASH...")
-        dash_analysis = ClickDebugger._analyze_callbacks()
-        
-        if dash_analysis['status'] == 'ok':
-            print(f"   ✅ {dash_analysis['message']}")
-            if 'click_callbacks' in dash_analysis:
-                for cb in dash_analysis['click_callbacks'][:3]:
-                    print(f"   🔗 {cb.get('component_id')} → callback activo")
-        else:
-            print(f"   ⚠️ {dash_analysis['message']}")
-            if dash_analysis.get('fix'):
-                print(f"   🔧 {dash_analysis['fix']}")
-        
-        # 6. Mostrar monitor en tiempo real
-        print("\n6️⃣ MONITOR DE CLICKS EN TIEMPO REAL:")
-        try:
-            monitor = ClickDebugger.create_real_time_click_monitor()
-            if monitor:
-                print("   💡 Monitor creado - Se mostrará abajo")
-                from IPython.display import display
-                display(monitor)
-            else:
-                print("   📋 Monitor de texto no disponible en este entorno")
-        except Exception as e:
-            print(f"   ❌ Error creando monitor: {e}")
-        
-        # 7. Recomendaciones específicas mejoradas
-        print("\n7️⃣ RECOMENDACIONES ESPECÍFICAS:")
-        print("   🔧 VERIFICAR:")
-        print("      • ✅ Todos los dcc.Graph usan id='plot-graph'")
-        print("      • ✅ Callbacks Input('plot-graph', 'clickData') están registrados")
-        print("      • ✅ CustomData está presente en todas las traces")
-        print("      • ✅ No hay conflictos entre múltiples gráficos")
-        print("   🛠️ SOLUCIONES IMPLEMENTADAS:")
-        print("      • ✅ Arquitectura unificada de IDs")
-        print("      • ✅ Callbacks sincronizados")
-        print("      • ✅ Sistema de detección automática")
-        print("      • ✅ Monitor en tiempo real")
-        
-        print(f"\n🎯 DIAGNÓSTICO COMPLETADO")
-        return True
-
-    @staticmethod
     def toggle_console_debug(enable=True):
         """🔧 Activar/desactivar debug de clicks en consola"""
         import os
@@ -1327,6 +1203,7 @@ class DiagnosticManager:
                 'status': 'error',
                 'message': f'Error testing clicks: {str(e)}'
             }
+    
 
 # =============================================================================
 # 📈 MONITOREO Y MÉTRICAS EN TIEMPO REAL
@@ -2288,21 +2165,24 @@ class ControlPanel:
             print()
             
             # Análisis por componente original (mantenido)
-            ControlPanel._show_section_header("� ANÁLISIS POR COMPONENTE", "info")
-            for comp_name, comp_data in analysis['components'].items():
-                emoji = status_emoji.get(comp_data['status'], '❓')
-                print(f"\n{emoji} {comp_name.upper()}")
-                print(f"   � {comp_data['message']}")
-                if isinstance(comp_data, dict) and comp_data.get('fix'):
-                    print(f"   🔧 Solución: {comp_data['fix']}")
-                # Mostrar detalles específicos si los hay
-                if isinstance(comp_data, dict):
-                    if 'traces_with_customdata' in comp_data:
-                        print(f"   📈 Traces con customdata: {len(comp_data['traces_with_customdata'])}")
-                    if 'traces_without_customdata' in comp_data:
-                        print(f"   ⚠️  Traces sin customdata: {len(comp_data['traces_without_customdata'])}")
-                    if 'click_callbacks' in comp_data:
-                        print(f"   � Click callbacks: {len(comp_data['click_callbacks'])}")
+            ControlPanel._show_section_header("📊 ANÁLISIS POR COMPONENTE", "info")
+            if 'components' in analysis and isinstance(analysis['components'], dict):
+                for comp_name, comp_data in analysis['components'].items():
+                    emoji = status_emoji.get(comp_data['status'], '❓')
+                    print(f"\n{emoji} {comp_name.upper()}")
+                    print(f"   📝 {comp_data['message']}")
+                    if isinstance(comp_data, dict) and comp_data.get('fix'):
+                        print(f"   🔧 Solución: {comp_data['fix']}")
+                    # Mostrar detalles específicos si los hay
+                    if isinstance(comp_data, dict):
+                        if 'traces_with_customdata' in comp_data:
+                            print(f"   📈 Traces con customdata: {len(comp_data['traces_with_customdata'])}")
+                        if 'traces_without_customdata' in comp_data:
+                            print(f"   ⚠️  Traces sin customdata: {len(comp_data['traces_without_customdata'])}")
+                        if 'click_callbacks' in comp_data:
+                            print(f"   🖱️ Click callbacks: {len(comp_data['click_callbacks'])}")
+            else:
+                print("   ℹ️  No hay información de componentes disponible")
             
             print()
             

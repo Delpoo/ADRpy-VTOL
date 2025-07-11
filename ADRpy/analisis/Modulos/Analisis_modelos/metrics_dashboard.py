@@ -7,6 +7,26 @@ import plotly.express as px
 import pandas as pd
 from typing import Dict, List, Any, Optional
 
+def find_missing_models(
+    modelos_por_celda: Dict[str, List[Dict]],
+    detalles_por_celda: Dict[str, Any]
+) -> List[Dict]:
+    """
+    Busca modelos que están en detalles pero no en modelos_por_celda, o viceversa.
+    """
+    missing = []
+    for celda, modelos in modelos_por_celda.items():
+        detalles = detalles_por_celda.get(celda, None)
+        if detalles is None:
+            missing.append({'celda': celda, 'motivo': 'Sin detalles en detalles_por_celda'})
+        elif not modelos:
+            missing.append({'celda': celda, 'motivo': 'Sin modelos en modelos_por_celda'})
+    # También buscar celdas en detalles_por_celda que no están en modelos_por_celda
+    for celda in detalles_por_celda:
+        if celda not in modelos_por_celda:
+            missing.append({'celda': celda, 'motivo': 'Presente solo en detalles_por_celda'})
+    return missing
+
 def generate_metrics_dashboard(
     modelos_por_celda: Dict[str, List[Dict]],
     detalles_por_celda: Dict[str, Any],
@@ -125,13 +145,10 @@ def generate_metrics_dashboard(
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'marginBottom': '18px', 'justifyContent': 'center', 'width': '100%'})
 
     # Visualización: Modelos por celda (heatmap compacto)
-    print("[DEBUG] Generando heatmap de modelos por celda...")
     modelos_por_celda_count = {k: len(v) for k, v in modelos_por_celda.items()}
-    print(f"[DEBUG] modelos_por_celda_count: {modelos_por_celda_count}")
     df_celdas = pd.DataFrame([
         {'Celda': k, 'Cantidad': v} for k, v in modelos_por_celda_count.items()
     ])
-    print(f"[DEBUG] df_celdas shape: {df_celdas.shape}")
     heatmap_celdas = None
     if not df_celdas.empty:
         # Separar aeronave y parámetro si es posible
@@ -140,12 +157,8 @@ def generate_metrics_dashboard(
         else:
             df_celdas['Aeronave'] = df_celdas['Celda']
             df_celdas['Parámetro'] = ''
-        print(f"[DEBUG] df_celdas columns: {df_celdas.columns}")
-        print(f"[DEBUG] df_celdas head:\n{df_celdas.head()}")
         # Pivot para heatmap
         pivot = df_celdas.pivot_table(index='Aeronave', columns='Parámetro', values='Cantidad', fill_value=0)
-        print(f"[DEBUG] pivot shape: {pivot.shape}")
-        print(f"[DEBUG] pivot head:\n{pivot.head()}")
         import plotly.graph_objects as go
         # Ajuste 100% ancho, alto igual al ancho (1:1), navegación óptima
         heatmap_fig = go.Figure(
@@ -171,7 +184,6 @@ def generate_metrics_dashboard(
                 yaxis=dict(automargin=True)
             )
         )
-        print(f"[DEBUG] heatmap_fig data: {heatmap_fig.data}")
         heatmap_celdas = html.Div(
             dcc.Graph(
                 id='heatmap-modelos',
@@ -207,11 +219,6 @@ def generate_metrics_dashboard(
                 'alignItems': 'center',
             }
         )
-        print(f"[DEBUG] heatmap_celdas creado: {heatmap_celdas}")
-    else:
-        print("[DEBUG] df_celdas está vacío, no se genera heatmap.")
-
-
     # Panel principal
     children = [
         html.H3("Dashboard de Métricas Globales", style={"marginBottom": "10px", 'fontSize': '1.3em', 'textAlign': 'center'}),
@@ -220,13 +227,9 @@ def generate_metrics_dashboard(
     ]
     # Nueva fila: heatmap arriba, luego fila con tipo de modelo (65%) y predictores (35%)
     if heatmap_celdas is not None:
-        print("[DEBUG] heatmap_celdas se inserta en el dashboard (forzado)")
         children.append(html.Div([
-            # html.Div("[DEBUG] Heatmap insertado", style={'color': 'red', 'fontWeight': 'bold', 'marginBottom': '8px'}),
             heatmap_celdas
         ], style={'marginBottom': '18px', 'height': '900px', 'minHeight': '600px', 'display': 'flex', 'flexDirection': 'column', 'justifyContent': 'center', 'alignItems': 'center', 'width': '100%', 'background': 'white', 'border': '1px solid #eee'}))
-    else:
-        print("[DEBUG] heatmap_celdas es None, NO se inserta en el dashboard")
     # Fila con dos gráficos más altos y proporción 65/35
     row_graphs = []
     if fig_tipo:

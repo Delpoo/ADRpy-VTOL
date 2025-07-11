@@ -794,5 +794,5 @@ def test_imputacion_correlacion_basica():
     assert not df_final.isna().any().any(), "Deberia imputar todos los valores faltantes"
     print("listo")
 
-test_imputacion_correlacion_basica()
+# Test removido para limpieza del código
 """

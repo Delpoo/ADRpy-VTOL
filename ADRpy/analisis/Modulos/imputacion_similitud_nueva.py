@@ -514,5 +514,5 @@ def test_imputacion_similitud_nueva():
     print(f"\nReporte generado: {len(reporte)} registros")
 
 if __name__ == "__main__":
-    # Ejecutar test si se llama directamente
-    test_imputacion_similitud_nueva()
+    # Test removido para limpieza del código
+    pass

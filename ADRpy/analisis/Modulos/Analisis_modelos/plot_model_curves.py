@@ -67,9 +67,10 @@ def normalize_imputation_point(point, rango_x, rango_y, rango_z):
     else:
         print(f"   🔍 X: variable_independiente_1 encontrado: {x_orig}")
 
-    # Imprimir el diccionario completo para debug
-    print("\n🟣 [DEBUG] Diccionario del punto de imputación:")
-    print(point)
+    # Imprimir el diccionario completo para debug (solo si DEBUG_NORMALIZATION está activado)
+    if DEBUG_NORMALIZATION:
+        print("\n🟣 [DEBUG] Diccionario del punto de imputación:")
+        print(point)
 
     # Buscar el valor de Y: preferir variable_independiente_2, si no existe usar y_original
     y_orig = point.get('variable_independiente_2')
@@ -120,12 +121,25 @@ def normalize_imputation_point(point, rango_x, rango_y, rango_z):
     
     if y_orig is not None:
         try:
-            # 🔧 CAMBIO: No normalizar variable dependiente (Y) para mostrar valores originales
-            y_norm = y_orig  # Mantener valores originales
-            print(f"   y_norm (sin normalizar): {y_norm}")
+            # 🔧 CORRECCIÓN: Lógica de normalización corregida según especificaciones
+            # - Variables independientes SIEMPRE se normalizan (X en 2D, X,Y en 3D)
+            # - Variables dependientes NUNCA se normalizan (Y en 2D, Z en 3D)
+            
+            print(f"   🔍 DEBUG: y_orig={y_orig}, z_orig={z_orig}, condición z_orig is not None: {z_orig is not None}")
+            
+            if z_orig is not None:  # Caso 3D: Y es variable independiente, normalizar
+                if rango_y[1] != rango_y[0]:
+                    y_norm = (y_orig - rango_y[0]) / (rango_y[1] - rango_y[0])
+                    print(f"   y_norm normalizado (3D - var. independiente): {y_norm}")
+                else:
+                    y_norm = 0.5
+                    print("   ⚠️ Rango Y constante en 3D, y_norm=0.5")
+            else:  # Caso 2D: Y es variable dependiente, NO normalizar
+                y_norm = y_orig  # Mantener valores originales
+                print(f"   y_norm (2D - var. dependiente, SIN normalizar): {y_norm}")
         except Exception as e:
             y_norm = None
-            print(f"   ❌ ERROR al normalizar Y: {e}")
+            print(f"   ❌ ERROR al procesar Y: {e}")
     else:
         y_norm = None
         print("   ⚠️ Y es None, y_norm=None")
@@ -636,17 +650,7 @@ def create_model_hover_info(modelo: Dict) -> str:
         return "Error en información del modelo"
 
 
-def get_model_predictions_safe(modelo: Dict, x_range: np.ndarray) -> Optional[np.ndarray]:
-    """
-    Función de compatibilidad - usar normalization_engine en su lugar.
-    """
-    logger.warning("get_model_predictions_safe está obsoleta, usar normalization_engine")
-    try:
-        vis_data = get_normalized_model_data(modelo)
-        curva_data = vis_data.get('curva', {})
-        return np.array(curva_data.get('y_normalized', []))
-    except:
-        return None
+
 
 
 def extract_theoretical_imputation_points(modelos: List[Dict], 
@@ -1356,62 +1360,6 @@ def add_imputation_points_to_plot(fig: go.Figure,
             
             logger.info(f"Añadidos {len(subdic_points)} puntos de imputación 3D del tipo {config['name']}")
 
-def test_extract_imputation_points(modelos_por_celda: Dict, 
-                                   celda_key: Optional[str] = None,
-                                   n_predictores_filter: Optional[int] = None) -> Dict:
-    """
-    Función de prueba para extraer y mostrar puntos de imputación.
-    
-    Parameters:
-    -----------
-    modelos_por_celda : Dict
-        Diccionario completo de modelos por celda
-    celda_key : Optional[str]
-        Clave específica de celda a probar (si None, prueba todas)
-    n_predictores_filter : Optional[int]
-        Filtro por número de predictores
-        
-    Returns:
-    --------
-    Dict
-        Resumen de puntos extraídos por celda
-    """
-    resultados = {}
-    
-    # Determinar qué celdas procesar
-    if celda_key:
-        celdas_a_procesar = [celda_key] if celda_key in modelos_por_celda else []
-    else:
-        celdas_a_procesar = list(modelos_por_celda.keys())[:5]  # Primeras 5 celdas para prueba
-    
-    logger.info(f"Probando extracción de puntos de imputación en {len(celdas_a_procesar)} celdas")
-    
-    for celda in celdas_a_procesar:
-        puntos = extract_imputation_points(
-            modelos_por_celda, 
-            celda, 
-            n_predictores_filter=n_predictores_filter
-        )
-        
-        resultados[celda] = {
-            'total_puntos': len(puntos),
-            'puntos_2d': len([p for p in puntos if p.get('n_predictores', 1) == 1]),
-            'puntos_3d': len([p for p in puntos if p.get('n_predictores', 1) == 2]),
-            'por_metodo': {},
-            'ejemplos': puntos[:2]  # Primeros 2 puntos como ejemplos
-        }
-        
-        # Contar por método
-        for punto in puntos:
-            metodo = punto.get('subdic_name', 'unknown')
-            if metodo not in resultados[celda]['por_metodo']:
-                resultados[celda]['por_metodo'][metodo] = 0
-            resultados[celda]['por_metodo'][metodo] += 1
-        
-        logger.info(f"Celda {celda}: {len(puntos)} puntos extraídos")
-    
-    return resultados
-
 def add_original_imputation_points(fig: go.Figure, 
                                    modelos_por_celda: Dict,
                                    celda_key: str,
@@ -1574,47 +1522,6 @@ def add_original_imputation_points(fig: go.Figure,
         import traceback
         traceback.print_exc()
 
-def test_original_imputation_points(modelos_por_celda: Dict, 
-                                   celda_key: str) -> go.Figure:
-    """
-    Función de prueba para crear un gráfico con puntos de imputación originales.
-    
-    Parameters:
-    -----------
-    modelos_por_celda : Dict
-        Diccionario completo de modelos por celda
-    celda_key : str
-        Clave de la celda a probar
-        
-    Returns:
-    --------
-    go.Figure
-        Figura de Plotly con puntos de imputación
-    """
-    logger.info(f"Creando gráfico de prueba para {celda_key}")
-    
-    # Crear figura vacía
-    fig = go.Figure()
-    
-    # Añadir puntos de imputación originales
-    add_original_imputation_points(
-        fig=fig,
-        modelos_por_celda=modelos_por_celda,
-        celda_key=celda_key,
-        show_imputation_points=True
-    )
-    
-    # Configurar layout básico
-    fig.update_layout(
-        title=f"Puntos de Imputación - {celda_key}",
-        xaxis_title="Variable Independiente",
-        yaxis_title="Valor Imputado",
-        width=800,
-        height=600
-    )
-    
-    return fig
-
 def add_normalized_imputation_points(fig: go.Figure, 
                                      detalles_por_celda: Dict,
                                      celda_key: str,
@@ -1656,25 +1563,15 @@ def add_normalized_imputation_points(fig: go.Figure,
     modelos_por_celda : Optional[Dict]
         [OBSOLETO] Diccionario con los modelos por celda (ya no se usa)
     """
-    # 🔍 DEBUG CRÍTICO: Logs para rastrear el flujo completo
-    print("🚨🚨🚨 PUNTO DE CONTROL 1: add_normalized_imputation_points INICIADA 🚨🚨🚨")
-    print(f"🚨 PUNTO DE CONTROL 2: celda_key={celda_key}")
-    print(f"🚨 PUNTO DE CONTROL 3: show_imputation_points={show_imputation_points}")
-    print(f"🚨 PUNTO DE CONTROL 4: n_predictores_filter={n_predictores_filter}")
-    print(f"🚨 PUNTO DE CONTROL 5: detalles_por_celda disponible: {detalles_por_celda is not None}")
-    
-    logger.info(f"🔍 DEBUG CRÍTICO: Iniciando add_normalized_imputation_points")
-    logger.info(f"🔍 DEBUG CRÍTICO: celda_key={celda_key}")
-    logger.info(f"🔍 DEBUG CRÍTICO: show_imputation_points={show_imputation_points}")
-    logger.info(f"🔍 DEBUG CRÍTICO: n_predictores_filter={n_predictores_filter}")
+    # Simple logging instead of excessive debug output
+    logger.info(f"Añadiendo puntos de imputación normalizados para celda {celda_key}")
     
     if not show_imputation_points:
-        print("🚨 PUNTO DE CONTROL 6: show_imputation_points=False - SALIENDO")
-        logger.info("🔍 DEBUG CRÍTICO: Puntos de imputación deshabilitados por show_imputation_points=False")
+        logger.info("Puntos de imputación deshabilitados")
         return
     
-    logger.info(f"🔍 DEBUG CRÍTICO: Añadiendo puntos de imputación normalizados para celda {celda_key}")
     if n_predictores_filter:
+        logger.info(f"Filtrando por número de predictores: {n_predictores_filter}")
         logger.info(f"🔍 DEBUG CRÍTICO: Filtrando por número de predictores: {n_predictores_filter}")
     
     try:
@@ -1686,25 +1583,22 @@ def add_normalized_imputation_points(fig: go.Figure,
             n_predictores_filter=n_predictores_filter
         )
         
-        logger.info(f"🔍 DEBUG CRÍTICO: Puntos extraídos: {len(imputation_points)}")
+        logger.info(f"Puntos de imputación extraídos: {len(imputation_points)}")
         
         if not imputation_points:
-            logger.warning(f"🔍 DEBUG CRÍTICO: No se encontraron puntos de imputación para {celda_key} con filtro {n_predictores_filter}")
-            logger.warning(f"🔍 DEBUG CRÍTICO: Intentando sin filtro para diagnóstico...")
-            
+            logger.warning(f"No se encontraron puntos de imputación para {celda_key} con filtro {n_predictores_filter}")
             # Intentar sin filtro para diagnóstico
             puntos_sin_filtro = extract_imputation_points(detalles_por_celda, celda_key, n_predictores_filter=None)
-            logger.warning(f"🔍 DEBUG CRÍTICO: Puntos sin filtro: {len(puntos_sin_filtro)}")
+            logger.warning(f"Puntos sin filtro: {len(puntos_sin_filtro)}")
             
             if puntos_sin_filtro:
                 ejemplo = puntos_sin_filtro[0]
-                logger.warning(f"🔍 DEBUG CRÍTICO: Ejemplo de punto: n_predictores={ejemplo.get('n_predictores')}, filtro_requerido={n_predictores_filter}")
-                logger.warning(f"🔍 DEBUG CRÍTICO: PROBLEMA DETECTADO: Los puntos tienen {ejemplo.get('n_predictores')} predictores pero se requieren {n_predictores_filter}")
+                logger.warning(f"Ejemplo de punto: n_predictores={ejemplo.get('n_predictores')}, filtro_requerido={n_predictores_filter}")
             
             return
 
         # Continuar con el resto de la función original...
-        logger.info(f"🔍 DEBUG CRÍTICO: Procediendo a normalizar {len(imputation_points)} puntos")
+        logger.info(f"Procediendo a normalizar {len(imputation_points)} puntos")
           # � TEMPORALMENTE SIN NORMALIZACIÓN - SALTAMOS LA BÚSQUEDA DEL MEJOR MODELO
         logger.info(f"� DEBUG: RESTAURANDO lógica original de normalización")
         
