@@ -750,7 +750,7 @@ def _run_dash_app(modelos_por_celda, detalles_por_celda, unique_values, port, de
     print("Presione Ctrl+C para detener la aplicación")
     
     try:
-        app.run_server(debug=debug, port=port, host='127.0.0.1')
+        app.run(debug=debug, port=port, host='127.0.0.1')
     except KeyboardInterrupt:
         print("\nAplicación detenida por el usuario")
     except Exception as e:

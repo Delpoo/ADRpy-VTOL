@@ -39,10 +39,9 @@ def _confianza_promedio(modelo):
         return conf_val
     return -1
 
-def normalize_imputation_point(point, rango_x, rango_y, rango_z):
+def normalize_imputation_point(point, rango_x, rango_y, rango_z, n_predictores=1):
     """
-    Normaliza un punto de imputación usando los rangos del modelo.
-    MODIFICADO: No normaliza la coordenada Z (variable dependiente) para mostrar valores originales.
+    Normaliza un punto de imputación según la dimensión del gráfico (2D o 3D).
     
     Parameters:
     -----------
@@ -53,116 +52,159 @@ def normalize_imputation_point(point, rango_x, rango_y, rango_z):
         - 'valor_imputado' o 'variable_dependiente' para Z
     rango_x, rango_y, rango_z : List[float]
         Rangos [min, max] para cada dimensión
+    n_predictores : int
+        1 para gráficos 2D, 2 para gráficos 3D
     
     Returns:
     --------
-    Tuple[float, float, float]
-        Coordenadas: X normalizada, Y normalizada, Z original (no normalizada)
+    Tuple:
+        - Para 2D: (x_norm, y_original, None)
+        - Para 3D: (x_norm, y_norm, z_original)
     """
-    # Buscar valor de X: preferir variable_independiente_1, si no existe usar x_original
-    x_orig = point.get('variable_independiente_1')
-    if x_orig is None:
-        x_orig = point.get('x_original', 0)
-        print(f"   🔍 X: variable_independiente_1 no encontrado, usando x_original: {x_orig}")
-    else:
-        print(f"   🔍 X: variable_independiente_1 encontrado: {x_orig}")
-
-    # Imprimir el diccionario completo para debug (solo si DEBUG_NORMALIZATION está activado)
+    # 🔍 DEBUG COMPLETO DEL PUNTO
     if DEBUG_NORMALIZATION:
-        print("\n🟣 [DEBUG] Diccionario del punto de imputación:")
-        print(point)
-
-    # Buscar el valor de Y: preferir variable_independiente_2, si no existe usar y_original
-    y_orig = point.get('variable_independiente_2')
-    if y_orig is None:
-        y_orig = point.get('y_original')
-        print(f"   🔍 Y: variable_independiente_2 no encontrado, usando y_original: {y_orig}")
-    else:
-        print(f"   🔍 Y: variable_independiente_2 encontrado: {y_orig}")
-
-    # Buscar valor de Z: preferir variable_dependiente, si no existe usar valor_imputado
-    z_orig = point.get('variable_dependiente')
+        print(f"\n🔎 [DEBUG COMPLETO] normalize_imputation_point llamada:")
+        print(f"   n_predictores: {n_predictores}")
+        print(f"   point completo: {point}")
+        print(f"   rangos recibidos: X={rango_x}, Y={rango_y}, Z={rango_z}")
+    
+    # 🔧 BÚSQUEDA FLEXIBLE DE VALORES X, Y, Z
+    # Buscar valor de X: múltiples nombres posibles
+    x_orig = None
+    x_fields = ['variable_independiente_1', 'x_original', 'X', 'x']
+    for field in x_fields:
+        if field in point and point[field] is not None:
+            x_orig = point[field]
+            if DEBUG_NORMALIZATION:
+                print(f"   🔍 X: encontrado en campo '{field}': {x_orig}")
+            break
+    
+    if x_orig is None:
+        x_orig = 0
+        if DEBUG_NORMALIZATION:
+            print(f"   ⚠️ X: no encontrado en ningún campo, usando 0")
+    
+    # Buscar valor de Y (solo para 3D): múltiples nombres posibles
+    y_orig = None
+    if n_predictores == 2:  # Solo buscar Y para gráficos 3D
+        y_fields = ['variable_independiente_2', 'y_original', 'Y', 'y']
+        for field in y_fields:
+            if field in point and point[field] is not None:
+                y_orig = point[field]
+                if DEBUG_NORMALIZATION:
+                    print(f"   🔍 Y: encontrado en campo '{field}': {y_orig}")
+                break
+        
+        if y_orig is None and DEBUG_NORMALIZATION:
+            print(f"   ⚠️ Y: no encontrado en ningún campo para gráfico 3D")
+    
+    # Buscar valor de Z: múltiples nombres posibles
+    z_orig = None
+    z_fields = ['variable_dependiente', 'valor_imputado', 'Valor imputado', 'z_original', 'Z', 'z']
+    for field in z_fields:
+        if field in point and point[field] is not None:
+            z_orig = point[field]
+            if DEBUG_NORMALIZATION:
+                print(f"   🔍 Z: encontrado en campo '{field}': {z_orig}")
+            break
+    
     if z_orig is None:
-        z_orig = point.get('valor_imputado', 0)
-        print(f"   🔍 Z: variable_dependiente no encontrado, usando valor_imputado: {z_orig}")
-    else:
-        print(f"   🔍 Z: variable_dependiente encontrado: {z_orig}")
+        z_orig = 0
+        if DEBUG_NORMALIZATION:
+            print(f"   ⚠️ Z: no encontrado en ningún campo, usando 0")
 
-    print("\n🔎 [NORMALIZACIÓN X] Normalizando variable_independiente_1 (X):")
+    # Normalizar X (siempre normalizada como variable independiente)
+    print(f"\n🔎 [NORMALIZACIÓN X] Normalizando variable_independiente_1 (X):")
     print(f"   X valor usado: {x_orig}")
     print(f"   rango_x: {rango_x}")
+    
+    # 🔍 VALIDACIÓN CRÍTICA: Verificar coherencia del rango X
+    if DEBUG_NORMALIZATION:
+        print(f"   🔎 VALIDACIÓN X: ¿{x_orig} está en rango [{rango_x[0]}, {rango_x[1]}]?")
+        if x_orig < rango_x[0] or x_orig > rango_x[1]:
+            print(f"   ❌ PROBLEMA DETECTADO: X={x_orig} está FUERA del rango {rango_x}")
+            print(f"   🔧 Esto causará normalización fuera de [0,1]")
+        else:
+            print(f"   ✅ OK: X={x_orig} está dentro del rango {rango_x}")
+    
+    # 🔧 CORRECCIÓN AUTOMÁTICA: Si el valor está fuera del rango, expandir el rango
+    if x_orig < rango_x[0] or x_orig > rango_x[1]:
+        rango_x_original = rango_x.copy()
+        rango_x = [min(rango_x[0], x_orig * 0.95), max(rango_x[1], x_orig * 1.05)]
+        if DEBUG_NORMALIZATION:
+            print(f"   🔧 CORRECCIÓN APLICADA: Rango X expandido de {rango_x_original} a {rango_x}")
+    
     if rango_x[1] != rango_x[0]:
         x_norm = (x_orig - rango_x[0]) / (rango_x[1] - rango_x[0])
         print(f"   x_norm calculado: {x_norm}")
+        
+        # 🔍 VALIDACIÓN RESULTADO
+        if DEBUG_NORMALIZATION:
+            if x_norm < 0 or x_norm > 1:
+                print(f"   ❌ RESULTADO PROBLEMÁTICO: x_norm={x_norm} está fuera de [0,1]")
+            else:
+                print(f"   ✅ RESULTADO OK: x_norm={x_norm} está en [0,1]")
     else:
         x_norm = 0.5
         print("   ⚠️ Rango X constante, x_norm=0.5")
 
-    print("\n🔎 [NORMALIZACIÓN Y] Normalizando variable_independiente_2 (Y):")
-    print(f"   Y valor usado: {y_orig}")
-    print(f"   rango_y: {rango_y}")
-    # Debug extra: mostrar de dónde viene rango_y
-    import inspect
-    frame = inspect.currentframe()
-    outer_frames = inspect.getouterframes(frame)
-    print("   [DEBUG] Llamado desde:")
-    for of in outer_frames[1:4]:
-        print(f"     {of.function} (línea {of.lineno} en {of.filename})")
-    print(f"   [DEBUG] Tipo de rango_y: {type(rango_y)} | valor: {rango_y}")
-    
-    # 🔧 DETECCIÓN DE PROBLEMA Y CORRECCIÓN AUTOMÁTICA
-    if rango_y == [0, 1] and y_orig is not None and (y_orig < 0 or y_orig > 1):
-        print(f"   ⚠️ PROBLEMA DETECTADO: rango_y es [0, 1] pero y_orig = {y_orig} está fuera de ese rango")
-        print(f"   🔧 APLICANDO CORRECCIÓN AUTOMÁTICA: Normalizando con rango extendido")
-        # Usar un rango que incluya el valor actual
-        rango_y_corregido = [min(0, y_orig * 0.8), max(1, y_orig * 1.2)]
-        print(f"   🔧 Rango Y corregido temporalmente: {rango_y_corregido}")
-        rango_y = rango_y_corregido
-    
-    if y_orig is not None:
-        try:
-            # 🔧 CORRECCIÓN: Lógica de normalización corregida según especificaciones
-            # - Variables independientes SIEMPRE se normalizan (X en 2D, X,Y en 3D)
-            # - Variables dependientes NUNCA se normalizan (Y en 2D, Z en 3D)
-            
-            print(f"   🔍 DEBUG: y_orig={y_orig}, z_orig={z_orig}, condición z_orig is not None: {z_orig is not None}")
-            
-            if z_orig is not None:  # Caso 3D: Y es variable independiente, normalizar
-                if rango_y[1] != rango_y[0]:
-                    y_norm = (y_orig - rango_y[0]) / (rango_y[1] - rango_y[0])
-                    print(f"   y_norm normalizado (3D - var. independiente): {y_norm}")
-                else:
-                    y_norm = 0.5
-                    print("   ⚠️ Rango Y constante en 3D, y_norm=0.5")
-            else:  # Caso 2D: Y es variable dependiente, NO normalizar
-                y_norm = y_orig  # Mantener valores originales
-                print(f"   y_norm (2D - var. dependiente, SIN normalizar): {y_norm}")
-        except Exception as e:
-            y_norm = None
-            print(f"   ❌ ERROR al procesar Y: {e}")
+    if n_predictores == 1:
+        # 2D: Y es variable dependiente, NO normalizar
+        print(f"\n🔎 [2D] Y es variable dependiente - NO normalizar:")
+        print(f"   Y valor original: {z_orig}")
+        return x_norm, z_orig, None
     else:
-        y_norm = None
-        print("   ⚠️ Y es None, y_norm=None")
-
-    print("\n🔎 [SIN NORMALIZACIÓN Z] Manteniendo variable_dependiente (Z) en escala original:")
-    print(f"   Z valor original usado: {z_orig}")
-    print(f"   ✅ Z se mantiene sin normalizar para mostrar valores reales")
-    
-    # 🔧 CAMBIO PRINCIPAL: NO normalizar Z, mantener valor original
-    z_original = z_orig  # Usar directamente el valor original
-
-    return x_norm, y_norm, z_original
+        # 3D: Y es variable independiente, normalizar (y_orig ya fue buscado arriba)
+        print(f"\n🔎 [3D] Y es variable independiente - normalizar:")
+        print(f"   Y valor usado: {y_orig}")
+        print(f"   rango_y: {rango_y}")
+        
+        # 🔍 VALIDACIÓN CRÍTICA: Verificar coherencia del rango Y
+        if DEBUG_NORMALIZATION and y_orig is not None:
+            print(f"   🔎 VALIDACIÓN Y: ¿{y_orig} está en rango [{rango_y[0]}, {rango_y[1]}]?")
+            if y_orig < rango_y[0] or y_orig > rango_y[1]:
+                print(f"   ❌ PROBLEMA DETECTADO: Y={y_orig} está FUERA del rango {rango_y}")
+                print(f"   🔧 Esto causará normalización fuera de [0,1]")
+            else:
+                print(f"   ✅ OK: Y={y_orig} está dentro del rango {rango_y}")
+        
+        # 🔧 CORRECCIÓN AUTOMÁTICA: Si el valor está fuera del rango, expandir el rango
+        if y_orig is not None and (y_orig < rango_y[0] or y_orig > rango_y[1]):
+            rango_y_original = rango_y.copy()
+            rango_y = [min(rango_y[0], y_orig * 0.95), max(rango_y[1], y_orig * 1.05)]
+            if DEBUG_NORMALIZATION:
+                print(f"   🔧 CORRECCIÓN APLICADA: Rango Y expandido de {rango_y_original} a {rango_y}")
+        
+        if y_orig is not None and rango_y[1] != rango_y[0]:
+            y_norm = (y_orig - rango_y[0]) / (rango_y[1] - rango_y[0])
+            print(f"   y_norm calculado: {y_norm}")
+            
+            # 🔍 VALIDACIÓN RESULTADO
+            if DEBUG_NORMALIZATION:
+                if y_norm < 0 or y_norm > 1:
+                    print(f"   ❌ RESULTADO PROBLEMÁTICO: y_norm={y_norm} está fuera de [0,1]")
+                else:
+                    print(f"   ✅ RESULTADO OK: y_norm={y_norm} está en [0,1]")
+        else:
+            y_norm = 0.5
+            print("   ⚠️ Rango Y constante o y_orig None, y_norm=0.5")
+        
+        print(f"\n🔎 [3D] Z es variable dependiente - NO normalizar:")
+        print(f"   Z valor original: {z_orig}")
+        
+        return x_norm, y_norm, z_orig
 
 # Control de debug global
-DEBUG_NORMALIZATION = False  # Cambiar a True para debug detallado
+DEBUG_NORMALIZATION = True  # ✅ ACTIVADO para debug detallado
 
-def get_best_model_ranges(modelos_por_celda, celda_key):
+def get_best_model_ranges(modelos_por_celda, celda_key, n_predictores_filter=None):
     """
     Obtiene los rangos de normalización del mejor modelo de una celda.
     LÓGICA ORIGINAL RESTAURADA CON FIX: Selecciona el mejor modelo por confianza promedio,
     y extrae los rangos de X_original y y_original de los datos de entrenamiento.
     
     FIXED: Maneja correctamente cuando se pasa una lista directamente como valor de celda.
+    NUEVO: Filtra modelos por número de predictores para evitar confusión entre 2D/3D.
     
     Parameters:
     -----------
@@ -170,6 +212,8 @@ def get_best_model_ranges(modelos_por_celda, celda_key):
         Diccionario completo de modelos
     celda_key : str
         Clave de la celda
+    n_predictores_filter : Optional[int]
+        Filtro por número de predictores (1 para 2D, 2 para 3D, None para todos)
     
     Returns:
     --------
@@ -185,6 +229,7 @@ def get_best_model_ranges(modelos_por_celda, celda_key):
 
     if DEBUG_NORMALIZATION:
         print(f"[DEBUG] get_best_model_ranges: celda_key buscada: '{celda_key}'")
+        print(f"[DEBUG] n_predictores_filter aplicado: {n_predictores_filter}")
         print(f"[DEBUG] Claves disponibles en modelos_por_celda: {list(modelos_por_celda.keys())[:10]}")
     
     if not modelos_por_celda or celda_key not in modelos_por_celda:
@@ -252,14 +297,20 @@ def get_best_model_ranges(modelos_por_celda, celda_key):
             n_pred = modelo.get('n_predictores', 1)
             
             if DEBUG_NORMALIZATION:
-                print(f"� DEBUG: Modelo {i+1} - Confianza: {confianza:.3f}, n_predictores: {n_pred}")
+                print(f"🔵 DEBUG: Modelo {i+1} - Confianza: {confianza:.3f}, n_predictores: {n_pred}")
             
-            # Buscar mejor modelo general
+            # 🔧 APLICAR FILTRO: Solo considerar modelos que coincidan con el filtro
+            if n_predictores_filter is not None and n_pred != n_predictores_filter:
+                if DEBUG_NORMALIZATION:
+                    print(f"   ⚪ Modelo {i+1} EXCLUIDO por filtro (n_pred={n_pred} != filter={n_predictores_filter})")
+                continue
+            
+            # Buscar mejor modelo (ya filtrado)
             if confianza > mejor_confianza:
                 mejor_confianza = confianza
                 mejor_modelo = modelo
                 if DEBUG_NORMALIZATION:
-                    print(f"� DEBUG: Nuevo mejor modelo general (confianza: {confianza:.3f})")
+                    print(f"🟢 DEBUG: Nuevo mejor modelo (confianza: {confianza:.3f}, n_pred: {n_pred})")
             
             # 🔧 FIX: Buscar específicamente el mejor modelo de 2 predictores
             if n_pred == 2 and confianza > mejor_confianza_2pred:
@@ -278,51 +329,29 @@ def get_best_model_ranges(modelos_por_celda, celda_key):
         if modelo_2_predictores:
             print(f"🔧 DEBUG: Mejor modelo de 2 predictores con confianza: {mejor_confianza_2pred:.3f}")
     
-    # 🔧 FIX: Lógica corregida para selección de modelos
-    # Para gráficos 2D (1 predictor): usar el mejor modelo de 1 predictor
-    # Para gráficos 3D (2 predictores): usar el mejor modelo de 2 predictores si existe
+
     
-    # Determinar qué modelo usar para cada rango
-    modelo_para_rango_x = mejor_modelo  # Por defecto, usar mejor modelo general
-    modelo_para_rango_y = mejor_modelo  # Por defecto, usar mejor modelo general
-    modelo_para_rango_z = mejor_modelo  # Siempre usar mejor modelo general para Z
+    # Extraer rangos de los datos de entrenamiento del mejor modelo filtrado
+    datos_ent = mejor_modelo.get('datos_entrenamiento', {})
+    X_original = datos_ent.get('X_original', [])
+    y_original = datos_ent.get('y_original', [])
     
-    # Si hay modelo de 2 predictores, usarlo para rangos X e Y en gráficos 3D
-    if modelo_2_predictores is not None:
-        modelo_para_rango_x = modelo_2_predictores
-        modelo_para_rango_y = modelo_2_predictores
-        if DEBUG_NORMALIZATION:
-            print(f"🔧 FIX: Usando modelo de 2 predictores para rangos X e Y")
-    
-    # Extraer rangos de los datos de entrenamiento
-    # Para rango X: usar el modelo apropiado
-    datos_ent_x = modelo_para_rango_x.get('datos_entrenamiento', {})
-    X_original_x = datos_ent_x.get('X_original', [])
-    
-    # Para rango Y: usar el modelo apropiado (solo si es de 2 predictores)
-    datos_ent_y = modelo_para_rango_y.get('datos_entrenamiento', {})
-    X_original_y = datos_ent_y.get('X_original', [])
-    
-    # Para rango Z: usar siempre el mejor modelo
-    datos_ent_z = modelo_para_rango_z.get('datos_entrenamiento', {})
-    y_original = datos_ent_z.get('y_original', [])
-    
-    if not X_original_x or not y_original:
+    if not X_original or not y_original:
         if DEBUG_NORMALIZATION:
             print(f"🔴 DEBUG: No hay datos de entrenamiento originales")
-            print(f"   X_original_x: {bool(X_original_x)}, y_original: {bool(y_original)}")
+            print(f"   X_original: {bool(X_original)}, y_original: {bool(y_original)}")
         return rango_x, rango_y, rango_z, predictor_names
     
     # Convertir a arrays numpy para facilidad de cálculo
     import numpy as np
-    X_array = np.array(X_original_x)
+    X_array = np.array(X_original)
     y_array = np.array(y_original)
     
     if DEBUG_NORMALIZATION:
         print(f"🔍 DEBUG: X_array.shape = {X_array.shape}")
         print(f"🔍 DEBUG: X_array.ndim = {X_array.ndim}")
     
-    # Calcular rango X del modelo apropiado
+    # Calcular rango X
     if X_array.ndim == 1:
         # Modelo de 1 predictor (array 1D)
         x_min, x_max = X_array.min(), X_array.max()
@@ -335,32 +364,25 @@ def get_best_model_ranges(modelos_por_celda, celda_key):
         rango_x = [float(x_min), float(x_max)]
         if DEBUG_NORMALIZATION:
             print(f"🟢 DEBUG: Rango X (desde 2 predictores): [{x_min:.3f}, {x_max:.3f}]")
-    
-    # Calcular rango Y solo si hay modelo de 2 predictores
-    if modelo_2_predictores is not None and X_original_y:
-        X_array_y = np.array(X_original_y)
-        if X_array_y.ndim == 2 and X_array_y.shape[1] >= 2:
-            # Usar segunda columna para Y
-            y_min, y_max = X_array_y[:, 1].min(), X_array_y[:, 1].max()
+        
+        # Calcular rango Y solo para modelos de 2 predictores
+        if X_array.shape[1] >= 2:
+            y_min, y_max = X_array[:, 1].min(), X_array[:, 1].max()
             rango_y = [float(y_min), float(y_max)]
             if DEBUG_NORMALIZATION:
                 print(f"🟢 DEBUG: Rango Y (2 predictores): [{y_min:.3f}, {y_max:.3f}]")
-                print(f"✅ DEBUG: Y range actualizado correctamente desde modelo de 2 predictores")
         else:
             if DEBUG_NORMALIZATION:
-                print(f"⚠️  DEBUG: Modelo de 2 predictores no tiene datos 2D válidos")
-    else:
-        if DEBUG_NORMALIZATION:
-            print(f"⚠️  DEBUG: Y range permanece por defecto [0, 1] (no hay modelo de 2 predictores)")
+                print(f"⚠️ DEBUG: Modelo de 2 predictores no tiene datos 2D válidos")
     
-    # Rango Z siempre del mejor modelo
+    # Rango Z del mejor modelo
     z_min, z_max = y_array.min(), y_array.max()
     rango_z = [float(z_min), float(z_max)]
     if DEBUG_NORMALIZATION:
         print(f"🟢 DEBUG: Rango Z (objetivo): [{z_min:.3f}, {z_max:.3f}]")
     
     # 🔧 OBTENER NOMBRES DE PREDICTORES
-    modelo_para_nombres = modelo_2_predictores if modelo_2_predictores else mejor_modelo
+    modelo_para_nombres = mejor_modelo
     
     try:
         # Intentar obtener nombres de predictores del modelo
@@ -1620,7 +1642,9 @@ def add_normalized_imputation_points(fig: go.Figure,
             # Si no tenemos modelos_por_celda, usar una estructura vacía
             modelos_por_celda = {}
         
-        rango_x, rango_y, rango_z, predictor_names = get_best_model_ranges(modelos_por_celda, celda_key)
+        rango_x, rango_y, rango_z, predictor_names = get_best_model_ranges(
+            modelos_por_celda, celda_key, n_predictores_filter=n_predictores_filter
+        )
         logger.info(f"🔧 DEBUG: Rangos de normalización obtenidos: X={rango_x}, Y={rango_y}, Z={rango_z}")
         logger.info(f"🟢 DEBUG: Nombres de predictores: {predictor_names}")
         print(f"🟢 LÓGICA ORIGINAL: Rangos X={rango_x}, Y={rango_y}, Z={rango_z}")
@@ -1652,12 +1676,14 @@ def add_normalized_imputation_points(fig: go.Figure,
                     subdic_name = point.get('subdic_name', 'unknown')
                     config = method_config.get(subdic_name, method_config['final'])
                     
-                    # APLICAR NORMALIZACIÓN (X, Y normalizadas, Z original)
-                    x_norm, y_norm, z_original = normalize_imputation_point(point, rango_x, rango_y, rango_z)
+                    # APLICAR NORMALIZACIÓN (X normalizada, Y original para 2D)
+                    x_norm, y_val, _ = normalize_imputation_point(
+                        point, rango_x, rango_y, rango_z, n_predictores=1
+                    )
                     
-                    # Para gráficos 2D: X normalizada, Z original (como Y)
+                    # Para gráficos 2D: X normalizada, Y original
                     x_val = x_norm
-                    y_val = z_original  # 🔧 CAMBIO: usar valor original de Z en lugar de normalizado
+                    # y_val ya está asignado por normalize_imputation_point
                     
                     logger.info(f"🔍 DEBUG: Punto 2D {subdic_name}: ORIGINAL ({point.get('x_original')}, {point.get('valor_imputado')}) → X_NORM={x_val:.3f}, Z_ORIGINAL={y_val}")
                     
@@ -1726,19 +1752,15 @@ def add_normalized_imputation_points(fig: go.Figure,
                     subdic_name = point.get('subdic_name', 'unknown')
                     config = method_config.get(subdic_name, method_config['final'])
                     
-                    # APLICAR NORMALIZACIÓN (X, Y normalizadas, Z original)
-                    x_norm, y_norm, z_original = normalize_imputation_point(point, rango_x, rango_y, rango_z)
-                    
-                    # 🔧 DEBUG ESPECÍFICO PARA PROBLEMA CON Y EN 3D
-                    print(f"🔍 DEBUG 3D - {subdic_name}:")
-                    print(f"   Punto original: x={point.get('x_original')}, y={point.get('y_original')}, z={point.get('valor_imputado')}")
-                    print(f"   Rangos usados: X={rango_x}, Y={rango_y}, Z={rango_z}")
-                    print(f"   Resultado: x_norm={x_norm:.4f}, y_norm={y_norm}, z_original={z_original} (Z SIN NORMALIZAR)")
+                    # APLICAR NORMALIZACIÓN (X, Y normalizadas, Z original para 3D)
+                    x_norm, y_norm, z_val = normalize_imputation_point(
+                        point, rango_x, rango_y, rango_z, n_predictores=2
+                    )
                     
                     # Para gráficos 3D: X, Y normalizadas, Z original
                     x_val = x_norm
                     y_val = y_norm if y_norm is not None else 0.5
-                    z_val = z_original  # 🔧 CAMBIO: usar valor original de Z
+                    # z_val ya está asignado por normalize_imputation_point
                     
                     # 🔧 DEBUG ADICIONAL: Verificar si Y no se normaliza
                     if y_norm is None:
@@ -1746,7 +1768,13 @@ def add_normalized_imputation_points(fig: go.Figure,
                         print(f"   y_original: {point.get('y_original')}")
                         print(f"   rango_y: {rango_y}")
                     elif point.get('y_original') is not None and (y_norm < 0 or y_norm > 1):
-                        print(f"   ❌ WARNING: y_norm={y_norm:.4f} fuera de rango [0,1] para {subdic_name}")
+                        print(f"   ❌ WARNING: y_norm={y_norm} está fuera de [0,1] para {subdic_name}")
+                        print(f"   y_original: {point.get('y_original')}")
+                        print(f"   rango_y: {rango_y}")
+                        print(f"   ¿y_original está fuera del rango del modelo?")
+                    # 🔧 DEBUG ADICIONAL: Verificar si Y no se normaliza
+                    if y_norm is None:
+                        print(f"   ❌ WARNING: y_norm es None para {subdic_name}")
                         print(f"   y_original: {point.get('y_original')}")
                         print(f"   rango_y: {rango_y}")
                         print(f"   ¿y_original está fuera del rango del modelo?")
