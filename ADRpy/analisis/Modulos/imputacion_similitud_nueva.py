@@ -62,9 +62,8 @@ def configurar_familias_caracteristicas():
     familias = {
         "fisica": [
             "Peso máximo al despegue (MTOW)",
-            "Empty weight",
-            "Payload",
-            "Cantidad de motores"
+            "Peso Vacio (MTOW - payload)",
+            "Payload"
         ],
         "geometrica": [
             "Área del ala",
@@ -77,10 +76,11 @@ def configurar_familias_caracteristicas():
             "Potencia específica (P/W)",
             "Autonomía de la aeronave",
             "Alcance de la aeronave", 
-            "Velocidad a la que se realiza el crucero (KTAS)",
-            "Velocidad máxima (KIAS)",
+            "Velocidad a la que se realiza el crucero (m/s TAS)",
+            "Velocidad máxima (m/s IAS)",
             "Rango de comunicación",
-            "Potencia HP"
+            "Potencia HP",
+            "Potencia Watts"
         ]
     }
     return familias

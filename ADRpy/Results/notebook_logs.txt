@@ -1,0 +1,18 @@
+2025-09-23 15:28:45 [LAUNCH] Intentando lanzar en modo debug
+2025-09-23 15:28:45 [ERROR] Error lanzando aplicación: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"C:\\Users/delpi/OneDrive/Tesis/ADRpy-VTOL/ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1318, in launch_app\n    raise Exception(f\"Error cargando datos: {error}\")\nException: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json\n"}
+2025-09-23 15:28:59 [LAUNCH] Intentando lanzar en modo produccion
+2025-09-23 15:28:59 [ERROR] Error lanzando aplicación: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"C:\\Users/delpi/OneDrive/Tesis/ADRpy-VTOL/ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1318, in launch_app\n    raise Exception(f\"Error cargando datos: {error}\")\nException: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json\n"}
+2025-09-23 15:34:53 [LAUNCH] Intentando lanzar en modo debug
+2025-09-23 15:34:53 [ERROR] Error lanzando aplicación: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"C:\\Users/delpi/OneDrive/Tesis/ADRpy-VTOL/ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1318, in launch_app\n    raise Exception(f\"Error cargando datos: {error}\")\nException: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json\n"}
+2025-09-23 15:34:54 [LAUNCH] Intentando lanzar en modo debug
+2025-09-23 15:34:54 [ERROR] Error lanzando aplicación: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"C:\\Users/delpi/OneDrive/Tesis/ADRpy-VTOL/ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1318, in launch_app\n    raise Exception(f\"Error cargando datos: {error}\")\nException: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json\n"}
+2025-09-23 15:35:04 [LAUNCH] Intentando lanzar en modo produccion
+2025-09-23 15:35:04 [ERROR] Error lanzando aplicación: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"C:\\Users/delpi/OneDrive/Tesis/ADRpy-VTOL/ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1318, in launch_app\n    raise Exception(f\"Error cargando datos: {error}\")\nException: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json\n"}
+2025-09-23 15:35:37 [LAUNCH] Intentando lanzar en modo debug
+2025-09-23 15:35:37 [ERROR] Error lanzando aplicación: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json
+  Detalles: {"traceback": "Traceback (most recent call last):\n  File \"C:\\Users/delpi/OneDrive/Tesis/ADRpy-VTOL/ADRpy\\analisis\\Modulos\\Analisis_modelos\\notebook_utils.py\", line 1318, in launch_app\n    raise Exception(f\"Error cargando datos: {error}\")\nException: Error cargando datos: Archivo no encontrado: Results/modelos_completos_por_celda.json\n"}

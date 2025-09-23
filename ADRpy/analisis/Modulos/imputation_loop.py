@@ -21,11 +21,12 @@ def is_missing(val):
 def bucle_imputacion_similitud_correlacion(
     df_filtrado,
     parametros_preseleccionados,
-    bloques_rasgos,
+#    bloques_rasgos,
     capas_familia,
     df_procesado,
     max_iteraciones=3,
-    debug_mode=False
+    debug_mode=False,
+    permitir_sin_filtro=False
 ):
 
     """
@@ -97,7 +98,10 @@ def bucle_imputacion_similitud_correlacion(
         )
         print("-" * 80)
         # Cambia aquí: obtener también modelos_info
-        df_correlacion_resultado, reporte_correlacion, modelos_info_correlacion = imputaciones_correlacion(df_correlacion)
+        df_correlacion_resultado, reporte_correlacion, modelos_info_correlacion = imputaciones_correlacion(
+            df_correlacion,
+            permitir_sin_filtro=permitir_sin_filtro
+        )
 
         # Guardar modelos_info_correlacion por cada celda (idx, objetivo)
         if modelos_info_correlacion:

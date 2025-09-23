@@ -62,6 +62,7 @@ from Modulos.imputation_loop import bucle_imputacion_similitud_correlacion
 from Modulos.excel_export import exportar_excel_con_imputaciones
 from Modulos.html_utils import convertir_a_html
 from Modulos.data_processing import mostrar_celdas_faltantes_con_seleccion, generar_resumen_faltantes
+from Modulos.derivados import completar_campos_derivados
 
 
 # Step 1: Configure environment for pandas display (limits rows/columns in output)
@@ -94,6 +95,14 @@ print("\n⚙️ === Processing data ===")
 df_procesado = procesar_datos_y_manejar_duplicados(df_inicial)
 df_original_para_analisis = df_inicial.copy()  # ← NUEVO: Guardar para análisis visual
 
+# Step 5.1: Complete derived fields to enrich the data for better similarity/correlation analysis
+print("\n🧮 === Completing derived fields for data enrichment ===")
+df_procesado, origen_por_celda = completar_campos_derivados(
+    df=df_procesado,
+    solo_completar_vacios=True,
+    usar_IAS_para_alcance=True
+)
+
 # Compare headers before and after processing to ensure consistency
 if df_inicial.columns.tolist() == df_procesado.columns.tolist():
     print("\n✅ Headers were preserved correctly.")
@@ -116,7 +125,7 @@ print(parameters_available)
 #elemento significativo a la hora de representar a una aeronave, esta lista solo afecta a la
 #creación del df_filtrado para la funcion de imputacion por similitud.
 parametros_preseleccionados = [
-    "Velocidad a la que se realiza el crucero (KTAS)",
+    "Velocidad a la que se realiza el crucero (m/s TAS)",
     "Techo de servicio máximo",
     "Área del ala",
     "Relación de aspecto del ala",
@@ -124,15 +133,15 @@ parametros_preseleccionados = [
     "Peso máximo al despegue (MTOW)",
     "Alcance de la aeronave",
     "Autonomía de la aeronave",
-    "Velocidad máxima (KIAS)",
-    "Velocidad de pérdida (KCAS)",
+    "Velocidad máxima (m/s IAS)",
+    "Velocidad de pérdida (m/s CAS)",
     "Envergadura",
     "Cuerda",
     "Payload",
     "Ancho del fuselaje",
 #----------------------------------------------------------#
     "Potencia HP",
-    "Cantidad de motores",
+    "Potencia Watts",
     "Rango de comunicación",
     "Misión",
     "Despegue"
@@ -176,41 +185,43 @@ generar_resumen_faltantes(df_filtrado, titulo="Summary of Missing Values in df_f
 
 
 # Step 10: Define family columns and layers directly (no dependency on old similarity script)
-filas_familia = [
-    "Misión",
-    "Despegue",
-    "Propulsión vertical",
-    "Propulsión horizontal"
-]
+#filas_familia = [
+#    "Misión",
+#    "Despegue",
+#    "Propulsión vertical",
+#    "Propulsión horizontal"
+#]
+
 capas_familia = [
     ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal"],
     ["Misión", "Despegue"],
     ["Misión"]
 ]
 # Si necesitas bloques_rasgos para la función, define aquí un stub o config actual
-bloques_rasgos = {}
+#bloques_rasgos = {}
 
 # Filter filas_familia to keep only columns that exist in df_procesado
-print(f"🔎 Columns requested for filas_familia: {filas_familia}")
-print(f"Columns available in df_procesado: {df_procesado.columns.tolist()}")
+#print(f"🔎 Columns requested for filas_familia: {filas_familia}")
+#print(f"Columns available in df_procesado: {df_procesado.columns.tolist()}")
 
-filas_familia_existentes = [col for col in filas_familia if col in df_procesado.columns]
-print(f"Columns actually found for filas_familia: {filas_familia_existentes}")
+#filas_familia_existentes = [col for col in filas_familia if col in df_procesado.columns]
+#print(f"Columns actually found for filas_familia: {filas_familia_existentes}")
 
 # Select columns for df_atributos and df_parametros
-if filas_familia_existentes:
-    df_atributos = df_procesado[filas_familia_existentes]
-    df_parametros = df_procesado.drop(columns=filas_familia_existentes)
-else:
-    print("⚠️ Warning: No family columns found, using empty DataFrame for df_atributos")
-    df_atributos = pd.DataFrame()
-    df_parametros = df_procesado.copy()
+#if filas_familia_existentes:
+#    df_atributos = df_procesado[filas_familia_existentes]
+#    df_parametros = df_procesado.drop(columns=filas_familia_existentes)
+#else:
+#    print("⚠️ Warning: No family columns found, using empty DataFrame for df_atributos")
+#    df_atributos = pd.DataFrame()
+#    df_parametros = df_procesado.copy()
 
 
+# Step 11: Run imputation loop with similarity and correlation methods
 df_procesado_actualizado, resumen_imputaciones, imputaciones_finales, detalles_para_excel, modelos_por_celda = bucle_imputacion_similitud_correlacion(
     df_filtrado=df_filtrado,
     parametros_preseleccionados=parametros_preseleccionados,
-    bloques_rasgos=bloques_rasgos,
+#    bloques_rasgos=bloques_rasgos,
     capas_familia=capas_familia,
     df_procesado=df_procesado,
     debug_mode=args.debug_mode
@@ -230,7 +241,8 @@ try:
         source_file=ruta_archivo,
         df_processed=df_procesado_actualizado,
         details_for_excel=detalles_para_excel,
-        output_file=archivo_destino
+        output_file=archivo_destino,
+        origen_por_celda=origen_por_celda
     )
 except Exception as e:
     print(f"❌ Error processing the file: {e}")

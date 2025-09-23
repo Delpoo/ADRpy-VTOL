@@ -3,6 +3,16 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.comments import Comment
+from openpyxl.styles import Font
+from openpyxl.cell.cell import MergedCell
+
+def create_large_comment(text, author="System"):
+    """Create a comment with enlarged size for better visibility"""
+    comment = Comment(text, author)
+    # Increase comment size significantly (12x height, 4x width)
+    comment.width = 500  # Default is around 100, making it 4x
+    comment.height = 1000  # Default is around 50, making it 12x
+    return comment
 
 # Helper function to check if a value is considered missing
 MISSING_VALUES = ["", "nan", "nan ", "-", "#n/d", "n/d", "#¡valor!"]
@@ -118,7 +128,7 @@ def format_comment(dictionary, title=None, indent=0, max_indent=2):
     return '\n'.join(lines)
 
 
-def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel, output_file=r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx"):
+def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel, output_file=r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx", origen_por_celda=None):
     """
     Exports the processed DataFrame to an Excel file, preserving the original format.
     Adds colors and comments to cells imputed by similarity, correlation, or both, including full details for each method used.
@@ -128,10 +138,24 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
     :param df_processed: DataFrame with the imputed values.
     :param details_for_excel: List of dicts with details for each imputation (final, similarity, correlation).
     """
+    import os
     try:
-        if not details_for_excel:
-            print("⚠️ No imputations to export.")
-            return
+
+        # --- Buscar nombre de archivo disponible para no sobrescribir ---
+        base, ext = os.path.splitext(output_file)
+        candidate = output_file
+        i = 1
+        while os.path.exists(candidate):
+            if base.endswith(")"):
+                # Si ya tiene (n), reemplazarlo
+                base_no_num = base[:base.rfind("(")].rstrip()
+                candidate = f"{base_no_num}({i}){ext}"
+            else:
+                candidate = f"{base} ({i}){ext}"
+            i += 1
+        if candidate != output_file:
+            print(f"ℹ️ El archivo '{output_file}' ya existe. Guardando como '{candidate}' para evitar sobrescribir.")
+        output_file = candidate
 
         print(f"📤 === Exporting data to file: {output_file} ===")
         wb = load_workbook(source_file)
@@ -145,26 +169,45 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
             print(f"❌ Error: The file '{source_file}' contains no sheets.")
             return
 
+        # Freeze panes at B2 (keep top row and first column visible)
+        try:
+            ws.freeze_panes = ws['B2']
+        except Exception:
+            pass
+
         # Define fill colors for each imputation method
         color_similarity = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")  # Yellow
         color_correlation = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")  # Green
         color_weighted = PatternFill(start_color="00B0F0", end_color="00B0F0", fill_type="solid")    # Blue
         color_orange = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")      # Orange
 
-        # Build a quick-access dictionary by cell
-        details_dict = {(d["Parámetro"], d["Aeronave"]): d for d in details_for_excel}
+        # Build a quick-access dictionary by cell (can be empty)
+        details_dict = {(d["Parámetro"], d["Aeronave"]): d for d in details_for_excel} if details_for_excel else {}
 
         for row in ws.iter_rows(min_row=2, min_col=2):
             for cell in row:
                 if ws is None or cell is None or cell.column is None or cell.row is None:
                     continue
+                # Skip non-top-left cells of merged ranges
+                if isinstance(cell, MergedCell):
+                    continue
                 parameter = ws.cell(row=1, column=cell.column).value
                 aircraft = ws.cell(row=cell.row, column=1).value
                 key = (parameter, aircraft)
+                # Do not overwrite non-empty cells
+                if not is_missing(cell.value):
+                    continue
+                wrote_something = False
                 if key in details_dict:
                     detail = details_dict[key]
-                    imputed_value = df_processed.at[aircraft, parameter]
-                    cell.value = imputed_value
+                    # Only write if there's a value in df_processed
+                    try:
+                        imputed_value = df_processed.at[aircraft, parameter]
+                    except Exception:
+                        imputed_value = None
+                    if imputed_value is not None and not (isinstance(imputed_value, float) and pd.isna(imputed_value)):
+                        cell.value = imputed_value
+                        wrote_something = True
                     # Validity check for imputed value
                     valid_sim = detail["similitud"] and not is_missing(detail["similitud"].get("Valor imputado", None))
                     valid_corr = detail["correlacion"] and not is_missing(detail["correlacion"].get("Valor imputado", None))
@@ -192,20 +235,61 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
                         if corr_comment:
                             comment += "\n" + corr_comment
                     if comment:
-                        # Estimate comment box size based on text length
-                        # Each line ~13px height, width ~7px per char, min/max limits
-                        lines = comment.count('\n') + 1
-                        max_line_length = max((len(line) for line in comment.split('\n')), default=40)
-                        # Convert px to points (Excel uses points: 1pt ≈ 1.33px for height, 1pt ≈ 7px for width)
-                        width_pt = min(max(120/7, int(max_line_length * 7 * 5)), 3500/7)  # 5x wider, in points
-                        height_pt = min(max(40/1.33, lines * 15 * 4 / 1.33), 1200/1.33)  # 4x taller, in points, higher max
-                        cell_comment = Comment(comment, "System")
+                        # Append to existing comment instead of replacing
                         try:
-                            cell_comment.width = width_pt
-                            cell_comment.height = height_pt
+                            if cell.comment and cell.comment.text:
+                                new_text = (cell.comment.text or '') + "\n" + comment
+                                author = cell.comment.author or "System"
+                                cell.comment = create_large_comment(new_text, author)
+                            else:
+                                cell.comment = create_large_comment(comment, "System")
                         except Exception:
-                            pass  # Fallback if openpyxl version does not support
-                        cell.comment = cell_comment
+                            pass
+                else:
+                    # No details_for_excel: try writing from df_processed if available
+                    try:
+                        value_df = df_processed.at[aircraft, parameter]
+                    except Exception:
+                        value_df = None
+                    if value_df is not None and not (isinstance(value_df, float) and pd.isna(value_df)):
+                        cell.value = value_df
+                        wrote_something = True
+
+                # Mark calculated cells (bold+italic) without changing fill
+                try:
+                    if origen_por_celda and (aircraft, parameter) in origen_por_celda:
+                        meta = origen_por_celda.get((aircraft, parameter), {})
+                        est = str(meta.get("Estado") or "").upper()
+                        fuente = str(meta.get("Fuente") or "").lower()
+                        is_calc = ("CALCUL" in est) or any(k in fuente for k in ("deriv", "cálcul", "calcu"))
+                        if is_calc:
+                            current_font = cell.font or Font()
+                            cell.font = Font(
+                                name=current_font.name,
+                                size=current_font.size,
+                                bold=True,
+                                italic=True,
+                                vertAlign=current_font.vertAlign,
+                                underline=current_font.underline,
+                                strike=current_font.strike,
+                                color=current_font.color,
+                            )
+                            # Append calculation comment
+                            calc_payload = {
+                                "formula": meta.get("formula"),
+                                "inputs": meta.get("inputs"),
+                            }
+                            calc_comment = format_comment(calc_payload, "CÁLCULO APLICADO")
+                            if calc_comment:
+                                if cell.comment and cell.comment.text:
+                                    new_text = (cell.comment.text or '') + "\n" + calc_comment
+                                    author = cell.comment.author or "System"
+                                    cell.comment = create_large_comment(new_text, author)
+                                else:
+                                    cell.comment = create_large_comment(calc_comment, "System")
+                except Exception:
+                    pass
+
         wb.save(output_file)
         print(f"✅ Export completed. File saved as '{output_file}'.")
     except FileNotFoundError:

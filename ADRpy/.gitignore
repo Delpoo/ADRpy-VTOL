@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+.build/
+dist/
+.DS_Store
+# venv
+.venv/
+venv/
+# Jupyter
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+# VSCode
+.vscode/*.log
+# HTML/artefactos
+*.html
+*.png
+*.svg

@@ -3,10 +3,64 @@ import numpy as np
 import logging
 from itertools import combinations
 from collections import defaultdict
+from typing import Any, Dict, List, Tuple, Optional
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.model_selection import LeaveOneOut
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
+
+# ---- CONFIG: mínimos de diversidad (valores únicos) y de muestras por tipo de modelo ----
+
+MIN_UNICOS = {
+    "exp-1": 5, "log-1": 5, "pot-1": 5, "linear-1": 5,
+    "poly-1": 7, "linear-2": 8, "poly-2": 10,
+}
+MIN_MUESTRAS = {
+    "exp-1": 6, "log-1": 6, "pot-1": 6, "linear-1": 6,
+    "poly-1": 10, "linear-2": 10, "poly-2": 12,
+}
+"""
+MIN_UNICOS = {
+    "exp-1": 3, "log-1": 3, "pot-1": 3, "linear-1": 3,
+    "poly-1": 3, "linear-2": 3, "poly-2": 3,
+}
+MIN_MUESTRAS = {
+    "exp-1": 3, "log-1": 3, "pot-1": 3, "linear-1": 3,
+    "poly-1": 3, "linear-2": 3, "poly-2": 3,
+}
+"""
+"""
+Notas:
+- MIN_UNICOS = diversidad mínima: cuántos valores únicos exigimos en y y en cada predictor (tras todos los filtros). 
+Evita modelos entrenados con valores muy repetidos (poca información).
+- MIN_MUESTRAS = tamaño muestral mínimo: cuántas filas efectivas exigimos para poder entrenar ese tipo de modelo.
+- Estas estructuras son la ÚNICA fuente de verdad. Queda prohibido redefinirlas en funciones.
+"""
+
+# ---- CONFIG: Chequeos "early-stop" para modelos de 2 predictores ----
+CHECKS_2D = {
+    # Colinealidad / inestabilidad
+    "pearson_abs_r_max": 0.90,
+    "vif_max": 10.0,
+    "pc2_ratio_min": 0.03,
+    "rank_min": 2,
+    "cond_max": 1e5,
+    # Cobertura / diversidad espacial
+    "unique_pair_ratio_min": 0.60,
+    "hull_ratio_min": 0.15,
+    "ellipse_ratio_min": 0.10,
+    # Tamaño efectivo vs parámetros
+    "n_per_param_min_linear2": 8,
+    "n_per_param_min_poly2": 10,
+    # Modo agresivo
+    "agresivo": True,
+}
+"""
+Notas (2D checks):
+- Umbrales conservadores; para ajustar, modificar solo aquí.
+- area(elipse_1σ) = π*sqrt(λ1)*sqrt(λ2) con λ autovalores de la covarianza.
+- area(hull) via algoritmo monotone chain (sin libs externas).
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +76,128 @@ def is_missing(val):
     """
     if pd.isna(val):
         return True
-    if isinstance(val, str) and val.strip().lower() in ["", "nan", "nan " "-", "#n/d", "n/d", "#¡valor!"]:
+    if isinstance(val, str) and val.strip().lower() in ["", "nan", "nan ", "-", "#n/d", "n/d", "#¡valor!"]:
         return True
     return False
+
+def _early_checks_2d(X_raw: np.ndarray, tipo: str) -> tuple[bool, dict, list[str]]:
+    """Chequeos previos agresivos para modelos de 2 predictores en espacio crudo (X1,X2).
+    Devuelve (ok, metrics, reasons). No lanza excepciones.
+    """
+    cfg = CHECKS_2D
+    X_raw = np.asarray(X_raw, dtype=float)
+    n, k = X_raw.shape if X_raw.ndim == 2 else (0, 0)
+    reasons: list[str] = []
+    metrics: dict[str, float] = {}
+    if n < 2 or k < 2:
+        reasons.append("Datos insuficientes para chequeos 2D")
+        return False, metrics, reasons
+    x1 = X_raw[:,0]
+    x2 = X_raw[:,1]
+    # 1) Pearson y VIF
+    try:
+        r = float(np.corrcoef(x1, x2)[0,1])
+    except Exception:
+        r = np.nan
+    metrics["pearson_r"] = r
+    if np.isfinite(r):
+        if abs(r) >= cfg["pearson_abs_r_max"]:
+            reasons.append(f"|r|={abs(r):.4f} >= {cfg['pearson_abs_r_max']}")
+        vif = 1.0 / max(1e-12, (1.0 - r*r))
+        metrics["vif"] = vif
+        if vif >= cfg["vif_max"]:
+            reasons.append(f"VIF={vif:.2f} >= {cfg['vif_max']}")
+    # 2) PCA / rank / condición
+    X_cent = np.column_stack([x1 - x1.mean(), x2 - x2.mean()])
+    try:
+        rank = int(np.linalg.matrix_rank(X_cent))
+    except Exception:
+        rank = 0
+    metrics["rank"] = rank
+    if rank < cfg["rank_min"]:
+        reasons.append(f"rank={rank} < {cfg['rank_min']}")
+    try:
+        u, s, vh = np.linalg.svd(X_cent, full_matrices=False)
+        var_total = float((s**2).sum())
+        var_pc2 = float((s.min()**2)) if s.size == 2 else 0.0
+        pc2_ratio = (var_pc2 / var_total) if var_total > 0 else 0.0
+    except Exception:
+        pc2_ratio = 0.0
+    metrics["pc2_ratio"] = pc2_ratio
+    if pc2_ratio < cfg["pc2_ratio_min"]:
+        reasons.append(f"PC2_ratio={pc2_ratio:.4f} < {cfg['pc2_ratio_min']}")
+    try:
+        cond_num = float(np.linalg.cond(X_cent))
+    except Exception:
+        cond_num = np.inf
+    metrics["cond"] = cond_num
+    if cond_num > cfg["cond_max"]:
+        reasons.append(f"cond={cond_num:.2e} > {cfg['cond_max']:.1e}")
+    # 3) Cobertura
+    pairs_unique = len({(float(a), float(b)) for a,b in X_raw})
+    unique_pair_ratio = pairs_unique / max(1, n)
+    metrics["unique_pair_ratio"] = unique_pair_ratio
+    if unique_pair_ratio < cfg["unique_pair_ratio_min"]:
+        reasons.append(f"unique_pair_ratio={unique_pair_ratio:.2f} < {cfg['unique_pair_ratio_min']}")
+    x1min, x1max = float(np.min(x1)), float(np.max(x1))
+    x2min, x2max = float(np.min(x2)), float(np.max(x2))
+    bbox_area = max(0.0, (x1max-x1min)) * max(0.0, (x2max-x2min))
+    metrics["bbox_area"] = bbox_area
+    def _hull_area(points: np.ndarray) -> float:
+        pts = sorted(set(map(tuple, points)))
+        if len(pts) <= 2:
+            return 0.0
+        def cross(o,a,b):
+            return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0])
+        lower=[]
+        for p in pts:
+            while len(lower)>=2 and cross(lower[-2], lower[-1], p) <= 0:
+                lower.pop()
+            lower.append(p)
+        upper=[]
+        for p in reversed(pts):
+            while len(upper)>=2 and cross(upper[-2], upper[-1], p) <= 0:
+                upper.pop()
+            upper.append(p)
+        hull = lower[:-1] + upper[:-1]
+        area = 0.0
+        for i in range(len(hull)):
+            x_i,y_i = hull[i]
+            x_j,y_j = hull[(i+1)%len(hull)]
+            area += x_i*y_j - x_j*y_i
+        return abs(area)*0.5
+    hull_area = _hull_area(X_raw[:, :2])
+    metrics["hull_area"] = hull_area
+    hull_ratio = (hull_area / bbox_area) if bbox_area > 0 else 0.0
+    metrics["hull_ratio"] = hull_ratio
+    if hull_ratio < cfg["hull_ratio_min"]:
+        reasons.append(f"hull_ratio={hull_ratio:.3f} < {cfg['hull_ratio_min']}")
+    # elipse 1σ
+    try:
+        cov = np.cov(np.vstack((x1, x2)))
+        evals,_ = np.linalg.eigh(cov)
+        evals = np.clip(evals, 0.0, None)
+        ellipse_area = float(np.pi * np.sqrt(evals.max()) * np.sqrt(evals.min()))
+    except Exception:
+        ellipse_area = 0.0
+    metrics["ellipse_area"] = ellipse_area
+    ellipse_ratio = (ellipse_area / bbox_area) if bbox_area > 0 else 0.0
+    metrics["ellipse_ratio"] = ellipse_ratio
+    if ellipse_ratio < cfg["ellipse_ratio_min"]:
+        reasons.append(f"ellipse_ratio={ellipse_ratio:.3f} < {cfg['ellipse_ratio_min']}")
+    # 4) n/p
+    if tipo == "linear-2":
+        p = 3; n_per_param_min = cfg["n_per_param_min_linear2"]
+    else:
+        p = 6; n_per_param_min = cfg["n_per_param_min_poly2"]
+    n_per_p = n / float(p) if p>0 else 0.0
+    metrics["n_per_param"] = n_per_p
+    if n_per_p < n_per_param_min:
+        reasons.append(f"n/p={n_per_p:.2f} < {n_per_param_min} (p={p})")
+    # agresivo extra
+    if cfg.get("agresivo", False) and np.isfinite(r) and abs(r) >= 0.95 and not any("|r|=" in x for x in reasons):
+        reasons.append(f"agresivo: |r|={abs(r):.4f} >= 0.95")
+    return (len(reasons)==0), metrics, reasons
 
 
 
@@ -66,18 +239,19 @@ def penalizacion_por_k(k: int) -> float:
 
 
 def seleccionar_predictores_validos(
-        df: pd.DataFrame,
-        objetivo: str,
-        idx_objetivo: int,
-        rango: float = 0.15
-) -> tuple[pd.DataFrame, str, bool]:
+    df: pd.DataFrame,
+    objetivo: str,
+    idx_objetivo: int,
+    nivel_familia: Optional[int] = None
+) -> Tuple[pd.DataFrame, str, bool]:
     """
     Devuelve un DF para imputar la fila idx_objetivo y la familia utilizada.
-    • Mantiene idx_objetivo (objetivo = NaN)  +  todas las filas cuyo
-      objetivo NO sea NaN.
+    • Mantiene idx_objetivo (objetivo = NaN) + todas las filas cuyo objetivo NO sea NaN.
     • NO elimina filas con NaNs en otros predictores.
     • Elimina columnas que en idx_objetivo valgan NaN.
-    • Aplica filtrado progresivo de familia (F0, F1, F2, sin filtro).
+    • Aplica filtrado progresivo de familia (F0, F1, F2, sin filtro) cuando nivel_familia es None.
+    • Si nivel_familia es 0,1,2 intenta SOLO esa familia; si no reúne criterio (>=5 válidos) retorna DF vacío y familia_usada="".
+    • El filtrado por rango es estricto (0% tolerancia): se elimina cualquier predictor cuyo valor en la aeronave objetivo esté fuera de [min, max] del entrenamiento.
     """
     # 1) Conservar idx_objetivo + filas con objetivo conocido
     df = df[(df.index == idx_objetivo) | df[objetivo].notna()].copy()
@@ -89,28 +263,52 @@ def seleccionar_predictores_validos(
     ]
     df = df[columnas_validas]
 
-    # 3) Filtrado progresivo de familia
+    # 3) Filtrado de familia (orden: F0 -> F1 -> F2) o familia específica
     familia_usada = "sin filtro"
     filtro_aplicado = False
     capas_familia = [
-        ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal", "Cantidad de motores propulsión vertical", "Cantidad de motores propulsión horizontal"],
-        ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal"],
-        ["Misión", "Despegue"]
+        ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal", "Cantidad de motores propulsión vertical", "Cantidad de motores propulsión horizontal"],  # F0 (más restrictiva)
+        ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal"],  # F1
+        ["Misión", "Despegue"]  # F2 (menos restrictiva antes de sin filtro)
     ]
-    for i, capa in enumerate(capas_familia):
+
+    if nivel_familia in (0, 1, 2):
+        # Intentar solo esa familia
+        capa = capas_familia[nivel_familia]
         if all(attr in df.columns for attr in capa):
             valores_obj = [df.at[idx_objetivo, attr] for attr in capa]
             mask = np.ones(df.shape[0], dtype=bool)
             for attr, val in zip(capa, valores_obj):
                 mask &= (df[attr] == val).values
             df_fam = df[mask]
-            # Solo contar filas con objetivo conocido (excluyendo idx_objetivo si está vacío)
             n_validos = df_fam[objetivo].notna().sum()
             if n_validos >= 5:
+                # Nota: Umbral fijo (>=5) para asegurar base mínima por familia.
+                # Es independiente de MIN_MUESTRAS (que se valida luego por tipo de modelo).
                 df = df_fam
-                familia_usada = f"F{i}"
+                familia_usada = f"F{nivel_familia}"
                 filtro_aplicado = True
-                break
+            else:
+                # Falló criterio: devolver DF vacío y familia_usada=""
+                return pd.DataFrame(), "", False
+        else:
+            return pd.DataFrame(), "", False
+    else:
+        # Modo progresivo automático
+        for i, capa in enumerate(capas_familia):
+            if all(attr in df.columns for attr in capa):
+                valores_obj = [df.at[idx_objetivo, attr] for attr in capa]
+                mask = np.ones(df.shape[0], dtype=bool)
+                for attr, val in zip(capa, valores_obj):
+                    mask &= (df[attr] == val).values
+                df_fam = df[mask]
+                n_validos = df_fam[objetivo].notna().sum()
+                if n_validos >= 5:
+                    # Igual criterio (>=5) aquí; mantiene consistencia de filtrado previo al modelado.
+                    df = df_fam
+                    familia_usada = f"F{i}"
+                    filtro_aplicado = True
+                    break
     # Eliminar columnas de familia si existen
     for col in ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal", "Cantidad de motores propulsión vertical", "Cantidad de motores propulsión horizontal"]:
         if col in df.columns:
@@ -140,15 +338,20 @@ def seleccionar_predictores_validos(
     return df, familia_usada, filtro_aplicado
 
 
-def generar_combinaciones(predictores: list) -> list:
+def generar_combinaciones(predictores: List[str]) -> List[Tuple[str, ...]]:
     combos = []
     for r in (1, 2):
         combos.extend(list(combinations(predictores, r)))
     return combos
 
 def entrenar_modelo(
-    df_filtrado: pd.DataFrame, objetivo: str, predictores: tuple, poly: bool, idx: int, modelo_extra: str | None = None
-) -> dict | None:
+    df_filtrado: pd.DataFrame,
+    objetivo: str,
+    predictores: Tuple[str, ...],
+    poly: bool,
+    idx: int,
+    modelo_extra: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
     """Train linear, polynomial, log, power, or exponential model and compute metrics.
     
     Todos los modelos devuelven datos coherentes en unidades originales:
@@ -162,13 +365,14 @@ def entrenar_modelo(
     # Guardar datos originales SIEMPRE (antes de cualquier transformación)
     X_df_original = df_train[list(predictores)]
     y_original = df_train[objetivo].values
-    
+
     # Almacenar datos originales para exportación
     datos_originales = {
         "X_original": X_df_original.values.tolist(),  # Lista de listas para JSON
         "y_original": y_original.tolist(),           # Lista para JSON
         "columnas_predictores": list(predictores)     # Nombres de columnas
-    }    # Inicializar variables comunes
+    }
+    # Inicializar variables comunes
     modelo = None
     coef_original = []
     intercepto_original = 0.0
@@ -178,9 +382,87 @@ def entrenar_modelo(
     tipo = "unknown"
     tipo_transformacion = "unknown"
 
+    # --- NUEVO: Si y es constante, no ajustar modelo, imputar valor constante ---
+    if len(df_train) > 0 and pd.Series(y_original).nunique() == 1:
+        valor_constante = y_original[0]
+        return {
+            "descartado": False,
+            "Aeronave": idx,
+            "Parámetro": objetivo,
+            "predictores": predictores,
+            "tipo": "constante",
+            "tipo_transformacion": "constante",
+            "n": len(df_train),
+            "n_predictores": len(predictores),
+            "datos_originales": datos_originales,
+            "datos_entrenamiento": datos_originales,
+            "indices_entrenamiento": df_train.index.tolist(),
+            "X_entrenamiento_original": X_df_original.values.tolist(),
+            "coeficientes_originales": [],
+            "intercepto_original": valor_constante,
+            "Peso de predictores": [],
+            "variable_independiente_1": None,
+            "variable_independiente_2": None,
+            "ecuacion_string": None,
+            "mape": 0.0,
+            "r2": 1.0,
+            "corr": 1.0,
+            "Confianza": 1.0 * penalizacion_por_k(len(df_train)),
+            "modelo": None,
+            "pf": None,
+            "scaler_X": None,
+            "scaler_y": None,
+            "Advertencia": "Imputación directa: variable objetivo constante en entrenamiento. No se ajustó modelo predictivo.",
+        }
+
+    # --- NUEVO: Chequeo de diversidad mínima de valores únicos en y y predictores ---
+    # Solo para modelos que no sean "constante"
+    # Determinar tipo preliminar para chequeo de diversidad
+    tipo_prelim = None
+    if modelo_extra == "log":
+        tipo_prelim = "log-1"
+    elif modelo_extra == "potencia":
+        tipo_prelim = "pot-1"
+    elif modelo_extra == "exp":
+        tipo_prelim = "exp-1"
+    elif poly:
+        tipo_prelim = f"poly-{len(predictores)}"
+    else:
+        tipo_prelim = f"linear-{len(predictores)}"
+
+    # Usar tipo_prelim para chequeo de diversidad
+    X_raw = df_train[list(predictores)].values if len(df_train) > 0 else np.array([])
+    y_raw = np.array(df_train[objetivo].values, dtype=float) if len(df_train) > 0 else np.array([])
+    n_unique_y = len(np.unique(y_raw))
+    n_samples = len(y_raw)
+    # diversidad_requerida y minimos_muestras_requeridas eliminados; usar MIN_UNICOS / MIN_MUESTRAS
+    min_unique = MIN_UNICOS.get(tipo_prelim, 5)
+    # Chequeo en y
+    if n_unique_y < min_unique:
+        raise ModeloDescartado(f"Insuficiente diversidad en y: {n_unique_y} < {min_unique} para '{tipo_prelim}'")
+    # Chequeo en cada predictor
+    for i, col in enumerate(predictores):
+        n_unique_col = len(np.unique(X_raw[:, i])) if X_raw.shape[0] > 0 else 0
+        if n_unique_col < min_unique:
+            raise ModeloDescartado(f"Insuficiente diversidad en predictor '{col}': {n_unique_col} < {min_unique} para '{tipo_prelim}'")
+    # Alerta de información efectiva
+    proporcion_info_efectiva = n_samples / n_unique_y if n_unique_y else float('inf')
+    warning_msg = None
+    if proporcion_info_efectiva > 2.5:
+        warning_msg = f"Alerta: proporción n/n_unique_y = {proporcion_info_efectiva:.2f} (>2.5). Riesgo de sobreajuste a valores repetidos."
+
     try:
         # Determinar tipo de modelo y aplicar transformaciones si es necesario
         ecuacion_string = None
+        # --- Inicializar advertencia para ratio MAPE ---
+        warning_ratio = None
+        # --- Chequeos tempranos agresivos para 2 predictores (linear-2 / poly-2) ---
+        if len(predictores) == 2 and tipo_prelim in {"linear-2", "poly-2"}:
+            ok2d, geom_metrics, reasons = _early_checks_2d(X_raw, tipo_prelim)
+            if not ok2d:
+                raise ModeloDescartado("Descartado 2D por: " + " | ".join(reasons))
+            # opcional: podríamos adjuntar geom_metrics más adelante si se necesita para trazabilidad
+        ratio_MAPE_val_vs_train = None
         if modelo_extra == "log":
             # Logarítmico: y = a + b*log(x)
             if len(predictores) != 1:
@@ -190,7 +472,7 @@ def entrenar_modelo(
                 return None
             X_transformed = np.log(np.array(X_df.values, dtype=float))
             y_transformed = np.array(df_train[objetivo].values, dtype=float)
-            min_required = 5
+            min_required = MIN_MUESTRAS.get("log-1", 5)
             tipo = "log-1"
             tipo_transformacion = "logarítmica"
             pf = None
@@ -220,7 +502,7 @@ def entrenar_modelo(
                 return None
             X_transformed = np.log(np.array(X_df.values, dtype=float))
             y_transformed = np.log(np.array(y_df.values, dtype=float))
-            min_required = 5
+            min_required = MIN_MUESTRAS.get("pot-1", 5)
             tipo = "pot-1"
             tipo_transformacion = "potencia"
             pf = None
@@ -251,7 +533,7 @@ def entrenar_modelo(
                 return None
             X_transformed = np.array(X_df.values, dtype=float)
             y_transformed = np.log(np.array(y_df.values, dtype=float))
-            min_required = 5
+            min_required = MIN_MUESTRAS.get("exp-1", 5)
             tipo = "exp-1"
             tipo_transformacion = "exponencial"
             pf = None
@@ -275,16 +557,11 @@ def entrenar_modelo(
         else:
             # Modelos lineales y polinómicos
             if poly:
-                pf_template = PolynomialFeatures(degree=2, include_bias=False)
-                num_features = pf_template.fit(
-                    np.zeros((1, len(predictores)))
-                ).n_output_features_
-                num_coeficientes = num_features + 1  # +1 por el intercepto
-                min_required = max(8, num_coeficientes)
+                tipo_poly = f"poly-{len(predictores)}"
+                min_required = MIN_MUESTRAS.get(tipo_poly, 5)
             else:
-                num_coeficientes = len(predictores) + 1
-                min_required = max(5, num_coeficientes)
-            num_coeficientes += 1  # Se agrega un valor extra para garantizar LOOCV
+                tipo_lin = f"linear-{len(predictores)}"
+                min_required = MIN_MUESTRAS.get(tipo_lin, 5)
             if len(df_train) < min_required:
                 return None
             X_df = df_train[list(predictores)]
@@ -381,21 +658,21 @@ def entrenar_modelo(
         # Los valores siguen el mismo orden que los predictores
         variable_independiente_1 = None
         variable_independiente_2 = None
-        
         if len(predictores) >= 1:
-            # Primera variable independiente (predictores[0])
             try:
                 variable_independiente_1 = float(df_filtrado.at[idx, predictores[0]])
             except Exception as e:
                 variable_independiente_1 = None
-                
         if len(predictores) >= 2:
-            # Segunda variable independiente (predictores[1])
             try:
                 variable_independiente_2 = float(df_filtrado.at[idx, predictores[1]])
             except Exception as e:
                 variable_independiente_2 = None
 
+        # --- Calcular ratio MAPE_LOOCV / mape y advertencia ---
+        # NOTA: El campo 'MAPE_LOOCV' se agrega después en validar_con_loocv, pero aquí solo inicializamos en None
+        ratio_MAPE_val_vs_train = None
+        # El warning se agregará después de LOOCV, pero aquí lo inicializamos
         # Construir diccionario de retorno unificado
         resultado = {
             "descartado": False,
@@ -405,29 +682,30 @@ def entrenar_modelo(
             "tipo": tipo,
             "tipo_transformacion": tipo_transformacion,
             "n": len(df_train),
-            "n_predictores": len(predictores),  # Agregar número de predictores
-            # Datos en unidades originales - USAR AMBOS NOMBRES PARA COMPATIBILIDAD
+            "n_predictores": len(predictores),
             "datos_originales": datos_originales,
-            "datos_entrenamiento": datos_originales,  # Alias para compatibilidad con visualización
+            "datos_entrenamiento": datos_originales,
+            "indices_entrenamiento": df_train.index.tolist(),
+            "X_entrenamiento_original": X_df_original.values.tolist(),
             "coeficientes_originales": coef_original,
             "intercepto_original": intercepto_original,
             "Peso de predictores": pesos_predictores,
-            # Valores de variables independientes para cálculos futuros (orden coincide con predictores)
             "variable_independiente_1": variable_independiente_1,
             "variable_independiente_2": variable_independiente_2,
-            # Ecuaciones
             "ecuacion_string": ecuacion_string,
-            # Métricas (calculadas en escala original)
             "mape": mape,
             "r2": r2,
             "corr": corr,
             "Confianza": confianza,
-            # Objetos del modelo (para predicción posterior)
             "modelo": modelo,
-            "pf": pf,
-            "scaler_X": scaler_X,
-            "scaler_y": scaler_y,
+            "pf": pf if 'pf' in locals() else None,
+            "scaler_X": scaler_X if 'scaler_X' in locals() else None,
+            "scaler_y": scaler_y if 'scaler_y' in locals() else None,
+            "ratio_MAPE_val_vs_train": ratio_MAPE_val_vs_train,
         }
+        # Agregar advertencia de información efectiva si corresponde
+        if warning_msg is not None:
+            resultado["Advertencia"] = warning_msg
         return resultado
         
     except ModeloDescartado as e:
@@ -441,7 +719,7 @@ def entrenar_modelo(
             "tipo_transformacion": tipo_transformacion,
         }
 #! en ecuaciones polinomiales de 1 predictor solo no me salta el error de matriz singular, me da una ecuacion valida ver tabla de word
-def filtrar_mejores_modelos(modelos: list, top: int = 2) -> list:
+def filtrar_mejores_modelos(modelos: List[Dict[str, Any]], top: int = 2) -> List[Dict[str, Any]]:
     """Return top models per type based on Confianza."""
     # Nueva lógica de robustez y descarte
     modelos_filtrados = []
@@ -478,53 +756,78 @@ def filtrar_mejores_modelos(modelos: list, top: int = 2) -> list:
     return mejores
 
 
-def validar_con_loocv(df: pd.DataFrame, objetivo: str, info: dict) -> dict:
+def validar_con_loocv(df: pd.DataFrame, objetivo: str, info: Dict[str, Any]) -> Dict[str, Any]:
     """
     Calcula MAPE_LOOCV, R2_LOOCV, Corr_LOOCV y Confianza_LOOCV usando Leave-One-Out,
-    reproduciendo el pipeline real:
-      • escalar X con StandardScaler
-      • aplicar PolynomialFeatures si corresponde
-      • escalar y
-      • des-escalar la predicción antes de calcular el error
+        reproduciendo exactamente el pipeline de entrenamiento (sin leakage):
+            • Si es polinómico: PolynomialFeatures -> StandardScaler (X) -> StandardScaler (y) -> Regresión
+            • Si no es polinómico: StandardScaler (X) -> StandardScaler (y) -> Regresión
+            • Siempre se hace fit SOLO con el fold de entrenamiento (no se usa información del test).
+            • La predicción se des-escalada (inverse_transform) antes de calcular errores.
     """
     df_train = df.dropna(subset=[objetivo, *info["predictores"]])
     n_LOOCV = len(df_train)
-    if n_LOOCV == 0:
-        return {"MAPE_LOOCV": np.inf, "R2_LOOCV": -np.inf,
-                "Corr_LOOCV": -np.inf, "Confianza_LOOCV": 0}
+    if n_LOOCV < 2:
+        # No se puede hacer LOOCV con menos de 2 muestras
+        advertencia = "Advertencia: No se puede realizar LOOCV con menos de 2 muestras."
+        return {
+            "n_LOOCV": n_LOOCV,
+            "MAPE_LOOCV": np.inf,
+            "R2_LOOCV": -np.inf,
+            "Corr_LOOCV": -np.inf,
+            "Confianza_LOOCV": 0,
+            "Advertencia": advertencia
+        }
 
-    X_full = df_train[list(info["predictores"])].values
-    y_full = df_train[objetivo].values
+    X_full = np.asarray(df_train[list(info["predictores"])].values)
+    y_full = np.asarray(df_train[objetivo].values, dtype=float)
     preds  = np.zeros(n_LOOCV)
     errors = np.zeros(n_LOOCV)
 
     loo = LeaveOneOut()
     for i, (tr, te) in enumerate(loo.split(X_full)):
-        # ── entrenar escaladores en el subset de training ──
-        scaler_X = StandardScaler().fit(X_full[tr])
-        X_tr = scaler_X.transform(X_full[tr])
-        X_te = scaler_X.transform(X_full[te])
+        # Obtener datos crudos del fold
+        X_tr_raw = X_full[tr]
+        X_te_raw = X_full[te]
+        y_tr_raw = y_full[tr]
+        y_te_raw = y_full[te]
 
-        # polynomial si corresponde
-        if info["pf"] is not None:
-            pf = PolynomialFeatures(degree=2, include_bias=False)
-            X_tr = pf.fit_transform(X_tr)
-            X_te = pf.transform(X_te)
+        # Determinar si es modelo polinómico
+        es_polinomico = info["pf"] is not None or info.get("tipo", "").startswith("poly")
 
-        # escalar y
-        scaler_y = StandardScaler().fit(y_full[tr].reshape(-1, 1))
-        y_tr = scaler_y.transform(y_full[tr].reshape(-1, 1)).flatten()
+        if es_polinomico:
+            # 1) PolynomialFeatures sobre X "crudo" (fold de train)
+            degree = 2  # grado por defecto
+            if info.get("pf") is not None:
+                degree = getattr(info["pf"], "degree", 2)  # obtener grado del objeto pf si existe
+            pf = PolynomialFeatures(degree=degree, include_bias=False)
+            X_tr_poly = pf.fit_transform(X_tr_raw)   # fit SOLO con train fold
+            X_te_poly = pf.transform(X_te_raw)
 
-        # entrenar y predecir
-        m = LinearRegression().fit(X_tr, y_tr)
-        y_hat_scaled = m.predict(X_te)[0]
-        # des-escalar la predicción
+            # 2) StandardScaler sobre features polinómicos
+            scaler_X = StandardScaler().fit(X_tr_poly)  # fit SOLO con train fold
+            X_tr = scaler_X.transform(X_tr_poly)
+            X_te = scaler_X.transform(X_te_poly)
+        else:
+            # Modelo no polinómico: StandardScaler sobre X crudo
+            scaler_X = StandardScaler().fit(X_tr_raw)  # fit SOLO con train fold
+            X_tr = scaler_X.transform(X_tr_raw)
+            X_te = scaler_X.transform(X_te_raw)
+
+        # y escalada como en entrenamiento (fit SOLO con train fold)
+        y_tr_arr = np.asarray(y_tr_raw, dtype=float).reshape(-1, 1)
+        scaler_y = StandardScaler().fit(y_tr_arr)
+        y_tr = scaler_y.transform(y_tr_arr).ravel()
+
+        # Entrenar y predecir con desescalado
+        reg = LinearRegression().fit(X_tr, y_tr)
+        y_hat_scaled = reg.predict(X_te)[0]
         y_hat = scaler_y.inverse_transform([[y_hat_scaled]])[0, 0]
 
         preds[i]  = y_hat
         # evitar división por cero
-        denom = y_full[te][0] if y_full[te][0] != 0 else 1e-9
-        errors[i] = abs((y_full[te][0] - y_hat) / denom)
+        denom = y_te_raw[0] if y_te_raw[0] != 0 else 1e-9
+        errors[i] = abs((y_te_raw[0] - y_hat) / denom)
 
     MAPE_LOOCV = errors.mean() * 100
     R2_LOOCV   = r2_score(np.array(y_full), np.array(preds))
@@ -537,63 +840,79 @@ def validar_con_loocv(df: pd.DataFrame, objetivo: str, info: dict) -> dict:
             "Corr_LOOCV": Corr_LOOCV,
             "Confianza_LOOCV": Conf_cv}
 
-def imputar_valores_celda(df_resultado, df_filtrado, objetivo, info, idx):
+def imputar_valores_celda(
+    df_resultado: pd.DataFrame,
+    df_filtrado: pd.DataFrame,
+    objetivo: str,
+    info: Dict[str, Any],
+    idx: int
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """Imputar el valor de una celda específica utilizando el modelo desnormalizado."""
     if idx not in df_filtrado.index:
         raise KeyError(f"Index {idx} is not present in the DataFrame.")
     
-    # Obtener predictores de la fila (escala original)
-    X_pred_df = df_filtrado.loc[[idx], list(info["predictores"])]
-    X_pred    = X_pred_df.values
-    
-    # Inicializar valor
-    valor = np.nan# Detectar tipo de modelo especial
-    tipo_modelo = str(info.get("tipo", "")).lower()
-    if tipo_modelo.startswith("log") or tipo_modelo.startswith("pot") or tipo_modelo.startswith("exp"):
-        # Modelos especiales: predecir directamente sin escalado
-        if tipo_modelo.startswith("log"):
-            X_pred_trans = np.log(np.array(X_pred, dtype=float))
-            valor = info["modelo"].predict(X_pred_trans.reshape(-1, 1))[0]
-        elif tipo_modelo.startswith("pot"):
-            X_pred_trans = np.log(np.array(X_pred, dtype=float))
-            pred_log = info["modelo"].predict(X_pred_trans.reshape(-1, 1))[0]
-            valor = np.exp(pred_log)
-        elif tipo_modelo.startswith("exp"):
-            X_pred_trans = np.array(X_pred, dtype=float)
-            pred_log = info["modelo"].predict(X_pred_trans.reshape(-1, 1))[0]
-            valor = np.exp(pred_log)
-    else:
-        # Modelos lineales y polinómicos: usar escalado y polinomio si corresponde
-        if info["pf"] is not None:
-            # Primero expandir a polinómicos
-            X_pred_poly = info["pf"].transform(X_pred)
-            if info["scaler_X"] is not None:
-                X_scaled = info["scaler_X"].transform(X_pred_poly)
-            else:
-                X_scaled = X_pred_poly
-        else:
-            if info["scaler_X"] is not None:
-                X_scaled = info["scaler_X"].transform(X_pred)
-            else:
-                X_scaled = X_pred
-        y_norm = info["modelo"].predict(X_scaled)[0]
-        if info["scaler_y"] is not None:
-            valor = info["scaler_y"].inverse_transform([[y_norm]])[0, 0]
-        else:
-            valor = y_norm
 
-    # ── advertencia de extrapolación ─────────────────────────
+    # Si el modelo es "constante", imputar directamente el valor constante
+    if str(info.get("tipo", "")).lower() == "constante":
+        valor = info["intercepto_original"]
+    else:
+        # Obtener predictores de la fila (escala original)
+        X_pred_df = df_filtrado.loc[[idx], list(info["predictores"])]
+        X_pred    = X_pred_df.values
+        # Inicializar valor
+        valor = np.nan
+        tipo_modelo = str(info.get("tipo", "")).lower()
+        if tipo_modelo.startswith("log") or tipo_modelo.startswith("pot") or tipo_modelo.startswith("exp"):
+            # Modelos especiales: predecir directamente sin escalado
+            if tipo_modelo.startswith("log"):
+                X_pred_trans = np.log(np.array(X_pred, dtype=float))
+                valor = info["modelo"].predict(X_pred_trans.reshape(-1, 1))[0]
+            elif tipo_modelo.startswith("pot"):
+                X_pred_trans = np.log(np.array(X_pred, dtype=float))
+                pred_log = info["modelo"].predict(X_pred_trans.reshape(-1, 1))[0]
+                valor = np.exp(pred_log)
+            elif tipo_modelo.startswith("exp"):
+                X_pred_trans = np.array(X_pred, dtype=float)
+                pred_log = info["modelo"].predict(X_pred_trans.reshape(-1, 1))[0]
+                valor = np.exp(pred_log)
+        else:
+            # Modelos lineales y polinómicos: usar escalado y polinomio si corresponde
+            if info["pf"] is not None:
+                # Primero expandir a polinómicos
+                X_pred_poly = info["pf"].transform(X_pred)
+                if info["scaler_X"] is not None:
+                    X_scaled = info["scaler_X"].transform(X_pred_poly)
+                else:
+                    X_scaled = X_pred_poly
+            else:
+                if info["scaler_X"] is not None:
+                    X_scaled = info["scaler_X"].transform(X_pred)
+                else:
+                    X_scaled = X_pred
+            y_norm = info["modelo"].predict(X_scaled)[0]
+            if info["scaler_y"] is not None:
+                valor = info["scaler_y"].inverse_transform([[y_norm]])[0, 0]
+            else:
+                valor = y_norm
+
+    # ── advertencia de extrapolación (0% tolerancia) ─────────
     advert_extrap = ""
     df_train = df_filtrado.dropna(subset=[objetivo, *info["predictores"]])
     for col in info["predictores"]:
-        rango_min = df_train[col].min() * 0.85
-        rango_max = df_train[col].max() * 1.15
+        rango_min = df_train[col].min()
+        rango_max = df_train[col].max()
         v = df_filtrado.at[idx, col]
         if pd.isna(v) or not (rango_min <= v <= rango_max):
             advert_extrap = "Extrapolacion"
             break
-    # Si el modelo ya traía un warning (“Modelo no robusto”), combina:
-    advertencia_final = ", ".join(filter(None, [info.get("warning", ""), advert_extrap]))
+    # Unificación de advertencias: solo se usa la clave 'Advertencia'
+    advert_prev = info.get("Advertencia", "")
+    if advert_prev and advert_extrap:
+        advertencia_final = f"{advert_prev}, {advert_extrap}"
+    elif advert_prev:
+        advertencia_final = advert_prev
+    else:
+        advertencia_final = advert_extrap
 
     #5. imputar el valor en el DataFrame de resultado
     df_resultado.at[idx, objetivo] = valor
@@ -613,18 +932,30 @@ def imputar_valores_celda(df_resultado, df_filtrado, objetivo, info, idx):
         "Corr": info["corr"],
         "MAPE": info["mape"],
         "R2": info["r2"],
-        "Confianza_LOOCV": info["Confianza_LOOCV"],
-        "k_LOOCV": info["n_LOOCV"],
-        "Corr_LOOCV": info["Corr_LOOCV"],
-        "MAPE_LOOCV": info["MAPE_LOOCV"],
-        "R2_LOOCV": info["R2_LOOCV"],
+        "Confianza_LOOCV": info.get("Confianza_LOOCV", np.nan),
+        "k_LOOCV": info.get("n_LOOCV", np.nan),
+        "Corr_LOOCV": info.get("Corr_LOOCV", np.nan),
+        "MAPE_LOOCV": info.get("MAPE_LOOCV", np.nan),
+        "R2_LOOCV": info.get("R2_LOOCV", np.nan),
         "Método predictivo": "Correlacion",
         "Advertencia": advertencia_final,
     }
 
     return df_resultado, imputacion
 
-def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: str = None):
+def imputaciones_correlacion(
+    df: pd.DataFrame | str,
+    exportar_modelos: bool = False,
+    ruta_export: Optional[str] = None,
+    permitir_sin_filtro: bool = False
+) -> Tuple[pd.DataFrame, List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Imputa valores faltantes por correlación/modelado.
+
+    Política de selección de familia (estricta y ordenada): F0 -> F1 -> F2 -> (sin filtro solo si permitir_sin_filtro=True).
+    No se intenta 'sin filtro' cuando permitir_sin_filtro=False (por defecto).
+    Mantiene contrato de retorno: (df_resultado, reporte, modelos_info).
+    Advertencias unificadas bajo clave 'Advertencia'. Rango y extrapolación con 0% de tolerancia.
+    """
     if isinstance(df, str):
         df = pd.read_excel(df)
     df = df.rename(columns=lambda c: str(c).strip())
@@ -639,154 +970,291 @@ def imputaciones_correlacion(df, exportar_modelos: bool = False, ruta_export: st
     for objetivo in [c for c in df_original.columns if df_original[c].isna().any()]:
         faltantes = df_original[df_original[objetivo].isna()].index
         for idx in faltantes:
-            # Seleccionar predictores válidos para la celda actual y familia usada
-            df_filtrado, familia_usada, filtro_aplicado = seleccionar_predictores_validos(df_original, objetivo, idx)
-            if df_filtrado.empty:
-                print(f"❌ [ERROR] No se encontraron predictores válidos para {objetivo} en fila {idx}.")
-                continue
-
-            # Excluir la primera columna explícitamente
-            predictores = [col for col in df_filtrado.columns if col != df_filtrado.columns[0] and col != objetivo]
-            if not predictores:
-                print(f"⚠️ [ADVERTENCIA] No hay predictores disponibles para {objetivo} en fila {idx}.")
-                # Agregar advertencia al reporte
-                reporte.append({
-                    "Aeronave": idx,
-                    "Parámetro": objetivo,
-                    "Valor imputado": "NAN",
-                    "Confianza": 0,
-                    "Tipo Modelo": "N/A",
-                    "Predictores": "N/A",
-                    "k": 0,
-                    "Penalizacion_k": 0,
-                    "Corr": 0,
-                    "Familia": familia_usada,
-                    "Método predictivo": "Correlacion",
-                    "Advertencia": "⚠️ No se pudo imputar por falta de parámetros válidos." + ("; ⚠️ modelo sin filtrado por familia" if not filtro_aplicado else ""),
-                })
-                continue
-            modelos = []
-            for combo in generar_combinaciones(predictores):
-                for poly in (False, True):
-                    modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, poly, idx))
-                # Modelos especiales solo para 1 predictor
-                if len(combo) == 1:
-                    modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="log"))
-                    modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="potencia"))
-                    modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra="exp"))
-
-            # Solo pasar a LOOCV los modelos con MAPE <= 7.5% y R2 >= 0.6
-            validos = [m for m in modelos if m is not None and not m["descartado"] and m["mape"] <= 7.5 and m["r2"] >= 0.6]
-            descartados = [m for m in modelos if m is not None and m["descartado"]]
-            if not validos:
-                print(f"❗ [ALERTA] No hay modelos válidos para {objetivo} en fila {idx} tras filtrar por MAPE y R2.")
-                # Clasificar motivos de descarte para cada modelo no válido
-                motivos_descartes = []
-                for m in modelos:
-                    if m is None:
-                        continue
-                    if m.get("descartado", False):
-                        motivo = m.get("motivo", "Problema numérico, modelo descartado en entrenamiento")
-                    elif m["mape"] > 7.5 and m["r2"] < 0.6:
-                        motivo = "MAPE fuera de rango (>7.5%) y R2 fuera de rango (<0.6)"
-                    elif m["mape"] > 7.5:
-                        motivo = "MAPE fuera de rango (>7.5%)"
-                    elif m["r2"] < 0.6:
-                        motivo = "R2 fuera de rango (<0.6)"
+            modelos_validos = []
+            familia_usada = ""
+            filtro_aplicado = False
+            modelos_info_familia = []
+            df_filtrado_usado = None  # Track the df_filtrado used for the selected model
+            # 1. Intentar con filtros de familia en orden F0, F1, F2 (explícito)
+            for capa in (0, 1, 2):
+                df_filtrado, fam, filtro = seleccionar_predictores_validos(
+                    df_original, objetivo, idx, nivel_familia=capa
+                )
+                if fam != f"F{capa}" or df_filtrado is None or df_filtrado.empty:
+                    continue
+                predictores = [col for col in df_filtrado.columns if col != df_filtrado.columns[0] and col != objetivo]
+                if not predictores:
+                    continue
+                modelos = []
+                for combo in generar_combinaciones(predictores):
+                    for poly in (False, True):
+                        try:
+                            modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, poly, idx))
+                        except ModeloDescartado as e:
+                            modelos.append({
+                                "Aeronave": idx,
+                                "Parámetro": objetivo,
+                                "descartado": True,
+                                "motivo": str(e),
+                                "predictores": combo,
+                                "tipo": f"{'poly' if poly else 'linear'}-{len(combo)}",
+                                "tipo_transformacion": None
+                            })
+                    if len(combo) == 1:
+                        for modelo_extra in ("log", "potencia", "exp"):
+                            try:
+                                modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra=modelo_extra))
+                            except ModeloDescartado as e:
+                                modelos.append({
+                                    "Aeronave": idx,
+                                    "Parámetro": objetivo,
+                                    "descartado": True,
+                                    "motivo": str(e),
+                                    "predictores": combo,
+                                    "tipo": f"{modelo_extra}-1",
+                                    "tipo_transformacion": None
+                                })
+                constantes = [m for m in modelos if m and m.get("tipo") == "constante"]
+                predictivos = [m for m in modelos if m and m.get("tipo") != "constante" and not m.get("descartado", False)]
+                validos = [m for m in predictivos if m["mape"] <= 7.5 and m["r2"] >= 0.6]
+                if validos:
+                    modelos_validos = validos
+                    familia_usada = fam
+                    filtro_aplicado = filtro
+                    modelos_info_familia = modelos
+                    df_filtrado_usado = df_filtrado
+                    break
+                if constantes:
+                    constante = constantes[0]
+                    total_validos = df_original[objetivo].notna().sum()
+                    respaldo_constante = constante["n"]
+                    if respaldo_constante >= 8 and respaldo_constante >= 0.5 * total_validos:
+                        modelos_validos = [constante]
+                        familia_usada = fam
+                        filtro_aplicado = filtro
+                        modelos_info_familia = modelos
+                        df_filtrado_usado = df_filtrado
+                        break
+            if not modelos_validos:
+                if permitir_sin_filtro:
+                    # Intentar recién ahora modo progresivo que puede terminar en 'sin filtro'
+                    df_filtrado, fam, filtro = seleccionar_predictores_validos(
+                        df_original, objetivo, idx, nivel_familia=None
+                    )
+                    if fam == "sin filtro" and df_filtrado is not None and not df_filtrado.empty:
+                        predictores = [col for col in df_filtrado.columns if col != df_filtrado.columns[0] and col != objetivo]
+                        if predictores:
+                            modelos = []
+                            for combo in generar_combinaciones(predictores):
+                                for poly in (False, True):
+                                    try:
+                                        modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, poly, idx))
+                                    except ModeloDescartado as e:
+                                        modelos.append({
+                                            "Aeronave": idx,
+                                            "Parámetro": objetivo,
+                                            "descartado": True,
+                                            "motivo": str(e),
+                                            "predictores": combo,
+                                            "tipo": f"{'poly' if poly else 'linear'}-{len(combo)}",
+                                            "tipo_transformacion": None
+                                        })
+                                if len(combo) == 1:
+                                    for modelo_extra in ("log", "potencia", "exp"):
+                                        try:
+                                            modelos.append(entrenar_modelo(df_filtrado, objetivo, combo, False, idx, modelo_extra=modelo_extra))
+                                        except ModeloDescartado as e:
+                                            modelos.append({
+                                                "Aeronave": idx,
+                                                "Parámetro": objetivo,
+                                                "descartado": True,
+                                                "motivo": str(e),
+                                                "predictores": combo,
+                                                "tipo": f"{modelo_extra}-1",
+                                                "tipo_transformacion": None
+                                            })
+                            constantes = [m for m in modelos if m and m.get("tipo") == "constante"]
+                            predictivos = [m for m in modelos if m and m.get("tipo") != "constante" and not m.get("descartado", False)]
+                            validos = [m for m in predictivos if m["mape"] <= 7.5 and m["r2"] >= 0.6]
+                            if validos:
+                                modelos_validos = validos
+                                familia_usada = fam
+                                filtro_aplicado = filtro
+                                modelos_info_familia = modelos
+                                df_filtrado_usado = df_filtrado
+                            elif constantes:
+                                constante = constantes[0]
+                                total_validos = df_original[objetivo].notna().sum()
+                                respaldo_constante = constante["n"]
+                                if respaldo_constante >= 8 and respaldo_constante >= 0.5 * total_validos:
+                                    modelos_validos = [constante]
+                                    familia_usada = fam
+                                    filtro_aplicado = filtro
+                                    modelos_info_familia = modelos
+                                    df_filtrado_usado = df_filtrado
+                else:
+                    reporte.append({
+                        "Aeronave": idx,
+                        "Parámetro": objetivo,
+                        "Valor imputado": np.nan,
+                        "Confianza": 0.0,
+                        "Corr": 0.0,
+                        "k": 0,
+                        "Tipo Modelo": "n/a",
+                        "Predictores": "",
+                        "Penalizacion_k": 0.0,
+                        "Familia": "sin filtro",
+                        "Método predictivo": "Correlacion",
+                        "Advertencia": "❌ No se permite imputación sin filtro para esta celda.",
+                    })
+                    continue
+            if modelos_validos and df_filtrado_usado is not None:
+                if modelos_validos[0].get("tipo") != "constante":
+                    for m in modelos_validos:
+                        m.update(validar_con_loocv(df_filtrado_usado, objetivo, m))
+                        m["Confianza_promedio"] = (m["Confianza"] + m["Confianza_LOOCV"]) / 2
+                        mape = m.get("mape", None)
+                        mape_loocv = m.get("MAPE_LOOCV", None)
+                        if mape is not None and mape_loocv is not None:
+                            if mape == 0:
+                                ratio = np.inf
+                            else:
+                                ratio = mape_loocv / mape
+                            m["ratio_MAPE_val_vs_train"] = ratio
+                            if ratio > 5:
+                                advert_msg = (
+                                    f"Advertencia: El MAPE de validación es más de 5 veces mayor que el de entrenamiento "
+                                    f"({mape_loocv:.2f}% vs {mape:.2f}%). Posible sobreajuste."
+                                )
+                                if "Advertencia" in m and m["Advertencia"]:
+                                    m["Advertencia"] += "; " + advert_msg
+                                else:
+                                    m["Advertencia"] = advert_msg
+                        else:
+                            m["ratio_MAPE_val_vs_train"] = None
+                    for m in modelos_validos:
+                        if m is not None and not m.get("descartado", False):
+                            columnas_grafico = list(m["predictores"]) + [objetivo]
+                            df_filtrado_graf = df_filtrado_usado[columnas_grafico].dropna().to_dict(orient="list")
+                            modelos_info.append({
+                                "Aeronave": idx,
+                                "Parámetro": objetivo,
+                                "Familia": familia_usada,
+                                "Filtro_aplicado": filtro_aplicado,
+                                "predictores": list(m["predictores"]),
+                                "n_predictores": len(m["predictores"]),
+                                "n_muestras_entrenamiento": m["n"],
+                                "tipo": m["tipo"],
+                                "tipo_transformacion": m["tipo_transformacion"],
+                                "coeficientes_originales": m["coeficientes_originales"],
+                                "Peso de predictores": m.get("Peso de predictores", []),
+                                "intercepto_original": m["intercepto_original"],
+                                "ecuacion_string": m.get("ecuacion_string"),
+                                "variable_independiente_1": m.get("variable_independiente_1"),
+                                "variable_independiente_2": m.get("variable_independiente_2"),
+                                "mape": m["mape"],
+                                "r2": m["r2"],
+                                "corr": m["corr"],
+                                "Confianza": m["Confianza"],
+                                "Confianza_LOOCV": m.get("Confianza_LOOCV"),
+                                "k_LOOCV": m.get("n_LOOCV"),
+                                "Corr_LOOCV": m.get("Corr_LOOCV"),
+                                "MAPE_LOOCV": m.get("MAPE_LOOCV"),
+                                "R2_LOOCV": m.get("R2_LOOCV"),
+                                "Advertencia": m.get("Advertencia", None),
+                                "datos_entrenamiento": m["datos_originales"],
+                                "indices_entrenamiento": m.get("indices_entrenamiento", []),
+                                "X_entrenamiento_original": m.get("X_entrenamiento_original", m["datos_originales"].get("X_original", [])),
+                                "df_filtrado_shape": df_filtrado_usado.shape,
+                                "df_filtrado_columns": list(df_filtrado_usado.columns),
+                                "df_original_shape": df_completo.shape,
+                                "df_original_columns": list(df_completo.columns),
+                                "df_original": df_completo.to_dict(orient="list"),
+                                "df_filtrado": df_filtrado_graf,
+                            })
+                    robustos = [m for m in modelos_validos if m["MAPE_LOOCV"] <= 7.5 and m["R2_LOOCV"] >= 0.6]
+                    no_robustos = [
+                        m for m in modelos_validos
+                        if (m["MAPE_LOOCV"] <= 12.5 and m["R2_LOOCV"] >= 0.45)
+                        and not (m["MAPE_LOOCV"] <= 7.5 and m["R2_LOOCV"] >= 0.6)
+                    ]
+                    if robustos:
+                        mejor = max(robustos, key=lambda x: x["Confianza_promedio"])
+                        warning_text = "🟢 Modelo robusto"
+                    elif no_robustos:
+                        mejor = max(no_robustos, key=lambda x: x["Confianza_promedio"])
+                        warning_text = "🟡 Modelo no robusto"
                     else:
-                        motivo = "Sin predictores válidos"
-                    motivos_descartes.append((m, motivo))
-
-                if not validos:
-                    for m, motivo in motivos_descartes or [({"motivo": "Sin predictores válidos"}, "Sin predictores válidos")]:
                         reporte.append({
-                            "Aeronave" : idx,
+                            "Aeronave": idx,
                             "Parámetro": objetivo,
                             "Valor imputado": np.nan,
                             "Confianza": 0.0,
                             "Corr": 0.0,
                             "k": 0,
-                            "Tipo Modelo": m.get("tipo", "n/a"),
-                            "Predictores": ",".join(m.get("predictores", [])),
+                            "Tipo Modelo": "n/a",
+                            "Predictores": "",
                             "Penalizacion_k": 0.0,
                             "Familia": familia_usada,
                             "Método predictivo": "Correlacion",
-                            "Advertencia": f"❌ Modelo descartado: {motivo}" + ("; ⚠️ modelo sin filtrado por familia" if not filtro_aplicado else ""),
+                            "Advertencia": "❌ Todos los modelos descartados por LOOCV (MAPE > 12.5% o R2 <= 0.45)",
                         })
+                        continue
+                    # Añadir o concatenar etiqueta de robustez en 'Advertencia'
+                    if "Advertencia" in mejor and mejor["Advertencia"]:
+                        if warning_text not in mejor["Advertencia"]:
+                            mejor["Advertencia"] += "; " + warning_text
+                    else:
+                        mejor["Advertencia"] = warning_text
+                    mejor["Familia"] = familia_usada
+                    if not pd.isna(df_resultado.at[idx, objetivo]):
+                        print(f"⚠️ [ADVERTENCIA] Ya se imputó {objetivo} en fila {idx}. No debería ocurrir.")
+                    df_resultado, imputacion = imputar_valores_celda(df_resultado, df_filtrado_usado, objetivo, mejor, idx)
+                    imputacion["Familia"] = familia_usada
+                    advertencia_final = imputacion.get("Advertencia", "")
+                    if warning_text not in advertencia_final:
+                        if advertencia_final:
+                            advertencia_final += "; " + warning_text
+                        else:
+                            advertencia_final = warning_text
+                        imputacion["Advertencia"] = advertencia_final
+                    reporte.append(imputacion)
                     continue
-            # Validar con LOOCV y calcular confianza promedio
-            for m in validos:
-                m.update(validar_con_loocv(df_filtrado, objetivo, m))
-                m["Confianza_promedio"] = (m["Confianza"] + m["Confianza_LOOCV"]) / 2
-            # Guardar todos los modelos NO descartados (sin filtrar por mape/r2), ahora con LOOCV
-            for m in modelos:
-                if m is not None and not m.get("descartado", False):
-                    columnas_grafico = list(m["predictores"]) + [objetivo]
-                    df_filtrado_graf = df_filtrado[columnas_grafico].dropna().to_dict(orient="list")
-                    modelos_info.append({
-                        "Aeronave": idx,
-                        "Parámetro": objetivo,
-                        "Familia": familia_usada,
-                        "Filtro_aplicado": filtro_aplicado,
-                        "predictores": list(m["predictores"]),
-                        "n_predictores": len(m["predictores"]),
-                        "n_muestras_entrenamiento": m["n"],
-                        "tipo": m["tipo"],
-                        "tipo_transformacion": m["tipo_transformacion"],
-                        "coeficientes_originales": m["coeficientes_originales"],
-                        "Peso de predictores": m.get("Peso de predictores", []),
-                        "intercepto_original": m["intercepto_original"],
-                        "ecuacion_string": m.get("ecuacion_string"),
-                        "variable_independiente_1": m.get("variable_independiente_1"),
-                        "variable_independiente_2": m.get("variable_independiente_2"),
-                        "mape": m["mape"],
-                        "r2": m["r2"],
-                        "corr": m["corr"],
-                        "Confianza": m["Confianza"],
-                        "Confianza_LOOCV": m.get("Confianza_LOOCV"),
-                        "k_LOOCV": m.get("n_LOOCV"),
-                        "Corr_LOOCV": m.get("Corr_LOOCV"),
-                        "MAPE_LOOCV": m.get("MAPE_LOOCV"),
-                        "R2_LOOCV": m.get("R2_LOOCV"),
-                        "Advertencia": m.get("warning", None),
-                        "datos_entrenamiento": m["datos_originales"],
-                        "indices_entrenamiento": m["datos_originales"]["X_original"],
-                        "df_filtrado_shape": df_filtrado.shape,
-                        "df_filtrado_columns": list(df_filtrado.columns),
-                        "df_original_shape": df_completo.shape,
-                        "df_original_columns": list(df_completo.columns),
-                        "df_original": df_completo.to_dict(orient="list"),
-                        "df_filtrado": df_filtrado_graf,
-                    })
-            # Filtrar modelos robustos por LOOCV
-            robustos = [m for m in validos if m["MAPE_LOOCV"] <= 15 and m["R2_LOOCV"] >= 0.6]
-            if robustos:
-                mejor = max(robustos, key=lambda x: x["Confianza_promedio"])
-                warning_text = "🟢 Modelo robusto"
-            else:
-                mejor = max(validos, key=lambda x: x["Confianza_promedio"])
-                warning_text = "🟡 Modelo no robusto"
-            if not filtro_aplicado:
-                warning_text += "; ⚠️ modelo sin filtrado por familia"
-            mejor["warning"] = warning_text
-            mejor["Familia"] = familia_usada
-            # Verificar si ya imputamos algo en esta fila/parámetro
-            if not pd.isna(df_resultado.at[idx, objetivo]):
-                print(f"⚠️ [ADVERTENCIA] Ya se imputó {objetivo} en fila {idx}. No debería ocurrir.")
-            # Imputar el valor de la celda actual
-            df_resultado, imputacion = imputar_valores_celda(df_resultado, df_filtrado, objetivo, mejor, idx)
-            imputacion["Familia"] = familia_usada
-            # Solo agregar la advertencia si no está ya incluida
-            advertencia_final = imputacion.get("Advertencia", "")
-            if warning_text not in advertencia_final:
-                if advertencia_final:
-                    advertencia_final += "; " + warning_text
                 else:
-                    advertencia_final = warning_text
-                imputacion["Advertencia"] = advertencia_final
-            reporte.append(imputacion)
-
-
+                    constante = modelos_validos[0]
+                    total_validos = df_original[objetivo].notna().sum()
+                    respaldo_constante = constante["n"]
+                    porcentaje = 100 * respaldo_constante / total_validos if total_validos else 0
+                    advertencia = (
+                        f"Imputación por valor constante respaldada por {respaldo_constante} de {total_validos} valores "
+                        f"({porcentaje:.1f}% de la muestra original)."
+                    )
+                    if "Advertencia" in constante and constante["Advertencia"]:
+                        if advertencia not in constante["Advertencia"]:
+                            constante["Advertencia"] += "; " + advertencia
+                    else:
+                        constante["Advertencia"] = advertencia
+                    constante["Familia"] = familia_usada
+                    df_resultado, imputacion = imputar_valores_celda(df_resultado, df_filtrado_usado, objetivo, constante, idx)
+                    imputacion["Familia"] = familia_usada
+                    imputacion["Advertencia"] = advertencia
+                    reporte.append(imputacion)
+                    continue
+            # 4. Si no se pudo imputar nada
+            reporte.append({
+                "Aeronave": idx,
+                "Parámetro": objetivo,
+                "Valor imputado": np.nan,
+                "Confianza": 0.0,
+                "Corr": 0.0,
+                "k": 0,
+                "Tipo Modelo": "n/a",
+                "Predictores": "",
+                "Penalizacion_k": 0.0,
+                "Familia": familia_usada if familia_usada else "n/a",
+                "Método predictivo": "Correlacion",
+                "Advertencia": "❌ No se pudo imputar valor por ningún método.",
+            })
     return df_resultado, reporte, modelos_info
 """
 def test_imputacion_correlacion_basica():

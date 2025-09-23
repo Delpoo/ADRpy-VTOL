@@ -79,60 +79,54 @@ def normalize_imputation_point(point, rango_x, rango_y, rango_z, n_predictores=1
                 print(f"   🔍 X: encontrado en campo '{field}': {x_orig}")
             break
     
-    if x_orig is None:
-        x_orig = 0
-        if DEBUG_NORMALIZATION:
-            print(f"   ⚠️ X: no encontrado en ningún campo, usando 0")
-    
-    # Buscar valor de Y (solo para 3D): múltiples nombres posibles
-    y_orig = None
-    if n_predictores == 2:  # Solo buscar Y para gráficos 3D
-        y_fields = ['variable_independiente_2', 'y_original', 'Y', 'y']
-        for field in y_fields:
-            if field in point and point[field] is not None:
-                y_orig = point[field]
-                if DEBUG_NORMALIZATION:
-                    print(f"   🔍 Y: encontrado en campo '{field}': {y_orig}")
-                break
-        
-        if y_orig is None and DEBUG_NORMALIZATION:
-            print(f"   ⚠️ Y: no encontrado en ningún campo para gráfico 3D")
-    
-    # Buscar valor de Z: múltiples nombres posibles
-    z_orig = None
-    z_fields = ['variable_dependiente', 'valor_imputado', 'Valor imputado', 'z_original', 'Z', 'z']
-    for field in z_fields:
-        if field in point and point[field] is not None:
-            z_orig = point[field]
-            if DEBUG_NORMALIZATION:
-                print(f"   🔍 Z: encontrado en campo '{field}': {z_orig}")
-            break
-    
-    if z_orig is None:
-        z_orig = 0
-        if DEBUG_NORMALIZATION:
-            print(f"   ⚠️ Z: no encontrado en ningún campo, usando 0")
+    """
+    Normaliza un punto de imputación usando los rangos dados.
+    Si el valor está fuera del rango, NO expande el rango: el valor normalizado puede ser <0 o >1.
+    Devuelve las coordenadas normalizadas (x, y, z) según el número de predictores.
+    """
+    # Extraer valores originales
+    x_orig = point.get('x_original')
+    y_orig = point.get('y_original')
+    z_orig = point.get('valor_imputado')
 
-    # Normalizar X (siempre normalizada como variable independiente)
-    print(f"\n🔎 [NORMALIZACIÓN X] Normalizando variable_independiente_1 (X):")
-    print(f"   X valor usado: {x_orig}")
-    print(f"   rango_x: {rango_x}")
-    
-    # 🔍 VALIDACIÓN CRÍTICA: Verificar coherencia del rango X
-    if DEBUG_NORMALIZATION:
-        print(f"   🔎 VALIDACIÓN X: ¿{x_orig} está en rango [{rango_x[0]}, {rango_x[1]}]?")
-        if x_orig < rango_x[0] or x_orig > rango_x[1]:
-            print(f"   ❌ PROBLEMA DETECTADO: X={x_orig} está FUERA del rango {rango_x}")
-            print(f"   🔧 Esto causará normalización fuera de [0,1]")
+    # Para 1 predictor (2D): x = predictor, y = valor imputado
+    if n_predictores == 1:
+        # Normalizar X
+        if x_orig is not None and rango_x is not None and len(rango_x) == 2:
+            if x_orig < rango_x[0] or x_orig > rango_x[1]:
+                if DEBUG_NORMALIZATION:
+                    print(f"⚠️ [normalize_imputation_point] X fuera de rango: {x_orig} no en {rango_x}. El valor normalizado puede ser <0 o >1.")
+            x_norm = (x_orig - rango_x[0]) / (rango_x[1] - rango_x[0]) if rango_x[1] != rango_x[0] else 0.5
         else:
-            print(f"   ✅ OK: X={x_orig} está dentro del rango {rango_x}")
-    
-    # 🔧 CORRECCIÓN AUTOMÁTICA: Si el valor está fuera del rango, expandir el rango
-    if x_orig < rango_x[0] or x_orig > rango_x[1]:
-        rango_x_original = rango_x.copy()
-        rango_x = [min(rango_x[0], x_orig * 0.95), max(rango_x[1], x_orig * 1.05)]
-        if DEBUG_NORMALIZATION:
-            print(f"   🔧 CORRECCIÓN APLICADA: Rango X expandido de {rango_x_original} a {rango_x}")
+            x_norm = 0.5
+        # Y no se normaliza (se muestra en escala original)
+        y_val = z_orig
+        return x_norm, y_val, None
+
+    # Para 2 predictores (3D): x = predictor 1, y = predictor 2, z = valor imputado
+    elif n_predictores == 2:
+        # Normalizar X
+        if x_orig is not None and rango_x is not None and len(rango_x) == 2:
+            if x_orig < rango_x[0] or x_orig > rango_x[1]:
+                if DEBUG_NORMALIZATION:
+                    print(f"⚠️ [normalize_imputation_point] X fuera de rango: {x_orig} no en {rango_x}. El valor normalizado puede ser <0 o >1.")
+            x_norm = (x_orig - rango_x[0]) / (rango_x[1] - rango_x[0]) if rango_x[1] != rango_x[0] else 0.5
+        else:
+            x_norm = 0.5
+        # Normalizar Y
+        if y_orig is not None and rango_y is not None and len(rango_y) == 2:
+            if y_orig < rango_y[0] or y_orig > rango_y[1]:
+                if DEBUG_NORMALIZATION:
+                    print(f"⚠️ [normalize_imputation_point] Y fuera de rango: {y_orig} no en {rango_y}. El valor normalizado puede ser <0 o >1.")
+            y_norm = (y_orig - rango_y[0]) / (rango_y[1] - rango_y[0]) if rango_y[1] != rango_y[0] else 0.5
+        else:
+            y_norm = None
+        # Z no se normaliza (se muestra en escala original)
+        z_val = z_orig
+        return x_norm, y_norm, z_val
+    else:
+        # No soportado
+        return None, None, None
     
     if rango_x[1] != rango_x[0]:
         x_norm = (x_orig - rango_x[0]) / (rango_x[1] - rango_x[0])
