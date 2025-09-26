@@ -46,7 +46,11 @@ from typing import Dict, Iterable, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
+# matplotlib se importa via helper centralizado
+import plotly.graph_objects as go
+import ipywidgets as w
+from IPython.display import display, clear_output
 
 from asistente_diseno.outliers import compute_iqr_bounds
 from pandas.api.types import is_bool_dtype
@@ -570,7 +574,7 @@ def widget_sugerencias_param(
 ):
 
     try:
-        import ipywidgets as w
+        import ipywidgets as w  # local import to keep compatibility if used elsewhere
         from IPython.display import display, clear_output
     except Exception as e:
         raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
@@ -609,33 +613,55 @@ def widget_sugerencias_param(
 
             # Histograma de valores
             vals = pd.to_numeric(usados["valor"], errors="coerce").dropna()
-            fig, ax = plt.subplots()
-            vals.plot(kind="hist", bins=bins, ax=ax)
-            # líneas verticales: mediana y media ponderadas si existen
-            summary = sug["summary"].set_index("parametro")
-            if par in summary.index:
+            # Migración ligera: usar Plotly si está disponible; si no, tabla únicamente
+            try:
+                import plotly.graph_objects as _go
+
+                summary = sug["summary"].set_index("parametro")
                 med_w = (
                     summary.loc[par, "w_mediana"]
-                    if "w_mediana" in summary.columns
+                    if par in summary.index and "w_mediana" in summary.columns
                     else np.nan
                 )
                 mean_w = (
                     summary.loc[par, "w_media"]
-                    if "w_media" in summary.columns
+                    if par in summary.index and "w_media" in summary.columns
                     else np.nan
                 )
+                fig = _go.Figure()
+                fig.add_histogram(x=vals, nbinsx=bins, name="Usados", opacity=0.8)
                 if np.isfinite(med_w):
-                    ax.axvline(med_w, linestyle="--")
+                    fig.add_vline(
+                        x=float(med_w),
+                        line_width=2,
+                        line_dash="dash",
+                        line_color="green",
+                        annotation_text="w_mediana",
+                        annotation_position="top",
+                    )
                 if np.isfinite(mean_w):
-                    ax.axvline(mean_w, linestyle=":")
-                ax.set_title(
-                    f"{par}  |  n={int(summary.loc[par,'n_usados'])}  •  w_mediana={'{:.3f}'.format(med_w) if np.isfinite(med_w) else '—'}  •  w_media={'{:.3f}'.format(mean_w) if np.isfinite(mean_w) else '—'}"
+                    fig.add_vline(
+                        x=float(mean_w),
+                        line_width=2,
+                        line_dash="dot",
+                        line_color="royalblue",
+                        annotation_text="w_media",
+                        annotation_position="top",
+                    )
+                fig.update_layout(
+                    template="plotly_white",
+                    title=par,
+                    xaxis_title=par,
+                    yaxis_title="frecuencia",
+                    margin=dict(l=40, r=10, t=40, b=40),
                 )
-            ax.set_xlabel(par)
-            ax.set_ylabel("Frecuencia")
-            fig.tight_layout()
-            display(fig)
-            plt.close(fig)
+                display(fig)
+            except Exception:
+                display(
+                    w.HTML(
+                        "<i>No se pudo renderizar el histograma (Plotly no disponible).</i>"
+                    )
+                )
 
             # Mostrar posibles outliers excluidos
             if excl is not None and not isinstance(excl, dict) and not excl.empty:
@@ -648,37 +674,421 @@ def widget_sugerencias_param(
     return box
 
 
-def widget_sugerencias_panel(
-    sug: dict,
+def _fig_parametro_hist_box(
+    serie_val: pd.Series,
     *,
+    titulo: str,
+    objetivo_val: float | None = None,
+    sugerido_val: float | None = None,
+    low: float | None = None,
+    high: float | None = None,
+) -> go.Figure:
+    """Histograma + mejoras de lectura (IQR box overlay, vlines, avisos)."""
+    s = pd.to_numeric(serie_val, errors="coerce").dropna()
+    fig = go.Figure()
+
+    # Histograma base
+    fig.add_histogram(x=s, name="Top-K", nbinsx=30, opacity=0.75)
+
+    # BoxPlot adicional (referencia robusta) — mantenido como antes
+    if len(s) >= 5:
+        fig.add_trace(
+            go.Box(
+                x=s,
+                name="Box",
+                boxpoints="outliers",
+                jitter=0,
+                opacity=0.35,
+                orientation="h",
+            )
+        )
+
+    # Variables requeridas por el parche
+    try:
+        param = titulo.split(":", 1)[1].strip() if ":" in titulo else titulo
+    except Exception:
+        param = titulo
+    vals_topk = s.to_numpy()
+    low_iqr = float(low) if (low is not None) else np.nan
+    high_iqr = float(high) if (high is not None) else np.nan
+    sugerido = float(sugerido_val) if (sugerido_val is not None) else np.nan
+    objetivo = float(objetivo_val) if (objetivo_val is not None) else np.nan
+    n_topk = int(s.shape[0])
+    min_n = 5
+
+    # --- 1) Título sin solaparse (con subtítulo en <sup>) y margen superior amplio
+    fig.update_layout(
+        title=dict(
+            text=f"Distribución Top-K: {param}<br>"
+            f"<sup>LOW(IQR)={low_iqr:.3g}  ·  HIGH(IQR)={high_iqr:.3g}  ·  n_topk={n_topk}</sup>",
+            x=0.02,
+            xanchor="left",
+            y=0.97,
+            font=dict(size=16),
+        ),
+        margin=dict(t=110),  # deja espacio para título y posibles avisos
+    )
+
+    # --- 2) “Box overlay” del IQR (Q1–Q3) y líneas guía
+    vals = np.asarray(vals_topk, dtype=float)
+    vals = vals[np.isfinite(vals)]
+    if vals.size:
+        q1, q3 = np.nanpercentile(vals, [25, 75])
+        # estimar altura del hist para dimensionar el rectángulo
+        try:
+            import numpy as _np
+
+            ymax = max(1, int(_np.histogram(vals, bins="auto")[0].max()))
+        except Exception:
+            ymax = 1
+        fig.add_shape(
+            type="rect",
+            xref="x",
+            yref="y",
+            x0=float(q1),
+            x1=float(q3),
+            y0=0,
+            y1=ymax,
+            line=dict(width=0),
+            fillcolor="rgba(255,127,80,0.15)",  # coral suave
+        )
+
+    # líneas verticales LOW/HIGH (IQR)
+    if np.isfinite(low_iqr):
+        fig.add_vline(
+            x=float(low_iqr), line=dict(color="crimson", width=2, dash="dash")
+        )
+    if np.isfinite(high_iqr):
+        fig.add_vline(
+            x=float(high_iqr), line=dict(color="crimson", width=2, dash="dash")
+        )
+
+    # línea sugerido
+    if np.isfinite(sugerido):
+        fig.add_vline(
+            x=float(sugerido), line=dict(color="seagreen", width=2, dash="dash")
+        )
+        fig.add_annotation(
+            x=float(sugerido),
+            y=1.02,
+            yref="paper",
+            xref="x",
+            text="Sugerido",
+            showarrow=False,
+            font=dict(size=11, color="seagreen"),
+        )
+
+    # línea objetivo (si existe)
+    if np.isfinite(objetivo):
+        fig.add_vline(x=float(objetivo), line=dict(color="royalblue", width=2))
+        fig.add_annotation(
+            x=float(objetivo),
+            y=1.02,
+            yref="paper",
+            xref="x",
+            text="Objetivo",
+            showarrow=False,
+            font=dict(size=11, color="royalblue"),
+        )
+
+    # --- 3) Avisos (⚠️) bien posicionados y legibles
+    warnings = []
+    if np.isfinite(objetivo) and (objetivo < low_iqr or objetivo > high_iqr):
+        warnings.append("⚠️ objetivo fuera del IQR")
+    if (n_topk is not None) and (min_n is not None) and (n_topk < min_n):
+        warnings.append(f"⚠️ muestra Top-K pequeña (n={n_topk} < {min_n})")
+
+    if warnings:
+        fig.add_annotation(
+            xref="paper",
+            yref="paper",
+            x=0.01,
+            y=1.13,
+            text=" &nbsp; ".join(warnings),
+            align="left",
+            showarrow=False,
+            font=dict(size=12),
+            bgcolor="rgba(255,245,204,.9)",  # amarillo muy suave
+            bordercolor="rgba(0,0,0,.1)",
+            borderwidth=1,
+        )
+        fig.update_layout(margin=dict(t=150))  # un poco más de aire si hay avisos
+
+    # estéticas suaves
+    fig.update_layout(
+        bargap=0.15,
+        template="plotly_white",
+        hoverlabel=dict(namelength=-1),  # no truncar nombres
+        xaxis_title="valor",
+        yaxis_title="frecuencia",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+    )
+    return fig
+
+
+def widget_sugerencias_panel_plotly(
+    df_ranked: pd.DataFrame,
+    *,
+    params: list[str] | None = None,
+    top_k: int = 10,
+    remove_outliers: bool = True,
+    iqr_factor: float = 1.5,
+    use_distance_weights: bool = True,
+    use_confidence_weights: bool = False,
+    confidence_cols: dict[str, str] | None = None,
+    beta_dist: float = 1.0,
+    beta_conf: float = 1.0,
+    name_objetivo: str = "Objetivo (usuario)",
+) -> w.Accordion:
+    """
+    Accordion con:
+      1) Resumen de sugerencias por parámetro (tabla)
+      2) Detalle por parámetro (Dropdown + histograma/box Plotly + referencias)
+      3) Insumos Top-K (tabla de vecinos usados)
+    """
+    cfg = dict(
+        params=params,
+        top_k=top_k,
+        remove_outliers=remove_outliers,
+        iqr_factor=iqr_factor,
+        use_distance_weights=use_distance_weights,
+        use_confidence_weights=use_confidence_weights,
+        confidence_cols=confidence_cols,
+        beta_dist=beta_dist,
+        beta_conf=beta_conf,
+        name_objetivo=name_objetivo,
+    )
+
+    # Controles arriba
+    dd_k = w.BoundedIntText(
+        value=top_k,
+        min=3,
+        max=50,
+        step=1,
+        description="Top-K:",
+        layout=w.Layout(width="160px"),
+    )
+    ch_out = w.Checkbox(value=remove_outliers, description="Quitar atípicos (IQR)")
+    ft_iqr = w.FloatText(
+        value=iqr_factor, description="factor IQR", layout=w.Layout(width="170px")
+    )
+    ch_wd = w.Checkbox(value=use_distance_weights, description="Ponderar 1/(dist)")
+    btn = w.Button(description="Recalcular")
+    btn.style.button_color = "#28a745"
+    header = w.HBox([dd_k, ch_out, ft_iqr, ch_wd, btn])
+
+    # Salidas
+    out_resumen = w.Output()
+    out_detalle = w.Output()
+    out_insumos = w.Output()
+
+    # Dropdown de parámetro en el panel de Detalle
+    # Si no se pasa `params`, autodetectamos numéricas comunes del ranking (excluyendo auxiliares)
+    if params is None:
+        candidates = [
+            c
+            for c in df_ranked.columns
+            if pd.to_numeric(df_ranked[c], errors="coerce").notna().sum() > 0
+            and c.lower() not in ("dist", "similitud")
+        ]
+        params = sorted(candidates)
+    dd_param = w.Dropdown(
+        options=params, description="Parámetro:", layout=w.Layout(width="60%")
+    )
+
+    def _run_calc():
+        return sugerencias_topk(
+            df_ranked=df_ranked,
+            params=params,
+            top_k=int(dd_k.value),
+            remove_outliers=bool(ch_out.value),
+            iqr_factor=float(ft_iqr.value),
+            use_distance_weights=bool(ch_wd.value),
+            use_confidence_weights=use_confidence_weights,
+            confidence_cols=confidence_cols,
+            beta_dist=beta_dist,
+            beta_conf=beta_conf,
+            name_objetivo=name_objetivo,
+        )
+
+    def _render(*_):
+        sug = _run_calc()
+
+        # 1) Resumen
+        with out_resumen:
+            clear_output(wait=True)
+            df_summary = sug["summary"].copy()
+            display(df_summary)
+
+        # 2) Detalle por parámetro
+        with out_detalle:
+            clear_output(wait=True)
+            par = dd_param.value
+            if par not in sug["details"]:
+                display(w.HTML("<i>Sin datos para el parámetro elegido.</i>"))
+            else:
+                # serie top-k y referencias
+                det_pack = sug["details"][par]
+                usados = det_pack.get("usados", pd.DataFrame())
+                s_vals = usados.get("valor", pd.Series(dtype=float))
+
+                # Intentar recuperar objetivo/sugerido/low/high si existen en summary
+                objetivo_val = None  # no está explícito en output actual
+                resumen = (
+                    sug["summary"].set_index("parametro")
+                    if "parametro" in sug["summary"].columns
+                    else None
+                )
+                sugerido_val = (
+                    resumen.loc[par, "w_mediana"]
+                    if resumen is not None
+                    and par in resumen.index
+                    and "w_mediana" in resumen.columns
+                    else None
+                )
+                low = (
+                    resumen.loc[par, "low"]
+                    if resumen is not None
+                    and par in resumen.index
+                    and "low" in resumen.columns
+                    else None
+                )
+                high = (
+                    resumen.loc[par, "high"]
+                    if resumen is not None
+                    and par in resumen.index
+                    and "high" in resumen.columns
+                    else None
+                )
+
+                fig = _fig_parametro_hist_box(
+                    s_vals,
+                    titulo=f"Distribución Top-K: {par}",
+                    objetivo_val=objetivo_val,
+                    sugerido_val=sugerido_val,
+                    low=low,
+                    high=high,
+                )
+                display(fig)
+
+                # Números clave
+                rows = [
+                    {
+                        "parámetro": par,
+                        "n_topk": int(
+                            pd.to_numeric(s_vals, errors="coerce").dropna().shape[0]
+                        ),
+                        "sugerido (w_mediana)": sugerido_val,
+                        "LOW(IQR)": low,
+                        "HIGH(IQR)": high,
+                    }
+                ]
+                display(pd.DataFrame(rows))
+
+        # 3) Insumos (vecinos usados)
+        with out_insumos:
+            clear_output(wait=True)
+            df_k = sug.get("neighbors", None)
+            if df_k is None or df_k.empty:
+                display(w.HTML("<i>Sin vecinos disponibles.</i>"))
+            else:
+                display(df_k)
+
+    btn.on_click(lambda _: _render())
+
+    # Render inicial
+    _render()
+
+    # Armar Accordion
+    box_resumen = w.VBox([header, w.HTML("<hr>"), out_resumen])
+    box_detalle = w.VBox([dd_param, w.HTML("<hr>"), out_detalle])
+    box_insumos = w.VBox([out_insumos])
+
+    acc = w.Accordion(children=[box_resumen, box_detalle, box_insumos])
+    acc.set_title(0, "Sugerencias Top-K · Resumen")
+    acc.set_title(1, "Detalle por parámetro")
+    acc.set_title(2, "Vecinos (insumos)")
+    acc.selected_index = None  # colapsado por defecto
+    return acc
+
+
+def widget_sugerencias_panel(
+    data,
+    *,
+    # Back-compat args (cuando se pasa un dict 'sug'):
     titulo: str = "Sugerencias (Top-K)",
     collapsed: bool = True,
     bins: int = 20,
-):
+    # Nueva API (cuando se pasa df_ranked):
+    params: list[str] | None = None,
+    top_k: int = 10,
+    remove_outliers: bool = True,
+    iqr_factor: float = 1.5,
+    use_distance_weights: bool = True,
+    use_confidence_weights: bool = False,
+    confidence_cols: dict[str, str] | None = None,
+    beta_dist: float = 1.0,
+    beta_conf: float = 1.0,
+    name_objetivo: str = "Objetivo (usuario)",
+) -> w.Accordion:
     """
-    Panel colapsable con:
-      [0] Resumen (Styler via Output)
-      [1] Detalle por parámetro (tabla vecinos + histograma)
+    Wrapper compatible:
+    - Si 'data' es un dict de sugerencias (keys: summary, details, neighbors, config),
+      arma un Accordion simple con Resumen + Detalle (Plotly) + Vecinos.
+    - Si 'data' es un DataFrame (df_ranked), delega al panel Plotly recalculable
+      (widget_sugerencias_panel_plotly) con los parámetros provistos.
     """
-    try:
-        import ipywidgets as w
-        from IPython.display import display, clear_output
-    except Exception as e:
-        raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
+    # Caso 1: dict de sugerencias ya calculadas
+    if isinstance(data, dict) and {"summary", "details"}.issubset(set(data.keys())):
+        try:
+            import ipywidgets as w  # local import
+            from IPython.display import display, clear_output  # noqa: F401
+        except Exception as e:
+            raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
 
-    # Resumen (Styler) → render en Output
-    out_resumen = w.Output()
-    with out_resumen:
-        display(vista_sugerencias_resumen(sug["summary"]))
+        out_resumen = w.Output()
+        with out_resumen:
+            if isinstance(data.get("summary"), pd.DataFrame):
+                display(vista_sugerencias_resumen(data["summary"]))
+            else:
+                display(w.HTML("<i>Sin resumen disponible.</i>"))
 
-    # Detalle interactivo (ya es un widget)
-    detalle = widget_sugerencias_param(sug, bins=bins, titulo=titulo)
+        box_resumen = w.VBox([w.HTML(f"<b>{titulo} — resumen</b>"), out_resumen])
+        box_detalle = widget_sugerencias_param(data, bins=bins, titulo=titulo)
 
-    box_resumen = w.VBox([w.HTML(f"<b>{titulo} — resumen</b>"), out_resumen])
-    box_detalle = w.VBox([detalle])
+        out_insumos = w.Output()
+        with out_insumos:
+            neigh = data.get("neighbors", None)
+            if isinstance(neigh, pd.DataFrame) and not neigh.empty:
+                display(neigh)
+            else:
+                display(w.HTML("<i>Sin vecinos Top-K disponibles.</i>"))
+        box_insumos = w.VBox([out_insumos])
 
-    acc = w.Accordion(children=[box_resumen, box_detalle])
-    acc.set_title(0, "Resumen")
-    acc.set_title(1, "Detalle por parámetro")
-    acc.selected_index = None if collapsed else 0
-    return acc
+        acc = w.Accordion(children=[box_resumen, box_detalle, box_insumos])
+        acc.set_title(0, "Resumen")
+        acc.set_title(1, "Detalle por parámetro")
+        acc.set_title(2, "Vecinos (insumos)")
+        acc.selected_index = None if collapsed else 0
+        return acc
+
+    # Caso 2: DataFrame del ranking → delegar al panel Plotly modular
+    if isinstance(data, pd.DataFrame):
+        return widget_sugerencias_panel_plotly(
+            df_ranked=data,
+            params=params,
+            top_k=top_k,
+            remove_outliers=remove_outliers,
+            iqr_factor=iqr_factor,
+            use_distance_weights=use_distance_weights,
+            use_confidence_weights=use_confidence_weights,
+            confidence_cols=confidence_cols,
+            beta_dist=beta_dist,
+            beta_conf=beta_conf,
+            name_objetivo=name_objetivo,
+        )
+
+    # Tipo no soportado
+    raise TypeError(
+        "widget_sugerencias_panel: primer argumento debe ser dict de sugerencias o DataFrame (ranking)."
+    )

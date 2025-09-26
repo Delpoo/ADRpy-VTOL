@@ -11,7 +11,7 @@ el DataFrame original. Incluye:
   - Vistas listas para el notebook:
       * Resumen por columna (Q1, Q3, IQR, límites, % outliers) con Styler
       * "Quicklook" que empaqueta todo
-      * Histograma por columna con límites IQR (matplotlib)
+    * Histograma por columna con límites IQR (Plotly)
 
 Reglas base
 -----------
@@ -33,12 +33,16 @@ report["outliers_by_col"]["Envergadura"].head()  # filas outlier en esa columna
 fig = plot_outliers_hist(df, "Envergadura") ; fig  # histograma con límites IQR
 """
 
+from __future__ import annotations
 from typing import Dict, Iterable, List, Tuple, Optional
 import numpy as np
 import pandas as pd
 
-# matplotlib sólo se usa en funciones de gráfico
-import matplotlib.pyplot as plt
+# from .mplutils import import_matplotlib  # <- eliminar este import
+from .config import SEGMENT_COL, SEGMENT_LABELS
+import plotly.graph_objects as go
+import ipywidgets as w
+from IPython.display import display, clear_output
 
 
 # =============================================================================
@@ -58,6 +62,13 @@ def _valid_numeric(s: pd.Series) -> pd.Series:
     s_num = _to_numeric_series(s)
     s_num = s_num.replace([np.inf, -np.inf], np.nan).dropna()
     return s_num
+
+
+# Mapeo de etiquetas de segmento con claves en str para evitar conflictos de tipo
+try:
+    SEGMENT_LABELS_STR = {str(k): v for k, v in SEGMENT_LABELS.items()}
+except Exception:
+    SEGMENT_LABELS_STR = {}
 
 
 # =============================================================================
@@ -384,98 +395,213 @@ def plot_outliers_hist(
     factor: float = 1.5,
     min_n: int = 5,
     bins: int = 20,
-):
+) -> go.Figure:
     """
-    Histograma simple de una columna con líneas verticales en los límites IQR.
-    Reglas de gráficos:
-      - matplotlib, una figura por gráfico, sin colores explícitos (usa defaults).
+    Histograma simple de una columna con líneas verticales en los límites IQR (Plotly).
     """
     if column not in df.columns:
         raise KeyError(f"La columna '{column}' no existe en el DataFrame.")
-    s = pd.to_numeric(df[column], errors="coerce")
+    s = pd.to_numeric(df[column], errors="coerce").dropna()
     info = compute_iqr_bounds(s, factor=factor, min_n=min_n)
 
-    fig, ax = plt.subplots()
-    s.dropna().plot(kind="hist", bins=bins, ax=ax)
+    fig = go.Figure()
+    fig.add_histogram(x=s, nbinsx=int(bins), name=str(column), opacity=0.85)
     if info["usable"]:
-        ax.axvline(info["low"], linestyle="--")
-        ax.axvline(info["high"], linestyle="--")
-    ax.set_title(f"Histograma • {column}  (IQR usable={info['usable']})")
-    ax.set_xlabel(column)
-    ax.set_ylabel("Frecuencia")
+        for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
+            fig.add_vline(
+                x=float(xline),
+                line_width=2,
+                line_dash="dash",
+                line_color="red",
+                annotation_text=label,
+                annotation_position="top",
+            )
+    fig.update_layout(
+        template="plotly_white",
+        margin=dict(l=40, r=10, t=30, b=40),
+        xaxis_title=column,
+        yaxis_title="frecuencia",
+        showlegend=False,
+    )
     return fig
+
+
+def widget_outliers_plotly(
+    df: pd.DataFrame,
+    *,
+    segment_col: str = SEGMENT_COL,
+    iqr_factor: float = 1.5,
+    min_n: int = 5,
+) -> w.Accordion:
+    """
+    Explorador interactivo (Plotly + ipywidgets) de outliers por columna:
+      - Dropdown de columna numérica
+      - Slider del factor IQR y bins
+      - Opcional: filtro por segmento (si existe segment_col)
+      - Tabla con Q1/Q3/IQR/LOW/HIGH y listado de outliers
+    Devuelve un Accordion con la vista.
+    """
+    # Columnas numéricas con suficiente N
+    cols = [
+        c
+        for c in df.columns
+        if pd.to_numeric(df[c], errors="coerce").notna().sum() >= min_n
+    ]
+    if not cols:
+        return w.Accordion(
+            children=[w.HTML("<b>No hay columnas numéricas suficientes.</b>")]
+        )
+
+    # Detección de nombre para la tabla de outliers
+    name_col = _detectar_columna_nombre(df)
+
+    # Widgets
+    dd_col = w.Dropdown(
+        options=sorted(cols), description="Parámetro:", layout=w.Layout(width="45%")
+    )
+    sl_factor = w.FloatSlider(
+        value=float(iqr_factor),
+        min=0.5,
+        max=3.0,
+        step=0.1,
+        description="factor IQR:",
+        readout_format=".1f",
+    )
+    sl_bins = w.IntSlider(value=25, min=10, max=80, step=1, description="bins:")
+    ch_out = w.Checkbox(value=True, description="Listar outliers")
+
+    seg_widget = None
+    if segment_col and segment_col in df.columns:
+        seg_vals = pd.Series(df[segment_col]).dropna().unique().tolist()
+        seg_vals = [v for v in seg_vals if str(v).strip() != ""]
+        if len(seg_vals) > 1:
+            seg_options = ["Todos"] + sorted(seg_vals, key=lambda x: str(x))
+            seg_widget = w.Dropdown(options=seg_options, description="Segmento:")
+
+    # Outputs
+    out_plot = w.Output()
+    out_tbl = w.Output()
+
+    # Layout superior
+    controls_left = [dd_col, sl_factor, sl_bins]
+    controls_right = [seg_widget] if seg_widget is not None else []
+    controls_right.append(ch_out)
+    top = w.HBox(
+        [
+            w.HBox(controls_left, layout=w.Layout(flex="3")),
+            w.HBox(
+                controls_right, layout=w.Layout(flex="2", justify_content="flex-end")
+            ),
+        ]
+    )
+
+    def _render():
+        # Filtrar por segmento si corresponde
+        df_sel = df
+        if seg_widget is not None and seg_widget.value and seg_widget.value != "Todos":
+            try:
+                df_sel = df[df[segment_col] == seg_widget.value]
+            except Exception:
+                df_sel = df
+
+        col = dd_col.value
+        s = pd.to_numeric(df_sel[col], errors="coerce")
+        info = compute_iqr_bounds(s, factor=float(sl_factor.value), min_n=min_n)
+
+        with out_plot:
+            clear_output(wait=True)
+            fig = go.Figure()
+            fig.add_histogram(
+                x=s.dropna(), nbinsx=int(sl_bins.value), name=str(col), opacity=0.85
+            )
+            if info["usable"]:
+                for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
+                    if pd.notna(xline):
+                        fig.add_vline(
+                            x=float(xline),
+                            line_width=2,
+                            line_dash="dash",
+                            line_color="red",
+                            annotation_text=label,
+                            annotation_position="top",
+                        )
+            title_suffix = (
+                f" — seg: {seg_widget.value}"
+                if seg_widget is not None
+                and seg_widget.value
+                and seg_widget.value != "Todos"
+                else ""
+            )
+            fig.update_layout(
+                template="plotly_white",
+                margin=dict(l=40, r=10, t=35, b=40),
+                xaxis_title=str(col),
+                yaxis_title="frecuencia",
+                showlegend=False,
+                title=f"Histograma: {col}{title_suffix}",
+            )
+            display(fig)
+
+        with out_tbl:
+            clear_output(wait=True)
+            rows = [
+                {
+                    "columna": col,
+                    "n_valido": info["n_valido"],
+                    "Q1": info["Q1"],
+                    "Q3": info["Q3"],
+                    "IQR": info["IQR"],
+                    "LOW": info["low"],
+                    "HIGH": info["high"],
+                    "usable": info["usable"],
+                }
+            ]
+            df_info = pd.DataFrame(rows)
+            display(df_info)
+
+            if ch_out.value and info["usable"]:
+                mask_low = s < info["low"]
+                mask_high = s > info["high"]
+                cols_out = [col]
+                if name_col and name_col in df_sel.columns:
+                    cols_out.append(name_col)
+                outs = df_sel.loc[(mask_low | mask_high) & s.notna(), cols_out].copy()
+                if not outs.empty:
+                    if name_col and name_col in outs.columns:
+                        outs.rename(columns={name_col: "aeronave"}, inplace=True)
+                    outs["tipo_outlier"] = np.where(
+                        outs[col] < info["low"], "LOW", "HIGH"
+                    )
+                    display(w.HTML(f"<b>Outliers ({len(outs)} filas):</b>"))
+                    display(outs.sort_values(col))
+
+    # Render inicial y eventos
+    _render()
+    dd_col.observe(lambda _: _render(), names="value")
+    sl_factor.observe(lambda _: _render(), names="value")
+    sl_bins.observe(lambda _: _render(), names="value")
+    if seg_widget is not None:
+        seg_widget.observe(lambda _: _render(), names="value")
+
+    acc = w.Accordion(
+        children=[w.VBox([top, w.HTML("<hr>"), out_plot, w.HTML("<hr>"), out_tbl])]
+    )
+    acc.set_title(0, "Outliers (histograma interactivo)")
+    acc.selected_index = None
+    return acc
 
 
 def outliers_quicklook(
     df: pd.DataFrame,
-    columns: Optional[Iterable[str]] = None,
     *,
-    metodo: str = "IQR",
-    factor: float = 1.5,
-    k: float = 3.5,
+    segment_col: str = SEGMENT_COL,
+    iqr_factor: float = 1.5,
     min_n: int = 5,
-    keep_na: bool = True,
-    auto_detect_numeric: bool = True,
-) -> Dict[str, object]:
-    """
-    "Vistazo" integral para el notebook, sin escribir archivos.
-    Empaqueta:
-      - summary: DataFrame resumen IQR por columna (si metodo="IQR")
-      - summary_styler: Styler formateado para display()
-      - annotated_flags: DataFrame con banderas is_outlier_<col>
-      - outliers_by_col: dict[col -> DataFrame con filas outlier en esa col]
-      - params: dict con los parámetros usados
-
-    columns:
-      - Si None y auto_detect_numeric=True: toma columnas numéricas con >=5 válidos.
-      - Si se pasan explícitas, usa exactamente esas.
-    """
-    # Selección de columnas
-    if columns is None and auto_detect_numeric:
-        # detecta columnas numéricas con al menos 5 valores no NaN
-        numeric_cols = []
-        for c in df.columns:
-            s = pd.to_numeric(df[c], errors="coerce")
-            if s.notna().sum() >= 5:
-                numeric_cols.append(c)
-        columns = numeric_cols
-    elif columns is None:
-        columns = list(df.columns)
-
-    columns = [c for c in columns if c in df.columns]
-
-    # Resumen (sólo con IQR tiene sentido low/high)
-    if metodo.upper() == "IQR":
-        summary = iqr_summary_table(
-            df, columns, factor=factor, min_n=min_n, keep_na=keep_na
-        )
-        summary_styler = style_iqr_summary(summary)
-    else:
-        # Si quisieras un resumen por MAD, podríamos agregarlo aquí; por ahora dejamos IQR como principal.
-        summary = iqr_summary_table(
-            df, columns, factor=factor, min_n=min_n, keep_na=keep_na
-        )
-        summary_styler = style_iqr_summary(summary)
-
-    # Anotar y listar filas outlier por columna
-    annot = annotate_and_list_outliers(
-        df, columns, metodo=metodo, factor=factor, k=k, min_n=min_n, keep_na=keep_na
+) -> w.Accordion:
+    """Wrapper a la UI plotly para mantener compatibilidad con el notebook."""
+    return widget_outliers_plotly(
+        df, segment_col=segment_col, iqr_factor=iqr_factor, min_n=min_n
     )
-
-    return {
-        "summary": summary,
-        "summary_styler": summary_styler,
-        "annotated_flags": annot["annotated_flags"],
-        "outliers_by_col": annot["outliers_by_col"],
-        "params": {
-            "metodo": metodo,
-            "factor": factor,
-            "k": k,
-            "min_n": min_n,
-            "keep_na": keep_na,
-            "columns": columns,
-        },
-    }
 
 
 # =========================
@@ -599,20 +725,34 @@ def vista_outliers_en_notebook(
       - 'annotated_flags': DF original con columnas is_outlier_*
       - 'tabla_outliers': tabla aplanada (columna, fila, valor)
     """
-    rep = outliers_quicklook(
-        df,
-        columns=columns,
-        metodo=metodo,
-        factor=factor,
-        k=k,
-        min_n=min_n,
-        keep_na=keep_na,
-        auto_detect_numeric=auto_detect_numeric,
+    # No usar outliers_quicklook (ahora retorna UI). Reproducimos cálculos aquí.
+    # Selección de columnas
+    if columns is None and auto_detect_numeric:
+        cols = []
+        for c in df.columns:
+            s = pd.to_numeric(df[c], errors="coerce")
+            if s.notna().sum() >= min_n:
+                cols.append(c)
+        columns = cols
+    elif columns is None:
+        columns = list(df.columns)
+    columns = [c for c in columns if c in df.columns]
+
+    summary = iqr_summary_table(
+        df, columns, factor=factor, min_n=min_n, keep_na=keep_na
     )
-    tabla = outliers_tabla_global(rep)
+    summary_styler = style_iqr_summary(summary)
+    annot = annotate_and_list_outliers(
+        df, columns, metodo=metodo, factor=factor, k=k, min_n=min_n, keep_na=keep_na
+    )
+    tabla = outliers_tabla_global(
+        {
+            "outliers_by_col": annot["outliers_by_col"],
+        }
+    )
     return {
-        "summary_styler": rep["summary_styler"],
-        "annotated_flags": rep["annotated_flags"],
+        "summary_styler": summary_styler,
+        "annotated_flags": annot["annotated_flags"],
         "tabla_outliers": tabla,
     }
 
@@ -681,24 +821,36 @@ def widget_outliers_hist(
     def _plot(col: str, factor_val: float, bins_val: int):
         s = pd.to_numeric(df[col], errors="coerce")
         info = compute_iqr_bounds(s, factor=factor_val, min_n=min_n)
-
-        # Dibujo
-        fig, ax = plt.subplots()
-        s.dropna().plot(kind="hist", bins=bins_val, ax=ax)
+        fig = go.Figure()
+        fig.add_histogram(
+            x=s.dropna(), nbinsx=int(bins_val), name=str(col), opacity=0.85
+        )
         if info["usable"]:
-            ax.axvline(info["low"], linestyle="--")
-            ax.axvline(info["high"], linestyle="--")
-            # texto auxiliar con conteos
-            n_low = int((s < info["low"]).sum())
-            n_high = int((s > info["high"]).sum())
-            ax.set_title(
-                f"{col}  |  IQR usable={info['usable']}  |  outliers: low={n_low}, high={n_high}"
-            )
-        else:
-            ax.set_title(f"{col}  |  IQR no usable (n<{min_n} o IQR≈0)")
-        ax.set_xlabel(col)
-        ax.set_ylabel("Frecuencia")
-        fig.tight_layout()
+            for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
+                if pd.notna(xline):
+                    fig.add_vline(
+                        x=float(xline),
+                        line_width=2,
+                        line_dash="dash",
+                        line_color="red",
+                        annotation_text=label,
+                        annotation_position="top",
+                    )
+        n_low = int((s < info["low"]).sum()) if info["usable"] else 0
+        n_high = int((s > info["high"]).sum()) if info["usable"] else 0
+        title = (
+            f"{col}  |  IQR usable={info['usable']}  |  outliers: low={n_low}, high={n_high}"
+            if info["usable"]
+            else f"{col}  |  IQR no usable (n<{min_n} o IQR≈0)"
+        )
+        fig.update_layout(
+            template="plotly_white",
+            margin=dict(l=40, r=10, t=40, b=40),
+            xaxis_title=str(col),
+            yaxis_title="frecuencia",
+            showlegend=False,
+            title=title,
+        )
         return fig
 
     def _on_change(*args):
@@ -706,7 +858,6 @@ def widget_outliers_hist(
             clear_output(wait=True)
             fig = _plot(dd.value, sl_factor.value, sl_bins.value)
             display(fig)
-            plt.close(fig)
 
     # primera render
     _on_change()
@@ -739,43 +890,25 @@ def widget_outliers_panel(
     except Exception as e:
         raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
 
-    # 1) Resumen (Styler) → Output
+    # 1) Resumen (Styler) → Output (sin depender de outliers_quicklook)
     out_resumen = w.Output()
     with out_resumen:
-        rep = outliers_quicklook(df, factor=factor, min_n=min_n)
-        display(rep["summary_styler"])
+        cols_sum = []
+        for c in df.columns:
+            s = pd.to_numeric(df[c], errors="coerce")
+            if s.notna().sum() >= min_n:
+                cols_sum.append(c)
+        summary = iqr_summary_table(
+            df, cols_sum, factor=factor, min_n=min_n, keep_na=True
+        )
+        display(style_iqr_summary(summary))
 
     box_resumen = w.VBox([w.HTML(f"<b>{titulo} — resumen</b>"), out_resumen])
 
-    # 2) Selector + histograma
-    cols = []
-    for c in df.columns:
-        s = pd.to_numeric(df[c], errors="coerce")
-        if s.notna().sum() >= min_n:
-            cols.append(c)
-    dd = w.Dropdown(options=cols, description="Columna:", layout=w.Layout(width="60%"))
-    out = w.Output()
-
-    def _render(*_):
-        with out:
-            clear_output(wait=True)
-            from IPython.display import display as _display
-
-            s = pd.to_numeric(df[dd.value], errors="coerce").dropna()
-            if s.empty:
-                print(f"Sin datos válidos para '{dd.value}' con los filtros actuales.")
-                return
-            info = compute_iqr_bounds(s, factor=factor, min_n=min_n)
-            ax = s.plot(kind="hist", bins=20, title=f"Distribución • {dd.value}")
-            if info["usable"]:
-                ax.axvline(info["low"], linestyle="--")
-                ax.axvline(info["high"], linestyle="--")
-            _display(ax.figure)
-            plt.close(ax.figure)
-
-    _render()
-    dd.observe(_render, names="value")
-    box_detalle = w.VBox([dd, out])
+    # 2) Explorador Plotly
+    box_detalle = widget_outliers_plotly(
+        df, segment_col=SEGMENT_COL, iqr_factor=factor, min_n=min_n
+    )
 
     acc = w.Accordion(children=[box_resumen, box_detalle])
     acc.set_title(0, "Resumen")

@@ -37,3 +37,7 @@
 2025-09-23 16:08:20 [LAUNCH] Aplicación lanzada exitosamente en modo debug
   Detalles: {"port": 8054, "total_modelos": 130}
 2025-09-23 16:09:36 [MAINTENANCE] Logs antiguos borrados, conservados últimas 24h
+2025-09-26 12:54:17 [LAUNCH] Intentando lanzar en modo produccion
+2025-09-26 12:54:17 [MONITOR] Monitoreo iniciado
+2025-09-26 12:54:17 [LAUNCH] Aplicación lanzada exitosamente en modo produccion
+  Detalles: {"port": 8055, "total_modelos": 130}

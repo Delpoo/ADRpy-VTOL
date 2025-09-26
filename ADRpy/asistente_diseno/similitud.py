@@ -46,6 +46,11 @@ from typing import Dict, Iterable, Optional, Tuple, List
 import numpy as np
 import pandas as pd
 
+# Fix matplotlib backend issues before pandas styling operations
+from asistente_diseno.mplutils import fix_matplotlib_backend
+
+fix_matplotlib_backend()
+
 # Reutilizamos el módulo de outliers para IQR/MAD robustos
 from asistente_diseno.outliers import compute_iqr_bounds, mad_mask
 
@@ -267,6 +272,23 @@ def vista_topn_en_notebook(
             return f"{v:.3f}"
         except Exception:
             return v
+
+    # Asegurar matplotlib para Styler (colormaps/norm) y backend válido
+    try:
+        import os as _os
+
+        # Sanitizar backend inline inválido en entornos no soportados
+        if _os.environ.get("MPLBACKEND", "").startswith("module://"):
+            _os.environ["MPLBACKEND"] = "Agg"
+        from asistente_diseno.mplutils import (
+            ensure_matplotlib_for_styler as _ens,
+            fix_matplotlib_backend as _fix,
+        )
+
+        _fix()
+        _ens()
+    except Exception:
+        pass
 
     sty = (
         dfv.style.format({"distancia": "{:.3f}", "similitud": _format_sim})
@@ -597,6 +619,14 @@ def vista_topn_detallada(
     }
     for c in activos:
         fmt_cols[f"Δ_{c}"] = "{:.3f}"
+
+    # Asegurar matplotlib para Styler (colormaps/norm)
+    try:
+        from asistente_diseno.mplutils import ensure_matplotlib_for_styler
+
+        ensure_matplotlib_for_styler()
+    except Exception:
+        pass
 
     # Aplicar formato columna por columna para mayor compatibilidad de tipos
     sty = dfv.style

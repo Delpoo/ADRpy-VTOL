@@ -15,7 +15,7 @@ No hace predicciones para imputar. Es una herramienta **descriptiva**.
 from __future__ import annotations
 import math
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,6 @@ from .outliers import compute_iqr_bounds
 # Para UI
 import ipywidgets as w
 from IPython.display import display, clear_output
-import matplotlib.pyplot as plt
 
 # Config (nombre de columna de misión + etiquetas legibles si existen)
 from .config import SEGMENT_COL, SEGMENT_LABELS
@@ -39,7 +38,9 @@ def _safe_log(v: pd.Series) -> pd.Series:
     """ln(x) con seguridad; x<=0 -> NaN."""
     x = pd.to_numeric(v, errors="coerce")
     x = x.where(x > 0, np.nan)
-    return np.log(x)
+    # Aseguramos devolver un pandas.Series para satisfacer tipado estático
+    logged = np.log(x)
+    return pd.Series(logged, index=x.index, name=getattr(v, "name", None))
 
 
 def _adj_r2(y_true: np.ndarray, y_hat: np.ndarray, p: int) -> float:
@@ -83,6 +84,15 @@ def _iqr_mask_pair(
     if by["usable"]:
         mask &= (y >= by["low"]) & (y <= by["high"])
     return mask
+
+
+def _detect_name_col(df: pd.DataFrame) -> Optional[str]:
+    """Devuelve la columna 'nombre' más probable para hover."""
+    candidatos = ["Modelo", "modelo", "aeronave", "Aeronave", "Nombre", "name"]
+    for c in candidatos:
+        if c in df.columns:
+            return c
+    return None
 
 
 # ---------------------------- Ajustes candidatos --------------------------- #
@@ -252,7 +262,7 @@ def preparar_tendencias(
     remove_outliers: bool = True,
     iqr_factor: float = 1.5,
     min_n: int = 5,
-) -> dict:
+) -> Dict[str, Any]:
     """
     Devuelve un dict con:
       - 'datos': DF limpio (x,y,segmento,mask)
@@ -283,7 +293,7 @@ def preparar_tendencias(
         }
     )
 
-    resp = {"datos": datos}
+    resp: Dict[str, Any] = {"datos": datos}
 
     # GLOBAL
     if modo == "global":
@@ -331,14 +341,18 @@ def widget_tendencias(
     modo_default: str = "global",
     remove_outliers_default: bool = True,
     iqr_factor_default: float = 1.5,
+    min_n_default: int = 5,
+    logx_default: bool = False,
+    # mantener API (enlace externo opcional)
+    x_obj_col_name: Optional[str] = None,
+    x_obj_widget: Optional[w.Widget] = None,
+    auto_from_widget: bool = True,
 ) -> w.Accordion:
-    """
-    Devuelve un Accordion con:
-      - Controles (X, Y, modo, IQR)
-      - Gráfico
-      - Tabla de métricas
-    """
-    # Candidatas numéricas
+    """Versión Plotly interactiva (sin matplotlib)."""
+    import plotly.graph_objects as go
+    from IPython.display import display, clear_output
+
+    # columnas numéricas candidatas
     num_cols = [
         c
         for c in df.columns
@@ -349,24 +363,32 @@ def widget_tendencias(
             children=[w.HTML("<b>No hay columnas numéricas suficientes.</b>")]
         )
 
-    # Controles
+    # heurística para nombre visible
+    name_col = _detect_name_col(df)
+    if name_col:
+        nombres = df[name_col].astype(str)
+    else:
+        # usar índice como nombre, pero como Serie para permitir .loc
+        nombres = pd.Series(df.index.astype(str), index=df.index)
+
+    # widgets
     dd_x = w.Dropdown(
         options=num_cols,
         value=(x_default or num_cols[0]),
         description="X:",
-        layout=w.Layout(width="40%"),
+        layout=w.Layout(width="35%"),
     )
     dd_y = w.Dropdown(
         options=num_cols,
         value=(y_default or (num_cols[1] if len(num_cols) > 1 else num_cols[0])),
         description="Y:",
-        layout=w.Layout(width="40%"),
+        layout=w.Layout(width="35%"),
     )
     dd_modo = w.Dropdown(
         options=[("Global", "global"), ("Por misión", "familia")],
-        value=modo_default,
+        value=("familia" if modo_default == "familia" else "global"),
         description="Modo:",
-        layout=w.Layout(width="30%"),
+        layout=w.Layout(width="20%"),
     )
     ch_out = w.Checkbox(
         value=remove_outliers_default, description="Quitar atípicos (IQR)"
@@ -374,15 +396,42 @@ def widget_tendencias(
     ft_iqr = w.FloatText(
         value=iqr_factor_default,
         description="factor IQR",
-        layout=w.Layout(width="180px"),
+        layout=w.Layout(width="150px"),
     )
+    it_min = w.IntText(
+        value=min_n_default, description="min_n", layout=w.Layout(width="110px")
+    )
+    ch_logx = w.Checkbox(value=logx_default, description="log X")
     btn = w.Button(description="Recalcular")
     btn.style.button_color = "#28a745"
 
-    top = w.HBox([dd_x, dd_y, dd_modo, ch_out, ft_iqr, btn])
-
+    top = w.HBox([dd_x, dd_y, dd_modo, ch_out, ft_iqr, it_min, ch_logx, btn])
     out_plot = w.Output()
     out_tbl = w.Output()
+
+    def _fit_to_xs(best, xs):
+        if best is None or not np.isfinite(best.r2_adj):
+            return None
+        n = best.nombre
+        p = best.params
+        if n == "lineal":
+            a, b = p
+            return a * xs + b
+        if n == "cuadrático":
+            a, b, c = p
+            return a * xs**2 + b * xs + c
+        if n == "log":
+            a, b = p
+            xs_pos = np.where(xs > 0, xs, np.nan)
+            return a * np.log(xs_pos) + b
+        if n == "exp":
+            a, b = p
+            return a * np.exp(b * xs)
+        if n == "potencia":
+            a, b = p
+            xs_pos = np.where(xs > 0, xs, np.nan)
+            return a * np.power(xs_pos, b)
+        return None
 
     def _render(*_):
         with out_plot:
@@ -395,101 +444,115 @@ def widget_tendencias(
                 modo=dd_modo.value,
                 remove_outliers=bool(ch_out.value),
                 iqr_factor=float(ft_iqr.value),
+                min_n=int(it_min.value),
             )
-
             datos = info["datos"]
             sub = datos[datos["mask"]]
-
             if sub.empty:
                 display(w.HTML("<i>Sin datos válidos con los filtros actuales.</i>"))
+                with out_tbl:
+                    clear_output(wait=True)
                 return
 
-            fig, ax = plt.subplots(figsize=(7.5, 5.0))
-            ax.scatter(sub["x"], sub["y"], s=22, alpha=0.55, label="Datos")
+            # figura
+            fig = go.Figure()
+            xvals = sub["x"].to_numpy()
+            yvals = sub["y"].to_numpy()
+            names = nombres.loc[sub.index].to_numpy()
 
             if dd_modo.value == "global":
+                # nube global
+                fig.add_scatter(
+                    x=xvals,
+                    y=yvals,
+                    mode="markers",
+                    name="Datos",
+                    hovertemplate="<b>%{customdata}</b><br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+                    customdata=names.reshape(-1, 1),
+                    marker=dict(size=8, opacity=0.8),
+                )
+                # mejor ajuste
                 best = info.get("global", {}).get("fit", None)
                 if best is not None and np.isfinite(best.r2_adj):
-                    xs = np.linspace(np.nanmin(sub["x"]), np.nanmax(sub["x"]), 200)
-                    # reconstruimos y_hat con parámetros:
-                    if best.nombre == "lineal":
-                        a, b = best.params
-                        ys = a * xs + b
-                    elif best.nombre == "cuadrático":
-                        a, b, c = best.params
-                        ys = a * xs**2 + b * xs + c
-                    elif best.nombre == "log":
-                        a, b = best.params
-                        xs_pos = np.where(xs > 0, xs, np.nan)
-                        ys = a * np.log(xs_pos) + b
-                    elif best.nombre == "exp":
-                        a, b = best.params
-                        ys = a * np.exp(b * xs)
-                    elif best.nombre == "potencia":
-                        a, b = best.params
-                        xs_pos = np.where(xs > 0, xs, np.nan)
-                        ys = a * np.power(xs_pos, b)
-                    else:
-                        ys = np.full_like(xs, np.nan)
-                    ax.plot(xs, ys, linewidth=2.2, label=f"Tendencia ({best.nombre})")
-
-            else:  # por misión
-                por = info.get("por_mision", {})
-                cmap = plt.cm.get_cmap("tab10", max(1, len(por)))
-                for i, (lab, obj) in enumerate(por.items()):
-                    best = obj.get("fit", None)
-                    sub_m = sub[sub["segmento"] == lab]
-                    ax.scatter(
-                        sub_m["x"], sub_m["y"], s=28, alpha=0.65, label=f"Datos: {lab}"
+                    xs = np.linspace(np.nanmin(xvals), np.nanmax(xvals), 220)
+                    ys = _fit_to_xs(best, xs)
+                    if ys is not None:
+                        fig.add_scatter(
+                            x=xs,
+                            y=ys,
+                            mode="lines",
+                            name=f"Tendencia ({best.nombre})",
+                            line=dict(width=3),
+                        )
+            else:
+                # por misión
+                for lab, grupo in sub.groupby("segmento"):
+                    xv = grupo["x"].to_numpy()
+                    yv = grupo["y"].to_numpy()
+                    nm = nombres.loc[grupo.index].to_numpy()
+                    fig.add_scatter(
+                        x=xv,
+                        y=yv,
+                        mode="markers",
+                        name=f"Datos: {lab}",
+                        hovertemplate="<b>%{customdata}</b><br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+                        customdata=nm.reshape(-1, 1),
+                        marker=dict(size=8, opacity=0.85),
                     )
-                    if best is not None and np.isfinite(best.r2_adj):
-                        xs = np.linspace(
-                            np.nanmin(sub_m["x"]), np.nanmax(sub_m["x"]), 150
-                        )
-                        if best.nombre == "lineal":
-                            a, b = best.params
-                            ys = a * xs + b
-                        elif best.nombre == "cuadrático":
-                            a, b, c = best.params
-                            ys = a * xs**2 + b * xs + c
-                        elif best.nombre == "log":
-                            a, b = best.params
-                            xs_pos = np.where(xs > 0, xs, np.nan)
-                            ys = a * np.log(xs_pos) + b
-                        elif best.nombre == "exp":
-                            a, b = best.params
-                            ys = a * np.exp(b * xs)
-                        elif best.nombre == "potencia":
-                            a, b = best.params
-                            xs_pos = np.where(xs > 0, xs, np.nan)
-                            ys = a * np.power(xs_pos, b)
-                        else:
-                            ys = np.full_like(xs, np.nan)
-                        ax.plot(
-                            xs,
-                            ys,
-                            linewidth=2.0,
-                            color=cmap(i),
-                            label=f"Tendencia: {lab}",
-                        )
+                    obj = info.get("por_mision", {}).get(lab, None)
+                    if (
+                        obj
+                        and obj.get("fit", None) is not None
+                        and np.isfinite(obj["fit"].r2_adj)
+                    ):
+                        xs = np.linspace(np.nanmin(xv), np.nanmax(xv), 180)
+                        ys = _fit_to_xs(obj["fit"], xs)
+                        if ys is not None:
+                            fig.add_scatter(
+                                x=xs,
+                                y=ys,
+                                mode="lines",
+                                name=f"Tendencia: {lab}",
+                                line=dict(width=2.5),
+                            )
 
-            ax.set_xlabel(dd_x.value)
-            ax.set_ylabel(dd_y.value)
-            ax.grid(True, alpha=0.25)
-            ax.legend(loc="best", fontsize=9)
+            # Línea vertical vinculada (si corresponde)
+            if (
+                (x_obj_widget is not None)
+                and (x_obj_col_name is not None)
+                and dd_x.value == x_obj_col_name
+            ):
+                try:
+                    v = float(getattr(x_obj_widget, "value", np.nan))
+                    if np.isfinite(v):
+                        fig.add_vline(
+                            x=float(v), line=dict(color="gray", width=1, dash="dash")
+                        )
+                except Exception:
+                    pass
+
+            fig.update_layout(
+                template="plotly_white",
+                legend=dict(
+                    orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0
+                ),
+                margin=dict(l=40, r=10, t=30, b=40),
+                xaxis_title=dd_x.value,
+                yaxis_title=dd_y.value,
+            )
+            if ch_logx.value:
+                fig.update_xaxes(type="log")
+
             display(fig)
-            plt.close(fig)
 
+        # tabla de métricas
         with out_tbl:
             clear_output(wait=True)
-
             rows = []
             if dd_modo.value == "global":
                 g = info.get("global", {})
                 r = g.get("resumen", None)
-                if r is None:
-                    display(w.HTML("<i>No hay resumen global disponible.</i>"))
-                else:
+                if r:
                     rows.append(
                         {
                             "ámbito": "Global",
@@ -499,11 +562,12 @@ def widget_tendencias(
                             "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
                             "MAPE_%": None if r.mape is None else round(r.mape, 2),
                             "calidad_n": r.calidad_n,
+                            "IQR": "ON" if ch_out.value else "OFF",
+                            "min_n": int(it_min.value),
                         }
                     )
             else:
-                por = info.get("por_mision", {})
-                for lab, obj in por.items():
+                for lab, obj in (info.get("por_mision", {}) or {}).items():
                     r = obj["resumen"]
                     rows.append(
                         {
@@ -514,21 +578,30 @@ def widget_tendencias(
                             "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
                             "MAPE_%": None if r.mape is None else round(r.mape, 2),
                             "calidad_n": r.calidad_n,
+                            "IQR": "ON" if ch_out.value else "OFF",
+                            "min_n": int(it_min.value),
                         }
                     )
-
             if rows:
-                dfm = pd.DataFrame(rows)
-                display(dfm)
+                display(pd.DataFrame(rows))
+
+    # redibujar automáticamente si cambia el control externo (opcional)
+    if (x_obj_widget is not None) and bool(auto_from_widget):
+
+        def _on_ext(change):
+            if change.get("name") == "value":
+                _render()
+
+        try:
+            x_obj_widget.observe(_on_ext, names="value")
+        except Exception:
+            pass
 
     btn.on_click(lambda _: _render())
-    # Render inicial
     acc = w.Accordion(
         children=[w.VBox([top, w.HTML("<hr>"), out_plot, w.HTML("<hr>"), out_tbl])]
     )
     acc.set_title(0, "Tendencias (X–Y)")
-    acc.selected_index = (
-        None  # colapsado por defecto; el usuario expande si lo necesita
-    )
+    acc.selected_index = None
     _render()
     return acc
