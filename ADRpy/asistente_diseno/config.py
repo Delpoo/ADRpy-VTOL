@@ -69,3 +69,26 @@ SEGMENT_LABELS = {
     5: "Carga",
     6: "Kamikaze",
 }
+
+# --- NUEVO: defaults para la detección y UI dinámica ---
+# mínimo de valores no nulos para considerar una columna útil
+MIN_VALID_NUMERIC = 5
+# columnas a excluir de la detección (ajusta a tus nombres reales)
+EXCLUDE_COLS = {"aeronave", "Aeronav e", "Nombre", SEGMENT_COL}
+# orden preferido al inicio del panel (si existen)
+PREFERRED_ORDER = [
+    "Peso máximo al despegue (MTOW)",
+    "Payload",
+    "Velocidad a la que se realiza el crucero (m/s TAS)",
+    "Autonomía de la aeronave (h)",
+]
+# Map opcional de etiquetas legibles por columna; si no está, se usa el nombre tal cual
+DISPLAY_LABELS = {
+    # "col_df": "Etiqueta legible"
+}
+# Defaults por parámetro (si no hay estado previo)
+PARAM_DEFAULTS = {
+    "active": False,
+    "mode": "ignorar",  # ignorar | minimo | maximo | fijo
+    "weight": 1.0,
+}

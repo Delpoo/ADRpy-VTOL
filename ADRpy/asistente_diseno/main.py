@@ -14,7 +14,10 @@ Notas
 from __future__ import annotations
 import os, sys, shutil, importlib, warnings
 from IPython.display import display, clear_output
+from typing import Optional
+from dataclasses import dataclass
 import ipywidgets as w  # widgets used throughout
+import numpy as np
 
 # ---------------------------------------------------------------------
 # Asegurar que el parent (ADRpy) esté en sys.path para imports absolutos
@@ -43,10 +46,25 @@ from asistente_diseno.similitud import (
     rank,
     insertar_objetivo_en_ranking,
     widget_filtrado_ranking,
+    ParamSpec,
 )
 from asistente_diseno.sugerencias import sugerencias_topk, widget_sugerencias_panel
 from asistente_diseno.outliers import widget_outliers_panel
 from asistente_diseno.config import SEGMENT_LABELS, SEGMENT_COL
+from asistente_diseno.tendencias import widget_tendencias_plotly
+from asistente_diseno.guias import widget_info_param
+from asistente_diseno.narrativa import narrativa_informe, export_markdown, export_html
+from asistente_diseno.guias_tooltips import apply_tooltip, HELP
+from asistente_diseno.datos import columnas_numericas_utiles
+from asistente_diseno.config import (
+    DISPLAY_LABELS,
+    PARAM_DEFAULTS,
+    PREFERRED_ORDER,
+    SEGMENT_COL,
+)
+import asistente_diseno.config as _cfg
+
+PARAM_GROUPS = getattr(_cfg, "PARAM_GROUPS", {})
 
 # ---------------------------------------------------------------------
 # UI (ipywidgets)
@@ -60,6 +78,561 @@ PARAMS_DEFAULT = [
     "Velocidad a la que se realiza el crucero (m/s TAS)",
     "Autonomía de la aeronave (h)",
 ]
+
+
+@dataclass
+class ParamRow:
+    col: str
+    label: str
+    ch_active: w.Checkbox
+    dd_mode: w.Dropdown
+    ft_value: w.FloatText
+    ft_min: w.FloatText
+    ft_max: w.FloatText
+    sl_weight: w.FloatSlider
+    btn_info: w.Button
+    box: w.HBox
+    # Commit C: vista compacta + toggler por fila
+    btn_toggle: Optional[w.Button] = None
+    expanded: bool = False
+
+
+class ParamPanel(w.VBox):
+    def __init__(self, df: pd.DataFrame):
+        super().__init__()
+        self.df = df
+        self.rows: list[ParamRow] = []
+        self.stats: dict[str, dict] = {}
+        self._filtered_rows: list[ParamRow] = []
+        self.view_mode: str = "Detallada"
+        # Paginación (Commit B)
+        self.page_size = 15
+        self.page = 1
+        # Contenedor de filas: sin scroll interno, que use el scroll principal del notebook
+        self.rows_container = w.VBox(layout=w.Layout(overflow="visible"))
+        self._build()
+
+    # Recalcular estadísticas según un subconjunto del dataset actual
+    def set_stats_from_df(self, df_subset: pd.DataFrame):
+        def _param_stats(df0: pd.DataFrame, col: str) -> dict:
+            s = (
+                pd.to_numeric(df0[col], errors="coerce")
+                if col in df0.columns
+                else pd.Series(dtype=float)
+            )
+            n = int(s.notna().sum())
+            miss = 1.0 - (n / max(int(len(s)), 1)) if len(s) else 1.0
+            arr = s.to_numpy()
+            try:
+                var = float(np.nanvar(arr, ddof=1)) if n > 1 else 0.0
+            except Exception:
+                var = 0.0
+            try:
+                vmin = float(np.nanmin(arr)) if n else float("nan")
+            except Exception:
+                vmin = float("nan")
+            try:
+                vmax = float(np.nanmax(arr)) if n else float("nan")
+            except Exception:
+                vmax = float("nan")
+            return {"n": n, "miss": miss, "var": var, "min": vmin, "max": vmax}
+
+        for r in self.rows:
+            try:
+                self.stats[r.col] = _param_stats(df_subset, r.col)
+            except Exception:
+                self.stats[r.col] = {
+                    "n": 0,
+                    "miss": 1.0,
+                    "var": 0.0,
+                    "min": float("nan"),
+                    "max": float("nan"),
+                }
+        # Prefill de min/max para filas en modo 'rango' que aún no tengan valores cargados
+        self._update_range_defaults()
+
+    def _prefill_range_from_stats(self, pr: "ParamRow"):
+        st = self.stats.get(pr.col, {})
+        vmin = st.get("min")
+        vmax = st.get("max")
+        try:
+            if pr.dd_mode.value == "rango":
+                if (
+                    pr.ft_min.value in (None, "")
+                    and vmin is not None
+                    and np.isfinite(vmin)
+                ):
+                    pr.ft_min.value = float(vmin)
+                if (
+                    pr.ft_max.value in (None, "")
+                    and vmax is not None
+                    and np.isfinite(vmax)
+                ):
+                    pr.ft_max.value = float(vmax)
+        except Exception:
+            pass
+
+    def _update_range_defaults(self):
+        for rr in self.rows:
+            self._prefill_range_from_stats(rr)
+
+    def _build(self):
+        # Controles de filtro/orden/visibilidad
+        self.txt_buscar = w.Text(
+            placeholder="Buscar parámetro…", layout=w.Layout(width="40%")
+        )
+        self.ch_solo_activos = w.Checkbox(value=False, description="Solo activos")
+        self.btn_todos_on = w.Button(
+            description="Activar visibles", button_style="success"
+        )
+        self.btn_todos_off = w.Button(
+            description="Desactivar todos", button_style="warning"
+        )
+
+        self.dd_sort = w.Dropdown(
+            options=[
+                "Alfabético",
+                "Activos primero",
+                "Menos faltantes",
+                "Más variabilidad",
+            ],
+            value="Alfabético",
+            description="Orden:",
+            layout=w.Layout(width="35%"),
+        )
+        grupos = sorted(set(PARAM_GROUPS.values())) if PARAM_GROUPS else []
+        opts_group = ["Todos"] + grupos if grupos else ["Todos"]
+        self.dd_group = w.Dropdown(
+            options=opts_group,
+            value=opts_group[0],
+            description="Grupo:",
+            layout=w.Layout(width="35%"),
+        )
+        # Vista como Dropdown (alineado con el resto)
+        self.dd_view = w.Dropdown(
+            options=["Detallada", "Compacta"],
+            value="Detallada",
+            description="Vista:",
+            layout=w.Layout(width="35%"),
+        )
+
+        # Controles de paginación (Commit B)
+        self.dd_page_size = w.Dropdown(
+            options=[5, 10, 15, 20, 30, 50],
+            value=15,
+            description="Por página:",
+            layout=w.Layout(width="220px"),
+        )
+        self.btn_prev = w.Button(description="◀", tooltip="Página anterior")
+        self.btn_next = w.Button(description="▶", tooltip="Página siguiente")
+        self.lbl_page = w.Label("Página 1/1 (0 items)")
+
+        header1 = w.HBox(
+            [
+                self.txt_buscar,
+                self.ch_solo_activos,
+                self.btn_todos_on,
+                self.btn_todos_off,
+            ]
+        )
+        header2 = w.HBox(
+            [
+                self.dd_sort,
+                self.dd_group,
+                self.dd_view,
+                self.dd_page_size,
+                self.btn_prev,
+                self.btn_next,
+                self.lbl_page,
+            ]
+        )
+
+        # Commit C: edición masiva (modo/peso) sobre la página visible
+        self.dd_bulk_mode = w.Dropdown(
+            options=[
+                ("(sin cambio)", "__nochange__"),
+                ("Ignorar", "ignorar"),
+                ("Fijo (= valor)", "fijo"),
+                ("Máximo (<= valor)", "maximo"),
+                ("Mínimo (>= valor)", "minimo"),
+            ],
+            value="__nochange__",
+            description="Modo masivo:",
+            layout=w.Layout(width="280px"),
+        )
+        self.ft_bulk_weight = w.FloatText(
+            value=float(PARAM_DEFAULTS.get("weight", 1.0)),
+            description="Peso masivo:",
+            layout=w.Layout(width="220px"),
+        )
+        self.btn_aplicar_bulk = w.Button(
+            description="Aplicar a visibles", button_style="info"
+        )
+        header3 = w.HBox(
+            [self.dd_bulk_mode, self.ft_bulk_weight, self.btn_aplicar_bulk]
+        )
+
+        # Construir filas para columnas numéricas útiles
+        cols = columnas_numericas_utiles(self.df)
+
+        def _key(c: str):
+            return (
+                c not in PREFERRED_ORDER,
+                (PREFERRED_ORDER.index(c) if c in PREFERRED_ORDER else 10**6),
+                c.lower(),
+            )
+
+        try:
+            cols.sort(key=_key)
+        except Exception:
+            cols.sort(key=lambda c: c.lower())
+
+        # Stats por columna
+        def _param_stats(df: pd.DataFrame, col: str) -> dict:
+            s = pd.to_numeric(df[col], errors="coerce")
+            n = int(s.notna().sum())
+            miss = 1.0 - (n / max(int(len(s)), 1))
+            arr = s.to_numpy()
+            try:
+                var = float(np.nanvar(arr, ddof=1)) if n > 1 else 0.0
+            except Exception:
+                var = 0.0
+            try:
+                vmin = float(np.nanmin(arr)) if n else float("nan")
+            except Exception:
+                vmin = float("nan")
+            try:
+                vmax = float(np.nanmax(arr)) if n else float("nan")
+            except Exception:
+                vmax = float("nan")
+            return {"n": n, "miss": miss, "var": var, "min": vmin, "max": vmax}
+
+        for c in cols:
+            try:
+                self.stats[c] = _param_stats(self.df, c)
+            except Exception:
+                self.stats[c] = {
+                    "n": 0,
+                    "miss": 1.0,
+                    "var": 0.0,
+                    "min": float("nan"),
+                    "max": float("nan"),
+                }
+
+        items: list[w.HBox] = []
+        for c in cols:
+            label = str(DISPLAY_LABELS.get(c, c))
+            ch = w.Checkbox(
+                value=False,
+                description=label,
+                indent=False,
+                layout=w.Layout(width="36%"),
+            )
+            dd = w.Dropdown(
+                options=[
+                    ("Ignorar", "ignorar"),
+                    ("Fijo (= valor)", "fijo"),
+                    ("Máximo (<= valor)", "maximo"),
+                    ("Mínimo (>= valor)", "minimo"),
+                    ("Rango [min..max]", "rango"),
+                ],
+                value="ignorar",
+                layout=w.Layout(width="16%"),
+            )
+            ft = w.FloatText(
+                value=None, placeholder="valor", layout=w.Layout(width="14%")
+            )
+            ft.layout.display = "none"  # oculto por defecto
+            ft_min = w.FloatText(
+                value=None, placeholder="min", layout=w.Layout(width="12%")
+            )
+            ft_min.layout.display = "none"
+            ft_max = w.FloatText(
+                value=None, placeholder="max", layout=w.Layout(width="12%")
+            )
+            ft_max.layout.display = "none"
+            sl = w.FloatSlider(
+                value=float(PARAM_DEFAULTS.get("weight", 1.0)),
+                min=0.0,
+                max=3.0,
+                step=0.1,
+                readout=True,
+                layout=w.Layout(width="14%"),
+            )
+            btn = w.Button(
+                description="i",
+                tooltip=f"Info de {label}",
+                layout=w.Layout(width="40px"),
+            )
+            # Commit C: per-row toggler (detalles) para vista compacta
+            btn_toggle = w.Button(
+                description="⋯",
+                tooltip="Mostrar/ocultar detalle",
+                layout=w.Layout(width="36px"),
+            )
+            row = w.HBox([ch, dd, ft, ft_min, ft_max, sl, btn, btn_toggle])
+            row.layout = w.Layout(align_items="center")
+            pr = ParamRow(
+                col=c,
+                label=label,
+                ch_active=ch,
+                dd_mode=dd,
+                ft_value=ft,
+                ft_min=ft_min,
+                ft_max=ft_max,
+                sl_weight=sl,
+                btn_info=btn,
+                box=row,
+                btn_toggle=btn_toggle,
+            )
+            self.rows.append(pr)
+            items.append(row)
+
+            # tooltips y toggles
+            apply_tooltip(dd, "modo_param")
+            apply_tooltip(ft, "valor_param")
+            apply_tooltip(ft_min, "valor_param")
+            apply_tooltip(ft_max, "valor_param")
+            apply_tooltip(sl, "peso_param")
+
+            def _toggle_value(change, pr=pr):
+                # Mostrar ft_value para fijo/min/max; ft_min/ft_max para rango.
+                detailed = (self.view_mode == "Detallada") or pr.expanded
+                mode = change["new"]
+                wants_value = mode in {"minimo", "maximo", "fijo"}
+                wants_range = mode == "rango"
+                pr.ft_value.layout.display = (
+                    "" if (wants_value and detailed) else "none"
+                )
+                pr.ft_min.layout.display = "" if (wants_range and detailed) else "none"
+                pr.ft_max.layout.display = "" if (wants_range and detailed) else "none"
+                # Si cambió a 'rango', pre-cargar min/max desde stats si están vacíos
+                if wants_range:
+                    self._prefill_range_from_stats(pr)
+
+            dd.observe(_toggle_value, names="value")
+            _toggle_value({"new": dd.value})
+
+            # Toggle per-row for compact view
+            def _on_toggle_row(_btn, pr=pr):
+                pr.expanded = not pr.expanded
+                _update_row_view(pr)
+
+            btn_toggle.on_click(_on_toggle_row)
+
+        # Helpers de vista (detallada/compacta)
+        def _update_row_view(pr: ParamRow):
+            is_compact = self.view_mode == "Compacta"
+            # dd_mode y peso visibles si no compacta o si expandido
+            show_detail = (not is_compact) or pr.expanded
+            pr.dd_mode.layout.display = "" if show_detail else "none"
+            pr.sl_weight.layout.display = "" if show_detail else "none"
+            # ft_value depende del modo y de show_detail; reutilizamos regla de _toggle_value
+            mode = pr.dd_mode.value
+            wants_value = mode in {"minimo", "maximo", "fijo"}
+            wants_range = mode == "rango"
+            pr.ft_value.layout.display = "" if (wants_value and show_detail) else "none"
+            pr.ft_min.layout.display = "" if (wants_range and show_detail) else "none"
+            pr.ft_max.layout.display = "" if (wants_range and show_detail) else "none"
+            # el botón de toggle solo tiene sentido en compacta
+            if pr.btn_toggle is not None:
+                pr.btn_toggle.layout.display = "" if is_compact else "none"
+
+        def _update_all_rows_view():
+            for rr in self.rows:
+                _update_row_view(rr)
+
+        # Manejo de filtro/orden y acciones masivas + paginación
+        def _total_pages() -> int:
+            n = len(self._filtered_rows)
+            ps = max(int(self.page_size), 1)
+            return max((n + ps - 1) // ps, 1)
+
+        def _visible_rows() -> list[ParamRow]:
+            ps = max(int(self.page_size), 1)
+            p = max(min(int(self.page), _total_pages()), 1)
+            start = (p - 1) * ps
+            end = start + ps
+            return self._filtered_rows[start:end]
+
+        def _update_page_label():
+            self.lbl_page.value = f"Página {self.page}/{_total_pages()} ({len(self._filtered_rows)} items)"
+
+        def _render_page():
+            vis = _visible_rows()
+            self.rows_container.children = (
+                [r.box for r in vis] if vis else [w.HTML("<i>Sin coincidencias</i>")]
+            )
+            _update_page_label()
+
+        def _reset_pagination():
+            self.page = 1
+            _update_page_label()
+
+        def _apply_filter(*_):
+            q = self.txt_buscar.value.strip().lower()
+            solo = bool(self.ch_solo_activos.value)
+            grupo = str(self.dd_group.value) if hasattr(self, "dd_group") else "Todos"
+            # filtrar
+            filtered: list[ParamRow] = []
+            for r in self.rows:
+                ok_q = (q in r.label.lower() or q in r.col.lower()) if q else True
+                ok_a = r.ch_active.value or not solo
+                ok_g = True
+                if grupo and grupo != "Todos" and PARAM_GROUPS:
+                    ok_g = PARAM_GROUPS.get(r.col) == grupo
+                if ok_q and ok_a and ok_g:
+                    filtered.append(r)
+            # ordenar
+            sort_mode = str(self.dd_sort.value)
+            if sort_mode == "Alfabético":
+                filtered.sort(key=lambda r: r.label.lower())
+            elif sort_mode == "Activos primero":
+                filtered.sort(
+                    key=lambda r: (not bool(r.ch_active.value), r.label.lower())
+                )
+            elif sort_mode == "Menos faltantes":
+                filtered.sort(
+                    key=lambda r: float(self.stats.get(r.col, {}).get("miss", 1.0))
+                )
+            elif sort_mode == "Más variabilidad":
+                filtered.sort(
+                    key=lambda r: -float(self.stats.get(r.col, {}).get("var", 0.0))
+                )
+            # guardar y montar (paginado)
+            self._filtered_rows = filtered
+            _reset_pagination()
+            _render_page()
+
+        self.txt_buscar.observe(lambda _: _apply_filter(), names="value")
+        self.ch_solo_activos.observe(lambda _: _apply_filter(), names="value")
+        self.dd_sort.observe(lambda _: _apply_filter(), names="value")
+        self.dd_group.observe(lambda _: _apply_filter(), names="value")
+
+        def _on_view_change(c):
+            self.view_mode = str(c.get("new", "Detallada"))
+            _update_all_rows_view()
+
+        self.dd_view.observe(_on_view_change, names="value")
+
+        # Paginación events
+        def _on_page_size(_):
+            try:
+                self.page_size = int(self.dd_page_size.value)
+            except Exception:
+                self.page_size = 10
+            _reset_pagination()
+            _render_page()
+
+        def _go_prev(_):
+            if self.page > 1:
+                self.page -= 1
+                _render_page()
+
+        def _go_next(_):
+            if self.page < _total_pages():
+                self.page += 1
+                _render_page()
+
+        self.dd_page_size.observe(_on_page_size, names="value")
+        self.btn_prev.on_click(_go_prev)
+        self.btn_next.on_click(_go_next)
+
+        # Acciones masivas sobre la página visible
+        self.btn_todos_on.on_click(
+            lambda _: [setattr(r.ch_active, "value", True) for r in _visible_rows()]
+        )
+        self.btn_todos_off.on_click(
+            lambda _: [setattr(r.ch_active, "value", False) for r in _visible_rows()]
+        )
+
+        # Aplicar edición masiva (modo/peso) a visibles
+        def _apply_bulk(_):
+            mode_sel = str(self.dd_bulk_mode.value)
+            try:
+                w_val = float(self.ft_bulk_weight.value)
+            except Exception:
+                w_val = float(PARAM_DEFAULTS.get("weight", 1.0))
+            for r in _visible_rows():
+                if mode_sel != "__nochange__":
+                    r.dd_mode.value = mode_sel
+                r.sl_weight.value = w_val
+                _update_row_view(r)
+
+        self.btn_aplicar_bulk.on_click(_apply_bulk)
+
+        self.children = [
+            header1,
+            header2,
+            header3,
+            w.HTML("<hr>"),
+            self.rows_container,
+        ]
+        # Inicializar paginación y primer render
+        self.page_size = int(self.dd_page_size.value)
+        _apply_filter()
+        _update_all_rows_view()
+
+    def collect_params(self) -> list[ParamSpec]:
+        out: list[ParamSpec] = []
+        for r in self.rows:
+            mode = str(r.dd_mode.value)
+            try:
+                val = (
+                    None
+                    if (mode == "ignorar" or r.ft_value.value in (None, ""))
+                    else float(r.ft_value.value)
+                )
+            except Exception:
+                val = None
+            out.append(
+                ParamSpec(
+                    col=r.col,
+                    label=r.label,
+                    active=bool(r.ch_active.value),
+                    mode=mode,  # type: ignore[arg-type]
+                    value=val,
+                    weight=float(r.sl_weight.value),
+                )
+            )
+        return out
+
+    def collect_restricciones(self) -> dict:
+        restr: dict[str, dict] = {}
+        for r in self.rows:
+            mode = str(r.dd_mode.value)
+            if (
+                not bool(r.ch_active.value)
+                or mode == "ignorar"
+                or float(r.sl_weight.value) <= 0
+            ):
+                continue
+            d: dict = {"tipo": mode, "peso": float(r.sl_weight.value)}
+            if mode in {"minimo", "maximo", "fijo"}:
+                try:
+                    if r.ft_value.value not in (None, ""):
+                        d["valor"] = float(r.ft_value.value)
+                except Exception:
+                    pass
+            elif mode == "rango":
+                try:
+                    vmin = (
+                        None if r.ft_min.value in (None, "") else float(r.ft_min.value)
+                    )
+                except Exception:
+                    vmin = None
+                try:
+                    vmax = (
+                        None if r.ft_max.value in (None, "") else float(r.ft_max.value)
+                    )
+                except Exception:
+                    vmax = None
+                if vmin is not None:
+                    d["min"] = vmin
+                if vmax is not None:
+                    d["max"] = vmax
+            restr[r.col] = d
+        return restr
 
 
 def _bloque_param(nombre_param: str, val: float = 0.0) -> dict:
@@ -83,7 +656,14 @@ def _bloque_param(nombre_param: str, val: float = 0.0) -> dict:
         readout_format=".1f",
         layout=w.Layout(width="300px"),
     )
-    box = w.HBox([dd_tipo, ft_val, ft_tol, ft_min, ft_max, sl_peso])
+    # botón de información (se cablea en build_ui)
+    btn_info = w.Button(description="i", tooltip=f"Info de {nombre_param}")
+    btn_info.layout.width = "36px"
+    # tooltips por control
+    apply_tooltip(dd_tipo, "modo_param")
+    apply_tooltip(ft_val, "valor_param")
+    apply_tooltip(sl_peso, "peso_param")
+    box = w.HBox([dd_tipo, ft_val, ft_tol, ft_min, ft_max, sl_peso, btn_info])
 
     # Mostrar/ocultar campos según tipo
     def _toggle(*args):
@@ -112,6 +692,7 @@ def _bloque_param(nombre_param: str, val: float = 0.0) -> dict:
         ft_min=ft_min,
         ft_max=ft_max,
         sl_peso=sl_peso,
+        btn_info=btn_info,
     )
 
 
@@ -140,14 +721,25 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
     """
     params = params or PARAMS_DEFAULT
 
-    # --- Bloques del panel izquierdo
-    bloques = [
-        _bloque_param(params[0], 25.0 if len(params) > 0 else 0.0),
-        _bloque_param(params[1], 5.0 if len(params) > 1 else 0.0),
-        _bloque_param(params[2], 22.0 if len(params) > 2 else 0.0),
-        _bloque_param(params[3], 4.0 if len(params) > 3 else 0.0),
-    ]
-    box_params = w.VBox([b["cont"] for b in bloques])
+    # --- Panel dinámico de parámetros (reemplaza a los 4 fijos)
+    param_panel = ParamPanel(df)
+
+    # Panel derecho: detalle del parámetro + botón de informe + ayuda
+    out_info = w.Output(layout=w.Layout(border="1px solid #ddd", padding="6px"))
+    btn_informe = w.Button(description="Generar informe", icon="file")
+    # Ayuda global (toggle) + panel de ayuda (Output)
+    btn_ayuda = w.ToggleButton(value=False, description="? Ayuda", icon="question")
+    try:
+        btn_ayuda.tooltip = "Mostrar/ocultar ayuda de controles"
+    except Exception:
+        pass
+    out_help = w.Output(
+        layout=w.Layout(
+            border="1px solid #ddd", padding="6px", max_height="260px", overflow="auto"
+        )
+    )
+    # inicialmente oculto
+    out_help.layout.display = "none"
 
     # --- Controles globales
     sl_alpha = w.FloatSlider(
@@ -158,10 +750,13 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         description="α similitud",
         layout=w.Layout(width="300px"),
     )
+    apply_tooltip(sl_alpha, "alpha_sim")
     ch_nan = w.Checkbox(value=True, description="Penalizar NaN")
+    apply_tooltip(ch_nan, "penalizar_nan")
     ft_pen_nan = w.FloatText(
         value=1.0, description="penalidad NaN", layout=w.Layout(width="220px")
     )
+    apply_tooltip(ft_pen_nan, "penalidad_nan")
     sl_topk = w.IntSlider(
         value=10,
         min=3,
@@ -170,10 +765,13 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         description="Top-K",
         layout=w.Layout(width="250px"),
     )
+    apply_tooltip(sl_topk, "top_k")
     ch_out = w.Checkbox(value=True, description="Quitar atípicos (IQR)")
+    apply_tooltip(ch_out, "iqr_on")
     ft_iqrf = w.FloatText(
         value=1.5, description="factor IQR", layout=w.Layout(width="180px")
     )
+    apply_tooltip(ft_iqrf, "iqr_factor")
 
     # Segmentación: columna + modo + valor + factor prefer
     candidatas_seg = ["(ninguno)"]
@@ -191,6 +789,7 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         description="Segmentar por",
         layout=w.Layout(width="300px"),
     )
+    apply_tooltip(dd_segcol, "segmentar_por")
     dd_segm_modo = w.Dropdown(
         options=[
             ("Global (sin segmentar)", "off"),
@@ -201,6 +800,7 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         description="Modo",
         layout=w.Layout(width="330px"),
     )
+    apply_tooltip(dd_segm_modo, "modo_global_familia")
     dd_segm_val = w.Dropdown(
         options=["(seleccioná columna)"],
         value="(seleccioná columna)",
@@ -215,6 +815,7 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         description="factor prefer",
         layout=w.Layout(width="300px"),
     )
+    apply_tooltip(sl_pref_fac, "factor_prefer")
 
     # Botones de acción + modo Auto
     btn_run = w.Button(
@@ -224,6 +825,7 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
     ch_auto = w.Checkbox(
         value=False, description="Auto", tooltip="Recalcular al cambiar"
     )
+    apply_tooltip(ch_auto, "auto")
     # Contraste de botones (evita que “desaparezcan” en temas oscuros)
     btn_run.style.button_color = "#28a745"  # verde
     btn_clear.style.button_color = "#f0ad4e"  # naranja
@@ -237,6 +839,86 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
     out_rank = w.Output()
     out_sug = w.Output()
     out_outl = w.Output()
+    # referencias a acordeones para callbacks
+    acc_out_ref: dict[str, Optional[w.Accordion]] = {"acc": None}
+    acc_sug_ref: dict[str, Optional[w.Accordion]] = {"acc": None}
+    # Tendencias se arma una vez (no depende del ranking); lo colocamos antes de Outliers
+    try:
+        x_obj_col_name = params[0] if (params and params[0] in df.columns) else None
+    except Exception:
+        x_obj_col_name = None
+
+    # Callback centralizado: dado un nombre de columna, devolver el "objetivo" actual (si aplica)
+    def _get_objetivo(col: str) -> float | None:
+        try:
+            # Buscar fila en panel dinámico
+            for r in param_panel.rows:
+                if r.col == col:
+                    t = str(r.dd_mode.value)
+                    if t in {"fijo", "maximo", "minimo"}:
+                        try:
+                            return float(r.ft_value.value)
+                        except Exception:
+                            return None
+            return None
+        except Exception:
+            return None
+
+    acc_tend = widget_tendencias_plotly(
+        df,
+        x_obj_col_name=x_obj_col_name,
+        x_obj_widget=None,
+        get_objetivo=_get_objetivo,
+    )
+
+    # helpers para mostrar info del parámetro
+    estado_sugerencias: dict[str, float | None] = {}
+    # estado del último ranking (para generar informe)
+    df_rank_obj_state: dict[str, pd.DataFrame | None] = {"df": None}
+
+    def _get_sugerido(col: str) -> float | None:
+        return estado_sugerencias.get(col)
+
+    def abrir_outliers(col: str):
+        try:
+            acc = acc_out_ref["acc"]
+            if acc is not None:
+                acc.selected_index = 0
+        except Exception:
+            pass
+
+    def abrir_xy(col: str):
+        try:
+            acc_tend.selected_index = 0
+        except Exception:
+            pass
+
+    def abrir_sugerencias(col: str):
+        try:
+            acc = acc_sug_ref["acc"]
+            if acc is not None:
+                acc.selected_index = 0
+        except Exception:
+            pass
+
+    def show_info(col: str):
+        with out_info:
+            clear_output(wait=True)
+            acc = widget_info_param(
+                df,
+                col,
+                get_objetivo=_get_objetivo,
+                get_sugerido=_get_sugerido,
+                factor_iqr=1.5,
+                on_open_outliers=lambda c: abrir_outliers(c),
+                on_open_xy=lambda c: abrir_xy(c),
+                on_open_sugerencias=lambda c: abrir_sugerencias(c),
+            )
+            display(acc)
+
+    # cablear botones info en panel dinámico
+    for r in param_panel.rows:
+        r.btn_info.on_click(lambda _btn, c=r.col: show_info(c))
 
     # --- Helpers internos
     def _populate_segment_values(*args):
@@ -244,6 +926,8 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         if col == "(ninguno)" or col not in df.columns:
             dd_segm_val.options = ["(ninguno)"]
             dd_segm_val.value = "(ninguno)"
+            # Actualizar stats con dataset global
+            param_panel.set_stats_from_df(df)
             return
         if col == SEGMENT_COL and SEGMENT_LABELS:
             opciones = ["(ninguno)"] + list(SEGMENT_LABELS.values())
@@ -253,6 +937,8 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
             vals = df[col].dropna().astype(str).unique().tolist()
             dd_segm_val.options = ["(ninguno)"] + sorted(vals)
             dd_segm_val.value = sorted(vals)[0] if vals else "(ninguno)"
+        # Cuando cambia la columna de segmentación, si aún no hay valor, usar global; si hay valor, filtrar
+        _update_param_stats_for_current_segment()
 
     def _render(*_):
         """Recalcula Ranking + Sugerencias + Outliers panel (colapsables)."""
@@ -266,7 +952,8 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                 message="invalid value encountered in scalar divide",
             )
 
-            restricciones = _armar_restricciones(bloques)
+            params_dyn = param_panel.collect_params()
+            restricciones = param_panel.collect_restricciones()
 
             with out_rank:
                 clear_output(wait=True)
@@ -289,7 +976,8 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
 
                 df_rank = rank(
                     df,
-                    restricciones,
+                    restricciones=restricciones,
+                    params=params_dyn,
                     metodo_escala="IQR",
                     min_n=5,
                     penalizar_nan=bool(ch_nan.value),
@@ -313,6 +1001,75 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                     name="Objetivo (usuario)",
                     segment_label="(selección)",
                 )
+                # guardar para el informe
+                df_rank_obj_state["df"] = df_rank_obj.copy()
+
+                # Calcular un resumen de sugerencias rápido para construir 'alerta' del objetivo
+                try:
+                    params_sug = [
+                        p.col
+                        for p in params_dyn
+                        if p.active and p.mode != "ignorar" and p.col in df.columns
+                    ]
+                    sug_small = sugerencias_topk(
+                        df_ranked=df_rank_obj,
+                        params=params_sug,
+                        top_k=int(sl_topk.value),
+                        remove_outliers=bool(ch_out.value),
+                        iqr_factor=float(ft_iqrf.value),
+                        use_distance_weights=True,
+                        use_confidence_weights=False,
+                        confidence_cols=None,
+                        beta_dist=1.0,
+                        beta_conf=1.0,
+                        name_objetivo="Objetivo (usuario)",
+                    )
+                    alerts: list[str] = []
+                    summary = sug_small.get("summary")
+                    if isinstance(summary, pd.DataFrame) and not summary.empty:
+                        for _, row in summary.iterrows():
+                            par = row.get("parametro")
+                            if par is None:
+                                continue
+                            objv = _get_objetivo(str(par))
+                            low = row.get("low", None)
+                            high = row.get("high", None)
+                            if (
+                                objv is not None
+                                and pd.notna(objv)
+                                and pd.notna(low)
+                                and pd.notna(high)
+                            ):
+                                if float(objv) < float(low):
+                                    alerts.append(f"{par}: objetivo < LOW(IQR)")
+                                elif float(objv) > float(high):
+                                    alerts.append(f"{par}: objetivo > HIGH(IQR)")
+                    alerta_txt = " | ".join(alerts) if alerts else ""
+                    if "alerta" not in df_rank_obj.columns:
+                        df_rank_obj.insert(2, "alerta", "")
+                    if len(df_rank_obj.index) > 0:
+                        df_rank_obj.loc[df_rank_obj.index[0], "alerta"] = alerta_txt
+                    # actualizar estado de sugerencias (valor sugerido por parámetro)
+                    try:
+                        estado_sugerencias.clear()
+                        if isinstance(summary, pd.DataFrame) and not summary.empty:
+                            for _, row in summary.iterrows():
+                                par = row.get("parametro")
+                                if par is None:
+                                    continue
+                                val = row.get("w_mediana")
+                                if pd.isna(val):
+                                    val = row.get("mediana")
+                                try:
+                                    estado_sugerencias[str(par)] = (
+                                        None if pd.isna(val) else float(val)
+                                    )
+                                except Exception:
+                                    estado_sugerencias[str(par)] = None
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
 
                 ui_rank = widget_filtrado_ranking(
                     df_rank_obj,
@@ -325,7 +1082,11 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
 
             with out_sug:
                 clear_output(wait=True)
-                params_sug = list(restricciones.keys())
+                params_sug = [
+                    p.col
+                    for p in params_dyn
+                    if p.active and p.mode != "ignorar" and p.col in df.columns
+                ]
                 sug = sugerencias_topk(
                     df_ranked=df_rank_obj,
                     params=params_sug,
@@ -339,9 +1100,16 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                     beta_conf=1.0,
                     name_objetivo="Objetivo (usuario)",
                 )
+
                 acc_sug = widget_sugerencias_panel(
-                    sug, titulo="Sugerencias (Top-K)", collapsed=True, bins=20
+                    sug,
+                    titulo="Sugerencias (Top-K)",
+                    collapsed=True,
+                    bins=20,
+                    get_objetivo=_get_objetivo,
                 )
+                # guardar referencia para callbacks
+                acc_sug_ref["acc"] = acc_sug
                 display(acc_sug)
 
             with out_outl:
@@ -353,11 +1121,237 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                     titulo="Outliers en el dataset (IQR)",
                     collapsed=True,
                 )
+                # guardar referencia para callbacks
+                acc_out_ref["acc"] = acc_out
                 display(acc_out)
 
+    # Mantener stats del panel sincronizadas con el subset del dataset según segmentación actual
+    def _current_subset_df() -> pd.DataFrame:
+        col = dd_segcol.value
+        if not col or col == "(ninguno)" or col not in df.columns:
+            return df
+        # Mapear el valor seleccionado si es SEGMENT_COL con etiquetas
+        if dd_segm_val.value and dd_segm_val.value != "(ninguno)":
+            val_ui = str(dd_segm_val.value)
+            if col == SEGMENT_COL and SEGMENT_LABELS:
+                # SEGMENT_LABELS: raw->label ; necesitamos raw que tenga ese label
+                inv = {v: str(k) for k, v in SEGMENT_LABELS.items()}
+                raw_val = inv.get(val_ui, val_ui)
+            else:
+                raw_val = val_ui
+            try:
+                return df[df[col].astype(str) == str(raw_val)]
+            except Exception:
+                return df
+        return df
+
+    def _update_param_stats_for_current_segment(*_):
+        subset = _current_subset_df()
+        param_panel.set_stats_from_df(subset)
+
+    # reporte narrativo
+    def on_generar_informe(_):
+        # construir mapas de objetivo/sugerido
+        objetivo_map = {}
+        try:
+            for r in param_panel.rows:
+                t = str(r.dd_mode.value)
+                if not r.ch_active.value or t == "ignorar":
+                    continue
+                v = None
+                if t in {"fijo", "maximo", "minimo"} and r.ft_value.value not in (
+                    None,
+                    "",
+                ):
+                    try:
+                        v = float(r.ft_value.value)
+                    except Exception:
+                        v = None
+                objetivo_map[r.col] = v
+        except Exception:
+            pass
+        sugerido_map = dict(estado_sugerencias)
+        df_rank_for_report = df_rank_obj_state["df"]
+
+        md = narrativa_informe(
+            df,
+            objetivo_map,
+            sugerido_map,
+            df_rank=df_rank_for_report,
+            top_k=int(sl_topk.value),
+            titulo="Resumen de diseño (asistente)",
+            iqr_factor=float(ft_iqrf.value),
+        )
+        # guardar en analisis/Results
+        try:
+            results_dir = os.path.join(PROJECT_ROOT, "analisis", "Results")
+            os.makedirs(results_dir, exist_ok=True)
+            p_md = os.path.join(results_dir, "informe_diseno.md")
+            p_ht = os.path.join(results_dir, "informe_diseno.html")
+            export_markdown(md, p_md)
+            export_html(md, p_ht)
+            with out_info:
+                clear_output(wait=True)
+                display(
+                    w.HTML(f"<b>Informe generado</b><br>MD: {p_md}<br>HTML: {p_ht}")
+                )
+        except Exception as e:
+            with out_info:
+                clear_output(wait=True)
+                display(w.HTML(f"<b>Error al generar informe:</b> {e}"))
+
+    btn_informe.on_click(on_generar_informe)
+
+    # Panel de ayuda: índice + acordeón con secciones
+    def _render_help():
+        with out_help:
+            clear_output(wait=True)
+            # Etiquetas legibles por clave
+            labels = {
+                "modo_param": "Modo por parámetro",
+                "valor_param": "Valor del parámetro",
+                "peso_param": "Peso relativo",
+                "alpha_sim": "α similitud (agregación)",
+                "penalizar_nan": "Penalizar NaN",
+                "penalidad_nan": "Penalidad por NaN",
+                "segmentar_por": "Segmentar por",
+                "segmentar_valor": "Valor del segmento",
+                "modo_global_familia": "Modo de segmentación",
+                "top_k": "Top‑K",
+                "factor_prefer": "Factor prefer",
+                "iqr_on": "Quitar atípicos (IQR)",
+                "iqr_factor": "Factor IQR",
+                "min_n": "Mínimo n",
+                "auto": "Auto‑recalcular",
+                # Tabla de ranking
+                "ranking_sim": "Similitud",
+                "ranking_dist": "Distancia",
+                "ranking_alerta": "Alerta",
+                "info_button": "Botón de info",
+                "report_button": "Generar informe",
+                # Tendencias
+                "t_x": "X (independiente)",
+                "t_y": "Y (dependiente)",
+                "t_logx": "Log(X)",
+                "t_obj_line": "Línea de objetivo",
+                # Sugerencias
+                "suger_box": "Boxplot e IQR",
+                "suger_low_high": "LOW/HIGH (IQR)",
+                "suger_w_mediana": "Mediana ponderada",
+                "suger_obj_line": "Línea de objetivo",
+                # Outliers
+                "out_iqr_explain": "Definición IQR",
+                # Paneles
+                "panel_info": "Panel de detalle",
+                "narrativa": "Informe narrativo",
+            }
+
+            def make_list(keys: list[str]) -> w.HTML:
+                items = []
+                for k in keys:
+                    if k in HELP:
+                        label = labels.get(k, k)
+                        items.append(f"<li><b>{label}:</b> {HELP[k]}</li>")
+                return w.HTML(
+                    "<ul style='margin:0 0 0 16px'>" + "".join(items) + "</ul>"
+                )
+
+            # Secciones del acordeón
+            sections = [
+                (
+                    "Ranking y similitud",
+                    [
+                        "modo_param",
+                        "valor_param",
+                        "peso_param",
+                        "alpha_sim",
+                        "penalizar_nan",
+                        "penalidad_nan",
+                        "segmentar_por",
+                        "segmentar_valor",
+                        "modo_global_familia",
+                        "top_k",
+                        "factor_prefer",
+                        "iqr_on",
+                        "iqr_factor",
+                        "auto",
+                        "ranking_sim",
+                        "ranking_dist",
+                        "ranking_alerta",
+                        "info_button",
+                        "report_button",
+                    ],
+                ),
+                ("Tendencias X–Y", ["t_x", "t_y", "t_logx", "t_obj_line", "min_n"]),
+                (
+                    "Sugerencias (Top‑K)",
+                    [
+                        "suger_box",
+                        "suger_low_high",
+                        "suger_w_mediana",
+                        "suger_obj_line",
+                    ],
+                ),
+                ("Outliers", ["out_iqr_explain"]),
+                ("Panel e informe", ["panel_info", "narrativa"]),
+            ]
+
+            # Construir acordeón con todas las secciones colapsadas
+            children = [make_list(keys) for _, keys in sections]
+            acc = w.Accordion(children=children)
+            for i, (title, _keys) in enumerate(sections):
+                acc.set_title(i, title)
+            acc.selected_index = None  # todo colapsado por defecto
+
+            # Índice de navegación superior
+            btns = []
+            for i, (title, _keys) in enumerate(sections):
+                b = w.Button(description=title, layout=w.Layout(width="auto"))
+                b.style.button_color = "#e9ecef"
+
+                def on_click_factory(idx: int):
+                    def _go(_):
+                        # abrir/cerrar: si ya está abierto, colapsar; si no, abrir
+                        if acc.selected_index == idx:
+                            acc.selected_index = None
+                        else:
+                            acc.selected_index = idx
+
+                    return _go
+
+                b.on_click(on_click_factory(i))
+                btns.append(b)
+            idx_box = w.HBox(btns)
+
+            display(
+                w.VBox(
+                    [
+                        w.HTML("<h4 style='margin:0 0 8px 0'>Ayuda de controles</h4>"),
+                        idx_box,
+                        w.HTML("<div style='height:6px'></div>"),
+                        acc,
+                    ]
+                )
+            )
+
+    def _toggle_help(change):
+        val = bool(change.get("new"))
+        out_help.layout.display = "" if val else "none"
+        if val:
+            _render_help()
+        else:
+            with out_help:
+                clear_output(wait=True)
+
+    btn_ayuda.observe(_toggle_help, names="value")
+
     def _clear(_):
-        for b in bloques:
-            b["dd_tipo"].value = "ignorar"
+        # reset panel dinámico
+        for r in param_panel.rows:
+            r.dd_mode.value = "ignorar"
+            r.ch_active.value = False
+            r.ft_value.value = None
+            r.sl_weight.value = float(PARAM_DEFAULTS.get("weight", 1.0))
         sl_alpha.value = 1.0
         ch_nan.value = True
         ft_pen_nan.value = 1.0
@@ -378,17 +1372,15 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
     btn_run.on_click(lambda _: _render())
     btn_clear.on_click(_clear)
     dd_segcol.observe(_populate_segment_values, names="value")
+    dd_segm_val.observe(_update_param_stats_for_current_segment, names="value")
+    dd_segm_modo.observe(_update_param_stats_for_current_segment, names="value")
 
-    for b in bloques:
-        for wdg in (
-            b["dd_tipo"],
-            b["ft_val"],
-            b["ft_tol"],
-            b["ft_min"],
-            b["ft_max"],
-            b["sl_peso"],
-        ):
-            wdg.observe(_maybe_auto, names="value")
+    for r in getattr(param_panel, "rows", []):
+        for wdg in (r.ch_active, r.dd_mode, r.ft_value, r.sl_weight):
+            try:
+                wdg.observe(_maybe_auto, names="value")
+            except Exception:
+                pass
     for wdg in (
         sl_alpha,
         ch_nan,
@@ -404,17 +1396,35 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
 
     # Render inicial
     _populate_segment_values()
-    header = w.HTML("<h4>Panel izquierdo (prototipo en notebook)</h4>")
-    container = w.VBox(
+    # Inicializar stats (globales) para prefill de rangos
+    param_panel.set_stats_from_df(df)
+    header = w.HTML("<h4>Parámetros (dinámico)</h4>")
+    left_panel = w.VBox(
         [
             header,
-            box_params,
+            param_panel,
             panel_global_1,
             panel_global_2,
+        ]
+    )
+    right_panel = w.VBox(
+        [
+            w.HBox([btn_informe, btn_ayuda]),
+            w.HTML("<b>Detalle del parámetro</b>"),
+            out_info,
+            out_help,
+        ]
+    )
+    top_row = w.HBox([left_panel, w.VBox([right_panel], layout=w.Layout(width="40%"))])
+    container = w.VBox(
+        [
+            top_row,
             w.HTML("<hr>"),
             out_rank,
             w.HTML("<hr>"),
             out_sug,
+            w.HTML("<hr>"),
+            acc_tend,
             w.HTML("<hr>"),
             out_outl,
         ]

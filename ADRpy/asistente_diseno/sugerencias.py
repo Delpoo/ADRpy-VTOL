@@ -42,7 +42,7 @@ Qué hace
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Iterable, Optional, Tuple, Any, Callable
 
 import numpy as np
 import pandas as pd
@@ -54,6 +54,288 @@ from IPython.display import display, clear_output
 
 from asistente_diseno.outliers import compute_iqr_bounds
 from pandas.api.types import is_bool_dtype
+
+# =============================================================================
+# NUEVO: utilidades y tipos para Top-K enriquecido (panel independiente)
+# =============================================================================
+
+ALERT = "⚠️"  # Si tu entorno no muestra emoji, cambia por "(!)" o "▲"
+
+
+@dataclass
+class TopKStats:
+    n: int
+    median: float
+    q1: float
+    q3: float
+    iqr: float
+    p10: float
+    p90: float
+    mean: float
+    std: float
+    cv: float  # σ / media
+
+
+def _topk_stats(x: pd.Series) -> TopKStats:
+    """Calcula métricas clave sobre la serie Top-K (numérica)."""
+    x = pd.to_numeric(x, errors="coerce").dropna()
+    n = int(x.size)
+    if n == 0:
+        return TopKStats(0, *(np.nan,) * 8)
+    q1 = float(np.nanpercentile(x, 25))
+    q3 = float(np.nanpercentile(x, 75))
+    iqr = float(q3 - q1)
+    mean = float(np.nanmean(x))
+    std = float(np.nanstd(x, ddof=1)) if n > 1 else np.nan
+    cv = (std / mean) if (n > 1 and np.isfinite(mean) and mean != 0.0) else np.nan
+    return TopKStats(
+        n=n,
+        median=float(np.nanmedian(x)),
+        q1=q1,
+        q3=q3,
+        iqr=iqr,
+        p10=float(np.nanpercentile(x, 10)),
+        p90=float(np.nanpercentile(x, 90)),
+        mean=mean,
+        std=std,
+        cv=cv,
+    )
+
+
+def _fig_topk_hist(
+    x: pd.Series,
+    *,
+    param_label: str,
+    objetivo: Optional[float],
+    min_bins: int = 12,
+) -> tuple[go.Figure, TopKStats, Dict[str, float]]:
+    """
+    Devuelve (fig, stats, iqr_info):
+      - fig: histograma con overlay IQR (dentro) + líneas LOW/HIGH, Sugerido (mediana) y Objetivo.
+      - stats: métricas Top-K (mediana, IQR, p10/p90, media, σ, CV, n).
+      - iqr_info: dict {'low','high','usable'} coherente con compute_iqr_bounds.
+    """
+    x = pd.to_numeric(x, errors="coerce").dropna()
+    stats = _topk_stats(x)
+
+    iqr_info = compute_iqr_bounds(x, factor=1.5, min_n=5)
+    low = float(iqr_info.get("low", np.nan))
+    high = float(iqr_info.get("high", np.nan))
+    usable = bool(iqr_info.get("usable", False))
+
+    nbins = min_bins if x.nunique() >= min_bins else max(6, int(x.nunique()))
+    fig = go.Figure()
+    fig.add_histogram(
+        x=x,
+        nbinsx=nbins,
+        marker=dict(color="rgba(66, 99, 255, 0.65)"),
+        name="Top-K",
+        hovertemplate="valor=%{x:.3g}<br>frec=%{y}<extra></extra>",
+    )
+
+    # Overlay IQR dentro del rango (si usable) + guías Low/High
+    if usable and np.isfinite(low) and np.isfinite(high) and (high > low):
+        fig.add_shape(
+            type="rect",
+            xref="x",
+            yref="paper",
+            x0=low,
+            x1=high,
+            y0=0.0,
+            y1=1.0,
+            line=dict(width=0),
+            fillcolor="rgba(255, 99, 71, 0.18)",
+            layer="below",
+        )
+        fig.add_vline(x=low, line=dict(color="crimson", dash="dash", width=2))
+        fig.add_vline(x=high, line=dict(color="crimson", dash="dash", width=2))
+        fig.add_annotation(
+            x=low,
+            y=1.02,
+            yref="paper",
+            showarrow=False,
+            text="LOW(IQR)",
+            font=dict(color="crimson"),
+        )
+        fig.add_annotation(
+            x=high,
+            y=1.02,
+            yref="paper",
+            showarrow=False,
+            text="HIGH(IQR)",
+            font=dict(color="crimson"),
+        )
+
+    # Línea sugerida = mediana Top-K
+    if np.isfinite(stats.median):
+        fig.add_vline(x=stats.median, line=dict(color="seagreen", dash="dash", width=3))
+        fig.add_annotation(
+            x=stats.median,
+            y=1.02,
+            yref="paper",
+            showarrow=False,
+            text="Sugerido",
+            font=dict(color="seagreen"),
+        )
+
+    # Línea objetivo
+    if objetivo is not None and np.isfinite(objetivo):
+        fig.add_vline(x=float(objetivo), line=dict(color="royalblue", width=2))
+        fig.add_annotation(
+            x=float(objetivo),
+            y=1.02,
+            yref="paper",
+            showarrow=False,
+            text="Objetivo",
+            font=dict(color="royalblue"),
+        )
+
+    fig.update_layout(
+        title=dict(
+            text=f"Distribución Top-K: {param_label}", x=0.02, y=0.94, xanchor="left"
+        ),
+        xaxis_title=param_label,
+        yaxis_title="frecuencia",
+        xaxis_title_standoff=6,
+        yaxis_title_standoff=6,
+        bargap=0.05,
+        margin=dict(l=50, r=16, t=50, b=48),
+        template="plotly_white",
+        showlegend=False,
+    )
+    return fig, stats, {"low": low, "high": high, "usable": usable}
+
+
+def _guia_imputacion_html(
+    param_label: str,
+    stats: TopKStats,
+    iqr: Dict[str, float],
+    objetivo: Optional[float],
+) -> w.HTML:
+    """Construye una guía textual con sugerencia/avisos para imputación del parámetro."""
+    low = iqr.get("low", np.nan)
+    high = iqr.get("high", np.nan)
+    usable = bool(iqr.get("usable", False))
+    sug = stats.median
+
+    msg = []
+    msg.append(f"<b>Parámetro:</b> {param_label}")
+    msg.append(f"<b>Sugerido (mediana Top-K):</b> <code>{sug:.3g}</code>")
+
+    if usable and np.isfinite(low) and np.isfinite(high):
+        msg.append(
+            f"<b>Rango confiable (IQR):</b> <code>[{low:.3g}, {high:.3g}]</code>"
+        )
+    else:
+        msg.append(
+            "<b>Rango confiable (IQR):</b> <i>no disponible (Top-K insuficiente o muy disperso)</i>"
+        )
+
+    if (
+        objetivo is not None
+        and np.isfinite(objetivo)
+        and usable
+        and np.isfinite(low)
+        and np.isfinite(high)
+    ):
+        obj = float(objetivo)
+        if obj < low:
+            prox = low
+            msg.append(
+                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{obj:.3g}</code>) <b>está por debajo</b> del IQR. "
+                f"Considera aproximarlo a <code>{prox:.3g}</code> para alinear con la evidencia Top-K."
+            )
+        elif obj > high:
+            prox = high
+            msg.append(
+                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{obj:.3g}</code>) <b>está por encima</b> del IQR. "
+                f"Considera aproximarlo a <code>{prox:.3g}</code> para alinear con la evidencia Top-K."
+            )
+        else:
+            msg.append("✅ El objetivo está dentro del IQR (coherente con Top-K).")
+
+    msg.append(
+        f"<small>n={stats.n} · media={stats.mean:.3g} · σ={stats.std:.3g} · CV={stats.cv:.3g} · "
+        f"p10={stats.p10:.3g} · p90={stats.p90:.3g}</small>"
+    )
+    html = "<br>".join(msg)
+    return w.HTML(html)
+
+
+def widget_topk_param(
+    df_topk: pd.DataFrame,
+    *,
+    param_cols: Dict[str, str],
+    get_objetivo: Optional[Callable[[str], Optional[float]]] = None,
+    objetivo_widget: Optional[w.Widget] = None,
+    title: str = "Detalle por parámetro",
+) -> w.Accordion:
+    """
+    Panel standalone para explorar Top-K por parámetro con métricas y guía.
+    df_topk: DataFrame con filas Top-K (pre-filtradas) para el objetivo actual.
+    param_cols: mapping etiqueta legible -> nombre de columna en df_topk.
+    get_objetivo: función opcional: (col) -> valor objetivo actual.
+    objetivo_widget: si se pasa, vincula un observe para refresco automático.
+    """
+    dd = w.Dropdown(
+        options=[(k, v) for k, v in param_cols.items()],
+        description="Parámetro:",
+        layout=w.Layout(width="60%"),
+    )
+    out_fig = w.Output()
+    out_tbl = w.Output()
+    out_info = w.Output()
+    hdr = w.HTML(f"<b>{title}</b>")
+
+    box = w.VBox([hdr, dd, out_fig, out_tbl, out_info])
+
+    def _render(*_):
+        col = dd.value
+        label = next((k for k, v in param_cols.items() if v == col), col)
+        x = df_topk[col] if col in df_topk.columns else pd.Series(dtype=float)
+
+        objetivo = get_objetivo(col) if callable(get_objetivo) else None
+        fig, stats, iqri = _fig_topk_hist(x, param_label=label, objetivo=objetivo)
+
+        dfm = pd.DataFrame(
+            [
+                {
+                    "n_topk": stats.n,
+                    "sugerido (mediana)": stats.median,
+                    "Q1": stats.q1,
+                    "Q3": stats.q3,
+                    "IQR": stats.iqr,
+                    "p10": stats.p10,
+                    "p90": stats.p90,
+                    "media": stats.mean,
+                    "σ": stats.std,
+                    "CV": stats.cv,
+                }
+            ]
+        )
+
+        with out_fig:
+            out_fig.clear_output(wait=True)
+            fig.show()
+
+        with out_tbl:
+            out_tbl.clear_output(wait=True)
+            display(dfm)
+
+        with out_info:
+            out_info.clear_output(wait=True)
+            display(_guia_imputacion_html(label, stats, iqri, objetivo))
+
+    dd.observe(_render, "value")
+    _render()
+
+    if objetivo_widget is not None:
+        objetivo_widget.observe(lambda *_: _render(), "value")
+
+    acc = w.Accordion(children=[box])
+    acc.set_title(0, "Sugerencias Top-K · Resumen")
+    acc.selected_index = None
+    return acc
 
 
 # =============================================================================
@@ -570,7 +852,11 @@ def vista_sugerencias_resumen(summary: pd.DataFrame) -> "pd.io.formats.style.Sty
 
 
 def widget_sugerencias_param(
-    sug: dict, *, bins: int = 20, titulo: str = "Sugerencias por parámetro (Top-K)"
+    sug: dict,
+    *,
+    bins: int = 20,
+    titulo: str = "Sugerencias por parámetro (Top-K)",
+    get_objetivo: Optional[Callable[[str], Optional[float]]] = None,
 ):
 
     try:
@@ -611,57 +897,49 @@ def widget_sugerencias_param(
                 )
             )
 
-            # Histograma de valores
+            # Histograma Top-K con overlay IQR consistente (_fig_parametro_hist_box)
             vals = pd.to_numeric(usados["valor"], errors="coerce").dropna()
-            # Migración ligera: usar Plotly si está disponible; si no, tabla únicamente
-            try:
-                import plotly.graph_objects as _go
-
-                summary = sug["summary"].set_index("parametro")
-                med_w = (
-                    summary.loc[par, "w_mediana"]
-                    if par in summary.index and "w_mediana" in summary.columns
-                    else np.nan
-                )
-                mean_w = (
-                    summary.loc[par, "w_media"]
-                    if par in summary.index and "w_media" in summary.columns
-                    else np.nan
-                )
-                fig = _go.Figure()
-                fig.add_histogram(x=vals, nbinsx=bins, name="Usados", opacity=0.8)
-                if np.isfinite(med_w):
-                    fig.add_vline(
-                        x=float(med_w),
-                        line_width=2,
-                        line_dash="dash",
-                        line_color="green",
-                        annotation_text="w_mediana",
-                        annotation_position="top",
-                    )
-                if np.isfinite(mean_w):
-                    fig.add_vline(
-                        x=float(mean_w),
-                        line_width=2,
-                        line_dash="dot",
-                        line_color="royalblue",
-                        annotation_text="w_media",
-                        annotation_position="top",
-                    )
-                fig.update_layout(
-                    template="plotly_white",
-                    title=par,
-                    xaxis_title=par,
-                    yaxis_title="frecuencia",
-                    margin=dict(l=40, r=10, t=40, b=40),
-                )
-                display(fig)
-            except Exception:
-                display(
-                    w.HTML(
-                        "<i>No se pudo renderizar el histograma (Plotly no disponible).</i>"
-                    )
-                )
+            resumen = (
+                sug["summary"].set_index("parametro")
+                if isinstance(sug.get("summary"), pd.DataFrame)
+                else None
+            )
+            sugerido_val = (
+                resumen.loc[par, "w_mediana"]
+                if resumen is not None
+                and par in resumen.index
+                and "w_mediana" in resumen.columns
+                else None
+            )
+            low = (
+                resumen.loc[par, "low"]
+                if resumen is not None
+                and par in resumen.index
+                and "low" in resumen.columns
+                else None
+            )
+            high = (
+                resumen.loc[par, "high"]
+                if resumen is not None
+                and par in resumen.index
+                and "high" in resumen.columns
+                else None
+            )
+            objetivo_val = None
+            if callable(get_objetivo):
+                try:
+                    objetivo_val = get_objetivo(par)
+                except Exception:
+                    objetivo_val = None
+            fig = _fig_parametro_hist_box(
+                vals,
+                titulo=f"Distribución Top-K: {par}",
+                objetivo_val=objetivo_val,
+                sugerido_val=sugerido_val,
+                low=low,
+                high=high,
+            )
+            display(fig)
 
             # Mostrar posibles outliers excluidos
             if excl is not None and not isinstance(excl, dict) and not excl.empty:
@@ -687,8 +965,14 @@ def _fig_parametro_hist_box(
     s = pd.to_numeric(serie_val, errors="coerce").dropna()
     fig = go.Figure()
 
-    # Histograma base
-    fig.add_histogram(x=s, name="Top-K", nbinsx=30, opacity=0.75)
+    # Histograma base (bins estables y tooltip limpio)
+    fig.add_histogram(
+        x=s,
+        name="Top-K",
+        nbinsx=12,
+        opacity=0.75,
+        hovertemplate="valor=%{x:.3g}<br>frec=%{y}<extra></extra>",
+    )
 
     # BoxPlot adicional (referencia robusta) — mantenido como antes
     if len(s) >= 5:
@@ -729,38 +1013,72 @@ def _fig_parametro_hist_box(
         margin=dict(t=110),  # deja espacio para título y posibles avisos
     )
 
-    # --- 2) “Box overlay” del IQR (Q1–Q3) y líneas guía
-    vals = np.asarray(vals_topk, dtype=float)
-    vals = vals[np.isfinite(vals)]
-    if vals.size:
-        q1, q3 = np.nanpercentile(vals, [25, 75])
-        # estimar altura del hist para dimensionar el rectángulo
-        try:
-            import numpy as _np
+    # --- 2) Overlay IQR (LOW-HIGH) como "box" siempre visible y líneas guía
+    # Si faltan límites, intentar un fallback desde los Top-K (Q1 ± 1.5*IQR)
+    if not (np.isfinite(low_iqr) and np.isfinite(high_iqr)) and s.shape[0] >= 5:
+        q1_f, q3_f = np.nanpercentile(s, [25, 75])
+        iqr_f = float(q3_f - q1_f)
+        if np.isfinite(iqr_f) and iqr_f > 0:
+            low_iqr = q1_f - 1.5 * iqr_f
+            high_iqr = q3_f + 1.5 * iqr_f
 
-            ymax = max(1, int(_np.histogram(vals, bins="auto")[0].max()))
-        except Exception:
-            ymax = 1
-        fig.add_shape(
-            type="rect",
-            xref="x",
-            yref="y",
-            x0=float(q1),
-            x1=float(q3),
-            y0=0,
-            y1=ymax,
-            line=dict(width=0),
-            fillcolor="rgba(255,127,80,0.15)",  # coral suave
-        )
+    # Sombrear fuera del IQR (izquierda y derecha) como marco visual
+    if np.isfinite(low_iqr) and np.isfinite(high_iqr) and s.size:
+        data_min = float(np.nanmin(s))
+        data_max = float(np.nanmax(s))
+        if data_min < float(low_iqr):
+            fig.add_shape(
+                type="rect",
+                xref="x",
+                yref="paper",
+                x0=data_min,
+                x1=float(low_iqr),
+                y0=0.0,
+                y1=1.0,
+                line=dict(width=0),
+                fillcolor="rgba(255, 127, 80, 0.12)",
+                layer="below",
+            )
+        if data_max > float(high_iqr):
+            fig.add_shape(
+                type="rect",
+                xref="x",
+                yref="paper",
+                x0=float(high_iqr),
+                x1=data_max,
+                y0=0.0,
+                y1=1.0,
+                line=dict(width=0),
+                fillcolor="rgba(255, 127, 80, 0.12)",
+                layer="below",
+            )
 
     # líneas verticales LOW/HIGH (IQR)
     if np.isfinite(low_iqr):
         fig.add_vline(
             x=float(low_iqr), line=dict(color="crimson", width=2, dash="dash")
         )
+        fig.add_annotation(
+            x=float(low_iqr),
+            y=1.02,
+            yref="paper",
+            xref="x",
+            text="LOW(IQR)",
+            showarrow=False,
+            font=dict(color="crimson"),
+        )
     if np.isfinite(high_iqr):
         fig.add_vline(
             x=float(high_iqr), line=dict(color="crimson", width=2, dash="dash")
+        )
+        fig.add_annotation(
+            x=float(high_iqr),
+            y=1.02,
+            yref="paper",
+            xref="x",
+            text="HIGH(IQR)",
+            showarrow=False,
+            font=dict(color="crimson"),
         )
 
     # línea sugerido
@@ -791,13 +1109,68 @@ def _fig_parametro_hist_box(
             font=dict(size=11, color="royalblue"),
         )
 
-    # --- 3) Avisos (⚠️) bien posicionados y legibles
+    # --- 3) Avisos (⚠️) con reglas extendidas
+    def _pct(x):
+        return f"{100*x:.0f}%"
+
     warnings = []
-    if np.isfinite(objetivo) and (objetivo < low_iqr or objetivo > high_iqr):
-        warnings.append("⚠️ objetivo fuera del IQR")
-    if (n_topk is not None) and (min_n is not None) and (n_topk < min_n):
+
+    # Parámetros (ajustables)
+    edge_tol = 0.10  # 10% del ancho del IQR --> "cerca del límite"
+    diff_tol = 0.20  # 20% del ancho del IQR --> brecha objetivo–sugerido
+    out_tol = 0.30  # 30% de Top-K fuera del IQR
+    min_unique = 4  # diversidad mínima en Top-K
+
+    # Magnitudes básicas
+    iqr_w = (
+        float(high_iqr - low_iqr)
+        if np.isfinite(high_iqr) and np.isfinite(low_iqr)
+        else np.nan
+    )
+    vals = np.asarray(vals_topk, dtype=float)
+    vals = vals[np.isfinite(vals)]
+
+    # 1) objetivo fuera del IQR
+    if np.isfinite(objetivo) and np.isfinite(low_iqr) and np.isfinite(high_iqr):
+        if objetivo < low_iqr or objetivo > high_iqr:
+            warnings.append("⚠️ objetivo fuera del IQR")
+
+    # 2) objetivo “cerca del límite” del IQR
+    if np.isfinite(objetivo) and np.isfinite(iqr_w) and iqr_w > 0:
+        dist_edge = min(abs(objetivo - low_iqr), abs(high_iqr - objetivo))
+        if dist_edge <= edge_tol * iqr_w:
+            warnings.append("⚠️ objetivo cerca del límite IQR")
+
+    # 3) sugerido fuera del IQR
+    if np.isfinite(sugerido) and np.isfinite(low_iqr) and np.isfinite(high_iqr):
+        if sugerido < low_iqr or sugerido > high_iqr:
+            warnings.append("⚠️ sugerido fuera del IQR")
+
+    # 4) brecha grande entre objetivo y sugerido (relativa al IQR)
+    if (
+        np.isfinite(objetivo)
+        and np.isfinite(sugerido)
+        and np.isfinite(iqr_w)
+        and iqr_w > 0
+    ):
+        if abs(objetivo - sugerido) >= diff_tol * iqr_w:
+            warnings.append("⚠️ gran brecha objetivo–sugerido")
+
+    # 5) alto % de atípicos entre los Top-K
+    if vals.size and np.isfinite(low_iqr) and np.isfinite(high_iqr):
+        out_frac = np.mean((vals < low_iqr) | (vals > high_iqr))
+        if out_frac >= out_tol:
+            warnings.append(f"⚠️ { _pct(out_frac) } de Top-K fuera del IQR")
+
+    # 6) poca diversidad en Top-K
+    if vals.size and len(np.unique(vals)) < min_unique:
+        warnings.append("⚠️ poca diversidad en Top-K")
+
+    # 7) n_topk chico (regla original)
+    if n_topk is not None and min_n is not None and n_topk < min_n:
         warnings.append(f"⚠️ muestra Top-K pequeña (n={n_topk} < {min_n})")
 
+    # Mostrar si hay algo
     if warnings:
         fig.add_annotation(
             xref="paper",
@@ -808,18 +1181,18 @@ def _fig_parametro_hist_box(
             align="left",
             showarrow=False,
             font=dict(size=12),
-            bgcolor="rgba(255,245,204,.9)",  # amarillo muy suave
+            bgcolor="rgba(255,245,204,.9)",
             bordercolor="rgba(0,0,0,.1)",
             borderwidth=1,
         )
-        fig.update_layout(margin=dict(t=150))  # un poco más de aire si hay avisos
+        fig.update_layout(margin=dict(t=150))
 
     # estéticas suaves
     fig.update_layout(
         bargap=0.15,
         template="plotly_white",
         hoverlabel=dict(namelength=-1),  # no truncar nombres
-        xaxis_title="valor",
+        xaxis_title=str(param),
         yaxis_title="frecuencia",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
     )
@@ -1019,6 +1392,7 @@ def widget_sugerencias_panel(
     titulo: str = "Sugerencias (Top-K)",
     collapsed: bool = True,
     bins: int = 20,
+    get_objetivo: Optional[Callable[[str], Optional[float]]] = None,
     # Nueva API (cuando se pasa df_ranked):
     params: list[str] | None = None,
     top_k: int = 10,
@@ -1054,7 +1428,9 @@ def widget_sugerencias_panel(
                 display(w.HTML("<i>Sin resumen disponible.</i>"))
 
         box_resumen = w.VBox([w.HTML(f"<b>{titulo} — resumen</b>"), out_resumen])
-        box_detalle = widget_sugerencias_param(data, bins=bins, titulo=titulo)
+        box_detalle = widget_sugerencias_param(
+            data, bins=bins, titulo=titulo, get_objetivo=get_objetivo
+        )
 
         out_insumos = w.Output()
         with out_insumos:

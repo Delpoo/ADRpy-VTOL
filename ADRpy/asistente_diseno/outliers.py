@@ -471,11 +471,18 @@ def widget_outliers_plotly(
     ch_out = w.Checkbox(value=True, description="Listar outliers")
 
     seg_widget = None
+    seg_label_to_raw: dict[str, object] = {}
+    seg_raw_to_label: dict[str, str] = {}
     if segment_col and segment_col in df.columns:
-        seg_vals = pd.Series(df[segment_col]).dropna().unique().tolist()
+        seg_vals = pd.Series(df[segment_col]).dropna().astype(str).unique().tolist()
         seg_vals = [v for v in seg_vals if str(v).strip() != ""]
         if len(seg_vals) > 1:
-            seg_options = ["Todos"] + sorted(seg_vals, key=lambda x: str(x))
+            # Build label maps using SEGMENT_LABELS when available, else use raw string as label
+            for raw in seg_vals:
+                label = SEGMENT_LABELS_STR.get(str(raw), str(raw))
+                seg_label_to_raw[label] = raw
+                seg_raw_to_label[str(raw)] = label
+            seg_options = ["Todos"] + sorted(list(seg_label_to_raw.keys()))
             seg_widget = w.Dropdown(options=seg_options, description="Segmento:")
 
     # Outputs
@@ -500,7 +507,10 @@ def widget_outliers_plotly(
         df_sel = df
         if seg_widget is not None and seg_widget.value and seg_widget.value != "Todos":
             try:
-                df_sel = df[df[segment_col] == seg_widget.value]
+                # Map displayed label back to raw segment value (string comparison)
+                chosen_label = str(seg_widget.value)
+                raw_str = seg_label_to_raw.get(chosen_label, chosen_label)
+                df_sel = df[df[segment_col].astype(str) == str(raw_str)]
             except Exception:
                 df_sel = df
 
@@ -525,13 +535,15 @@ def widget_outliers_plotly(
                             annotation_text=label,
                             annotation_position="top",
                         )
-            title_suffix = (
-                f" — seg: {seg_widget.value}"
-                if seg_widget is not None
+            title_suffix = ""
+            if (
+                seg_widget is not None
                 and seg_widget.value
                 and seg_widget.value != "Todos"
-                else ""
-            )
+            ):
+                # Always show the human-readable label in title
+                chosen_label = str(seg_widget.value)
+                title_suffix = f" — seg: {chosen_label}"
             fig.update_layout(
                 template="plotly_white",
                 margin=dict(l=40, r=10, t=35, b=40),

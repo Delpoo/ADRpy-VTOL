@@ -29,6 +29,7 @@ from IPython.display import display, clear_output
 
 # Config (nombre de columna de misión + etiquetas legibles si existen)
 from .config import SEGMENT_COL, SEGMENT_LABELS
+from .guias_tooltips import apply_tooltip
 
 
 # ------------------------------- Utilidades -------------------------------- #
@@ -235,6 +236,203 @@ def _best_fit(x: pd.Series, y: pd.Series) -> Optional[FitResult]:
     return resultados[0]
 
 
+# -------------------------- Curva a partir de 'best' ------------------------ #
+
+
+def _predict_curve(best: Optional[FitResult], xs: np.ndarray) -> Optional[np.ndarray]:
+    """Reconstruye y(x) usando best.params según el modelo detectado."""
+    if best is None or not np.isfinite(best.r2_adj):
+        return None
+    n = best.nombre
+    p = best.params
+    if n == "lineal":
+        a, b = p
+        return a * xs + b
+    if n == "cuadrático":
+        a, b, c = p
+        return a * xs**2 + b * xs + c
+    if n == "log":
+        a, b = p
+        xs_pos = np.where(xs > 0, xs, np.nan)
+        return a * np.log(xs_pos) + b
+    if n == "exp":
+        a, b = p
+        return a * np.exp(b * xs)
+    if n == "potencia":
+        a, b = p
+        xs_pos = np.where(xs > 0, xs, np.nan)
+        return a * np.power(xs_pos, b)
+    return None
+
+
+# --------------------------- Figura Plotly pura ----------------------------- #
+
+
+def fig_tendencias_plotly(
+    df: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    *,
+    modo: str = "global",
+    remove_outliers: bool = True,
+    iqr_factor: float = 1.5,
+    min_n: int = 5,
+) -> tuple[Any, pd.DataFrame]:
+    """
+    Construye un Figure Plotly y un DataFrame de métricas para Tendencias X–Y.
+    Si no hay datos válidos, devuelve una figura con un annotation y métricas vacías.
+    """
+    import plotly.graph_objects as go
+
+    info = preparar_tendencias(
+        df,
+        x_col,
+        y_col,
+        segment_col=SEGMENT_COL,
+        modo=modo,
+        remove_outliers=remove_outliers,
+        iqr_factor=iqr_factor,
+        min_n=min_n,
+    )
+    datos = info["datos"]
+    sub = datos[datos["mask"]]
+
+    # Detectar columna nombre para hover
+    name_col = _detect_name_col(df)
+    if name_col:
+        nombres = df[name_col].astype(str)
+    else:
+        nombres = pd.Series(df.index.astype(str), index=df.index)
+
+    fig = go.Figure()
+
+    if sub.empty:
+        fig.update_layout(
+            height=420,
+            template="plotly_white",
+            margin=dict(l=60, r=20, t=50, b=60),
+            title=f"Tendencias (X–Y): {x_col} vs {y_col}",
+            title_x=0.01,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+            xaxis_title=x_col,
+            yaxis_title=y_col,
+        )
+        fig.add_annotation(
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            text="Sin datos válidos con los filtros actuales",
+        )
+        return fig, pd.DataFrame()
+
+    xvals = sub["x"].to_numpy()
+    yvals = sub["y"].to_numpy()
+    names = nombres.loc[sub.index].to_numpy()
+    segs = sub["segmento"].to_numpy()
+
+    if modo == "global":
+        fig.add_scatter(
+            x=xvals,
+            y=yvals,
+            mode="markers",
+            name="Datos",
+            opacity=0.6,
+            customdata=np.stack([names, segs], axis=1),
+            hovertemplate="<b>%{customdata[0]}</b><br>seg=%{customdata[1]}<br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+            marker=dict(size=8),
+        )
+        best = info.get("global", {}).get("fit", None)
+        if best is not None and np.isfinite(best.r2_adj):
+            xs = np.linspace(np.nanmin(xvals), np.nanmax(xvals), 200)
+            ys = _predict_curve(best, xs)
+            if ys is not None:
+                fig.add_scatter(
+                    x=xs,
+                    y=ys,
+                    mode="lines",
+                    name=f"Tendencia ({best.nombre})",
+                    line=dict(width=3),
+                )
+    else:
+        for lab, grp in sub.groupby("segmento"):
+            xv = grp["x"].to_numpy()
+            yv = grp["y"].to_numpy()
+            nm = nombres.loc[grp.index].to_numpy()
+            fig.add_scatter(
+                x=xv,
+                y=yv,
+                mode="markers",
+                name=f"Datos: {lab}",
+                opacity=0.7,
+                customdata=np.stack([nm], axis=1),
+                hovertemplate="<b>%{customdata[0]}</b><br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+                marker=dict(size=8),
+            )
+            obj = (info.get("por_mision", {}) or {}).get(lab, None)
+            if obj and (obj.get("fit") is not None) and np.isfinite(obj["fit"].r2_adj):
+                xs = np.linspace(np.nanmin(xv), np.nanmax(xv), 200)
+                ys = _predict_curve(obj["fit"], xs)
+                if ys is not None:
+                    fig.add_scatter(
+                        x=xs,
+                        y=ys,
+                        mode="lines",
+                        name=f"Tendencia: {lab}",
+                        line=dict(width=2.5),
+                    )
+
+    fig.update_layout(
+        height=420,
+        template="plotly_white",
+        margin=dict(l=60, r=20, t=50, b=60),
+        title=f"Tendencias (X–Y): {x_col} vs {y_col}",
+        title_x=0.01,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        xaxis_title=x_col,
+        yaxis_title=y_col,
+    )
+
+    # Tabla de métricas
+    rows: list[dict] = []
+    if modo == "global":
+        g = info.get("global", {})
+        r = g.get("resumen")
+        if r:
+            rows.append(
+                {
+                    "ámbito": "Global",
+                    "n": r.n,
+                    "modelo": r.modelo,
+                    "ecuación": r.ecuacion,
+                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
+                    "MAPE_%": None if r.mape is None else round(r.mape, 2),
+                    "calidad_n": r.calidad_n,
+                    "IQR": "ON" if remove_outliers else "OFF",
+                    "min_n": int(min_n),
+                }
+            )
+    else:
+        for lab, obj in (info.get("por_mision", {}) or {}).items():
+            r = obj["resumen"]
+            rows.append(
+                {
+                    "ámbito": lab,
+                    "n": r.n,
+                    "modelo": r.modelo,
+                    "ecuación": r.ecuacion,
+                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
+                    "MAPE_%": None if r.mape is None else round(r.mape, 2),
+                    "calidad_n": r.calidad_n,
+                    "IQR": "ON" if remove_outliers else "OFF",
+                    "min_n": int(min_n),
+                }
+            )
+    df_metrics = pd.DataFrame(rows)
+    return fig, df_metrics
+
+
 # ----------------------------- API de cálculo ------------------------------ #
 
 
@@ -404,6 +602,16 @@ def widget_tendencias(
     ch_logx = w.Checkbox(value=logx_default, description="log X")
     btn = w.Button(description="Recalcular")
     btn.style.button_color = "#28a745"
+
+    # tooltips
+    apply_tooltip(dd_x, "t_x")
+    apply_tooltip(dd_y, "t_y")
+    apply_tooltip(dd_modo, "modo_global_familia")
+    apply_tooltip(ch_out, "iqr_on")
+    apply_tooltip(ft_iqr, "iqr_factor")
+    apply_tooltip(it_min, "min_n")
+    apply_tooltip(ch_logx, "t_logx")
+    apply_tooltip(btn, "auto")
 
     top = w.HBox([dd_x, dd_y, dd_modo, ch_out, ft_iqr, it_min, ch_logx, btn])
     out_plot = w.Output()
@@ -596,6 +804,136 @@ def widget_tendencias(
             x_obj_widget.observe(_on_ext, names="value")
         except Exception:
             pass
+
+    btn.on_click(lambda _: _render())
+    acc = w.Accordion(
+        children=[w.VBox([top, w.HTML("<hr>"), out_plot, w.HTML("<hr>"), out_tbl])]
+    )
+    acc.set_title(0, "Tendencias (X–Y)")
+    acc.selected_index = None
+    _render()
+    return acc
+
+
+def widget_tendencias_plotly(
+    df: pd.DataFrame,
+    *,
+    x_default: Optional[str] = None,
+    y_default: Optional[str] = None,
+    modo_default: str = "global",
+    remove_outliers_default: bool = True,
+    iqr_factor_default: float = 1.5,
+    min_n_default: int = 5,
+    # enlace opcional de línea vertical
+    x_obj_col_name: Optional[str] = None,
+    x_obj_widget: Optional[w.Widget] = None,
+    # NUEVO: callback de objetivo centralizado (columna -> valor)
+    get_objetivo: Optional[Callable[[str], Optional[float]]] = None,
+) -> w.Accordion:
+    """Widget Plotly puro que usa fig_tendencias_plotly para renderizar."""
+    import plotly.graph_objects as go
+
+    # columnas numéricas candidatas
+    num_cols = [
+        c
+        for c in df.columns
+        if pd.to_numeric(df[c], errors="coerce").notna().sum() >= 5
+    ]
+    if not num_cols:
+        return w.Accordion(
+            children=[w.HTML("<b>No hay columnas numéricas suficientes.</b>")]
+        )
+
+    dd_x = w.Dropdown(
+        options=num_cols,
+        value=(x_default or num_cols[0]),
+        description="X:",
+        layout=w.Layout(width="34%"),
+    )
+    dd_y = w.Dropdown(
+        options=num_cols,
+        value=(y_default or (num_cols[1] if len(num_cols) > 1 else num_cols[0])),
+        description="Y:",
+        layout=w.Layout(width="34%"),
+    )
+    dd_modo = w.Dropdown(
+        options=[("Global", "global"), ("Por misión", "familia")],
+        value=("familia" if modo_default == "familia" else "global"),
+        description="Modo:",
+        layout=w.Layout(width="22%"),
+    )
+    ch_out = w.Checkbox(
+        value=remove_outliers_default, description="Quitar atípicos (IQR)"
+    )
+    ft_iqr = w.FloatText(
+        value=iqr_factor_default,
+        description="factor IQR",
+        layout=w.Layout(width="150px"),
+    )
+    it_min = w.IntText(
+        value=min_n_default, description="min_n", layout=w.Layout(width="110px")
+    )
+    btn = w.Button(description="Recalcular")
+    btn.style.button_color = "#28a745"
+
+    # tooltips
+    apply_tooltip(dd_x, "t_x")
+    apply_tooltip(dd_y, "t_y")
+    apply_tooltip(dd_modo, "modo_global_familia")
+    apply_tooltip(ch_out, "iqr_on")
+    apply_tooltip(ft_iqr, "iqr_factor")
+    apply_tooltip(it_min, "min_n")
+    apply_tooltip(btn, "auto")
+
+    top = w.HBox([dd_x, dd_y, dd_modo, ch_out, ft_iqr, it_min, btn])
+    out_plot = w.Output()
+    out_tbl = w.Output()
+
+    def _render(*_):
+        with out_plot:
+            clear_output(wait=True)
+            fig, dfm = fig_tendencias_plotly(
+                df,
+                dd_x.value,
+                dd_y.value,
+                modo=dd_modo.value,
+                remove_outliers=bool(ch_out.value),
+                iqr_factor=float(ft_iqr.value),
+                min_n=int(it_min.value),
+            )
+            # Línea vertical vinculada (si corresponde)
+            # 1) Preferimos el objetivo centralizado si está disponible
+            vline_val: Optional[float] = None
+            if callable(get_objetivo):
+                try:
+                    ov = get_objetivo(dd_x.value)
+                    if ov is not None and np.isfinite(float(ov)):
+                        vline_val = float(ov)
+                except Exception:
+                    vline_val = None
+            # 2) Fallback al widget externo (compatibilidad original)
+            if vline_val is None:
+                if (
+                    (x_obj_widget is not None)
+                    and (x_obj_col_name is not None)
+                    and dd_x.value == x_obj_col_name
+                ):
+                    try:
+                        v = float(getattr(x_obj_widget, "value", np.nan))
+                        if np.isfinite(v):
+                            vline_val = float(v)
+                    except Exception:
+                        vline_val = None
+            if vline_val is not None:
+                fig.add_vline(
+                    x=vline_val, line=dict(color="gray", width=1, dash="dash")
+                )
+            fig.show()
+
+        with out_tbl:
+            clear_output(wait=True)
+            if isinstance(dfm, pd.DataFrame) and not dfm.empty:
+                display(dfm)
 
     btn.on_click(lambda _: _render())
     acc = w.Accordion(

@@ -41,7 +41,7 @@ df_rank = rank(df, restricciones, top_n=10, name_col="Modelo")
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional, Tuple, List
+from typing import Dict, Iterable, Optional, Tuple, List, Literal
 
 import numpy as np
 import pandas as pd
@@ -58,6 +58,40 @@ from asistente_diseno.outliers import compute_iqr_bounds, mad_mask
 # =============================================================================
 # Utilidades de nombres y tipos
 # =============================================================================
+
+# Representación de un parámetro dinámico seleccionado en la UI (opcional)
+Modo = Literal["ignorar", "minimo", "maximo", "fijo"]
+
+
+@dataclass
+class ParamSpec:
+    col: str
+    label: str
+    active: bool
+    mode: Modo
+    value: Optional[float]
+    weight: float
+
+
+def _params_to_restricciones(params: Optional[List[ParamSpec]]) -> Dict[str, dict]:
+    restr: Dict[str, dict] = {}
+    if not params:
+        return restr
+    for p in params:
+        if (
+            not p.active
+            or p.mode == "ignorar"
+            or (p.weight is not None and p.weight <= 0)
+        ):
+            continue
+        r = {"tipo": p.mode, "peso": float(p.weight)}
+        if p.mode in ("minimo", "maximo", "fijo") and p.value is not None:
+            try:
+                r["valor"] = float(p.value)
+            except Exception:
+                pass
+        restr[p.col] = r
+    return restr
 
 
 def _detectar_columna_nombre(
@@ -323,8 +357,9 @@ def _aplicar_segment_labels(
 
 def rank(
     df: pd.DataFrame,
-    restricciones: Dict[str, dict],
+    restricciones: Optional[Dict[str, dict]] = None,
     *,
+    params: Optional[List[ParamSpec]] = None,
     columnas_activas: Optional[Iterable[str]] = None,
     metodo_escala: str = "IQR",
     min_n: int = 5,
@@ -352,6 +387,11 @@ def rank(
 
     El resto del comportamiento es idéntico a la V2 (distancia_media/similitud_media, etc.).
     """
+    # Si vienen params dinámicos, conviértelos a restricciones
+    if params is not None:
+        restricciones = _params_to_restricciones(params)
+    restricciones = restricciones or {}
+
     # Determinar columnas a usar
     cols_restr = [c for c in restricciones.keys() if c in df.columns]
     if columnas_activas is not None:
@@ -573,6 +613,7 @@ def vista_topn_detallada(
         for c in [
             "aeronave",
             "segmento",
+            "alerta",  # NUEVO: si main inyecta un resumen de alertas por objetivo
             "distancia",
             "distancia_media",
             "similitud",

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Iterable, List, Tuple
 
 import pandas as pd
+import numpy as np
 
 from . import config
 
@@ -74,3 +75,30 @@ def a_numerico_seguro(serie: pd.Series) -> pd.Series:
     pd.Series
     """
     return pd.to_numeric(serie.copy(), errors="coerce")
+
+
+# --- NUEVO: detección de columnas numéricas "útiles" ---
+def columnas_numericas_utiles(
+    df: pd.DataFrame, min_valid: int | None = None
+) -> List[str]:
+    """
+    Devuelve columnas potencialmente útiles para la UI dinámica:
+    - Excluye nombres configurados en EXCLUDE_COLS
+    - Requiere al menos 'min_valid' valores no nulos
+    - Requiere varianza > 0 (evita columnas constantes)
+    """
+    if min_valid is None:
+        min_valid = int(getattr(config, "MIN_VALID_NUMERIC", 5))
+    excl = set(getattr(config, "EXCLUDE_COLS", set()))
+    out: List[str] = []
+    for c in df.columns:
+        if c in excl:
+            continue
+        s = pd.to_numeric(df[c], errors="coerce").replace([np.inf, -np.inf], np.nan)
+        n_valid = int(s.notna().sum())
+        # varianza sobre valores no nulos
+        arr = s.dropna().to_numpy(dtype=float)
+        var = float(np.var(arr, ddof=1)) if arr.size > 1 else 0.0
+        if n_valid >= int(min_valid) and var > 0.0:
+            out.append(c)
+    return out
