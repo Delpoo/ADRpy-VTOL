@@ -54,6 +54,7 @@ from IPython.display import display, clear_output
 
 from asistente_diseno.outliers import compute_iqr_bounds
 from pandas.api.types import is_bool_dtype
+from asistente_diseno.mplutils import style_df_2dec, apply_tickformat_2dec, f2
 
 # =============================================================================
 # NUEVO: utilidades y tipos para Top-K enriquecido (panel independiente)
@@ -102,6 +103,110 @@ def _topk_stats(x: pd.Series) -> TopKStats:
     )
 
 
+# =============================================================================
+# Pesos normalizados y helpers de render scrollable
+# =============================================================================
+
+# Kernel para pesos por distancia (evita explosiones con dist≈0 y acota a [0,1])
+W_KERNEL = "one_plus"  # opciones: "one_plus" | "exp" | "inv"
+EPS = 1e-6
+GAMMA = 4.0  # usado si W_KERNEL == "exp"
+W_MAX = 100.0  # tope duro si se usa el inverso antes de normalizar
+
+
+def _w_from_dist(dist_arr: np.ndarray) -> np.ndarray:
+    d = np.asarray(dist_arr, dtype=float)
+    d = np.where(np.isfinite(d), d, np.nan)
+    if W_KERNEL == "exp":
+        w = np.exp(-float(GAMMA) * d)
+    elif W_KERNEL == "inv":
+        w_raw = 1.0 / np.maximum(d, float(EPS))
+        # tope visual/numérico para evitar dominancias extremas aun antes de normalizar
+        w_raw = np.minimum(w_raw, float(W_MAX))
+        mx = np.nanmax(w_raw) if np.any(np.isfinite(w_raw)) else np.nan
+        w = w_raw / mx if (mx and np.isfinite(mx) and mx > 0) else w_raw
+    else:
+        # por defecto: 1/(1 + d)  →  d=0 => 1.0 ; d grande => ~0
+        w = 1.0 / (1.0 + d)
+    # asegurar rango [0,1]
+    w = np.clip(w, 0.0, 1.0)
+    # NaN -> 0
+    w = np.where(np.isfinite(w), w, 0.0)
+    return w
+
+
+def _wrap_scrollable_html(html_table: str, *, height: int = 420) -> str:
+    """Render robusto: encapsula la tabla en un <iframe> con su propio CSS.
+
+    Asegura barras de scroll visibles, encabezados sticky, primera columna fija,
+    bordes, zebra y truncado de headers con ellipsis.
+    """
+    inner = (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<style>\n"
+        "html,body{margin:0;padding:8px;overflow:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;font-size:12px;color:#111;}\n"
+        ".vecinos{table-layout:auto;width:max-content !important;min-width:100%;max-width:100%;border-collapse:separate;border-spacing:0;border:1px solid #ddd;}\n"
+        ".vecinos th, .vecinos td{min-width:12ch;}\n"
+        ".vecinos td{white-space:nowrap;padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
+        ".vecinos th{padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
+        ".vecinos thead th{position:sticky;top:0;background:#fff;z-index:3;box-shadow:0 1px 0 rgba(0,0,0,0.08);font-weight:600;}\n"
+        ".vecinos tbody tr:nth-child(odd) td{background:#fafafa;}\n"
+        ".vecinos tbody tr:hover td{background:#f0f7ff;}\n"
+        ".vecinos th:first-child, .vecinos td:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:1px 0 0 rgba(0,0,0,0.08);}\n"
+        ".vecinos td:nth-child(n+2){text-align:right;}\n"
+        ".vecinos .hdr{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word;}\n"
+        ".vecinos thead th:hover .hdr{-webkit-line-clamp:unset;max-height:none;}\n"
+        "</style></head><body>"
+        "<div id='tbl-wrap'>"
+        f"{html_table}"
+        "</div>"
+        "<script>\n"
+        "(function(){\n"
+        " var tbl=document.querySelector('.vecinos'); if(!tbl) return;\n"
+        " // Envolver texto de headers en un span para aplicar ellipsis\n"
+        " tbl.querySelectorAll('thead th').forEach(function(th){\n"
+        "   var txt=(th.textContent||'').trim(); th.setAttribute('title', txt);\n"
+        "   var span=document.createElement('span'); span.className='hdr'; span.textContent=txt;\n"
+        "   while(th.firstChild){ th.removeChild(th.firstChild);} th.appendChild(span);\n"
+        " });\n"
+        " // Ordenamiento simple al click del header\n"
+        " function parseVal(s){ var x=parseFloat(String(s).replace(',','.')); return isNaN(x)? null : x; }\n"
+        " function sortTable(tbl,col,asc){\n"
+        "   var tb=tbl.tBodies[0]; if(!tb) return;\n"
+        "   var rows=Array.prototype.slice.call(tb.querySelectorAll('tr'));\n"
+        "   rows.sort(function(a,b){\n"
+        "     var ta=(a.cells[col]&&a.cells[col].innerText||'').trim();\n"
+        "     var tbv=(b.cells[col]&&b.cells[col].innerText||'').trim();\n"
+        "     var na=parseVal(ta), nb=parseVal(tbv);\n"
+        "     var cmp=0;\n"
+        "     if(na!==null && nb!==null){ cmp = na-nb; } else { cmp = ta.localeCompare(tbv); }\n"
+        "     return asc? cmp : -cmp;\n"
+        "   });\n"
+        "   rows.forEach(function(r){ tb.appendChild(r); });\n"
+        " }\n"
+        " tbl.querySelectorAll('thead th').forEach(function(th,idx){\n"
+        "   th.style.cursor='pointer';\n"
+        "   th.addEventListener('click', function(){\n"
+        "     var asc = th.getAttribute('data-asc') !== 'true';\n"
+        "     sortTable(tbl, idx, asc);\n"
+        "     tbl.querySelectorAll('thead th').forEach(function(t){ t.removeAttribute('data-asc'); });\n"
+        "     th.setAttribute('data-asc', asc?'true':'false');\n"
+        "   });\n"
+        " });\n"
+        "})();\n"
+        "</script>"
+        "</body></html>"
+    )
+    # IMPORTANTE: usar comillas simples en el atributo srcdoc y escapar comillas simples dentro del HTML
+    # para evitar que el contenido rompa el atributo y deje el iframe vacío.
+    escaped = inner.replace("'", "&#39;")
+    iframe = (
+        f'<iframe style="width:100%;height:{int(height)}px;border:1px solid #eee;border-radius:4px;" '
+        f"srcdoc='{escaped}' loading=\"lazy\"></iframe>"
+    )
+    return iframe
+
+
 def _fig_topk_hist(
     x: pd.Series,
     *,
@@ -130,7 +235,7 @@ def _fig_topk_hist(
         nbinsx=nbins,
         marker=dict(color="rgba(66, 99, 255, 0.65)"),
         name="Top-K",
-        hovertemplate="valor=%{x:.3g}<br>frec=%{y}<extra></extra>",
+        hovertemplate="valor=%{x:.2f}<br>frec=%{y:.2f}<extra></extra>",
     )
 
     # Overlay IQR dentro del rango (si usable) + guías Low/High
@@ -203,6 +308,10 @@ def _fig_topk_hist(
         template="plotly_white",
         showlegend=False,
     )
+    try:
+        apply_tickformat_2dec(fig)
+    except Exception:
+        pass
     return fig, stats, {"low": low, "high": high, "usable": usable}
 
 
@@ -220,11 +329,11 @@ def _guia_imputacion_html(
 
     msg = []
     msg.append(f"<b>Parámetro:</b> {param_label}")
-    msg.append(f"<b>Sugerido (mediana Top-K):</b> <code>{sug:.3g}</code>")
+    msg.append(f"<b>Sugerido (mediana Top-K):</b> <code>{f2(sug)}</code>")
 
     if usable and np.isfinite(low) and np.isfinite(high):
         msg.append(
-            f"<b>Rango confiable (IQR):</b> <code>[{low:.3g}, {high:.3g}]</code>"
+            f"<b>Rango confiable (IQR):</b> <code>[{f2(low)}, {f2(high)}]</code>"
         )
     else:
         msg.append(
@@ -242,21 +351,21 @@ def _guia_imputacion_html(
         if obj < low:
             prox = low
             msg.append(
-                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{obj:.3g}</code>) <b>está por debajo</b> del IQR. "
-                f"Considera aproximarlo a <code>{prox:.3g}</code> para alinear con la evidencia Top-K."
+                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{f2(obj)}</code>) <b>está por debajo</b> del IQR. "
+                f"Considera aproximarlo a <code>{f2(prox)}</code> para alinear con la evidencia Top-K."
             )
         elif obj > high:
             prox = high
             msg.append(
-                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{obj:.3g}</code>) <b>está por encima</b> del IQR. "
-                f"Considera aproximarlo a <code>{prox:.3g}</code> para alinear con la evidencia Top-K."
+                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{f2(obj)}</code>) <b>está por encima</b> del IQR. "
+                f"Considera aproximarlo a <code>{f2(prox)}</code> para alinear con la evidencia Top-K."
             )
         else:
             msg.append("✅ El objetivo está dentro del IQR (coherente con Top-K).")
 
     msg.append(
-        f"<small>n={stats.n} · media={stats.mean:.3g} · σ={stats.std:.3g} · CV={stats.cv:.3g} · "
-        f"p10={stats.p10:.3g} · p90={stats.p90:.3g}</small>"
+        f"<small>n={stats.n} · media={f2(stats.mean)} · σ={f2(stats.std)} · CV={f2(stats.cv)} · "
+        f"p10={f2(stats.p10)} · p90={f2(stats.p90)}</small>"
     )
     html = "<br>".join(msg)
     return w.HTML(html)
@@ -316,11 +425,18 @@ def widget_topk_param(
 
         with out_fig:
             out_fig.clear_output(wait=True)
+            try:
+                apply_tickformat_2dec(fig)
+            except Exception:
+                pass
             fig.show()
 
         with out_tbl:
             out_tbl.clear_output(wait=True)
-            display(dfm)
+            try:
+                display(style_df_2dec(dfm))
+            except Exception:
+                display(dfm)
 
         with out_info:
             out_info.clear_output(wait=True)
@@ -498,8 +614,8 @@ def _build_weights_for_param(
         dist_arr = pd.to_numeric(df_sub["distancia"], errors="coerce").to_numpy(
             dtype=float
         )
-        w_dist = 1.0 / (dist_arr + float(cfg.eps))
-        w_dist = pd.Series(w_dist, index=df_sub.index)
+        w_arr = _w_from_dist(dist_arr)
+        w_dist = pd.Series(w_arr, index=df_sub.index)
 
     w_conf = pd.Series(1.0, index=df_sub.index)
     if cfg.use_confidence_weights and cfg.confidence_cols:
@@ -673,15 +789,15 @@ def sugerencias_topk(
             )
             det["valor"] = df_sub[col]
             det["w_total"] = w_total
-            det["w_dist"] = (
-                1.0
-                / (
-                    pd.to_numeric(df_sub.get("distancia", np.nan), errors="coerce")
-                    + float(cfg.eps)
-                )
-                if (cfg.use_distance_weights and "distancia" in df_sub.columns)
-                else np.nan
-            )
+            if cfg.use_distance_weights and "distancia" in df_sub.columns:
+                _s = df_sub.get("distancia", None)
+                if _s is not None and hasattr(_s, "to_numpy"):
+                    arr = pd.to_numeric(_s, errors="coerce").to_numpy(dtype=float)
+                else:
+                    arr = np.asarray([], dtype=float)
+                det["w_dist"] = _w_from_dist(arr)
+            else:
+                det["w_dist"] = np.nan
             if (
                 cfg.use_confidence_weights
                 and cfg.confidence_cols
@@ -718,10 +834,20 @@ def sugerencias_topk(
         w_media = _wmean_safe(vals, w_total)
         w_mediana = med  # mediana simple como recomendación robusta
 
-        # n_efectivo: suma de pesos positivos donde hay datos
+        # n_efectivo: suma de pesos NORMALIZADOS (0..1) donde hay datos
+        #   - Interpretación: "cantidad equivalente" de vecinos útiles
+        #   - Norma usada: escalar por el máximo de w_total (>0) en los usados
         w_num = pd.to_numeric(w_total, errors="coerce").fillna(0.0)
         m_valid = vals.notna() & (w_num > 0)
-        n_eff = float(w_num[m_valid].sum())
+        if m_valid.any():
+            max_w = float(w_num[m_valid].max())
+            if max_w > 0:
+                w_scaled = (w_num[m_valid] / max_w).clip(lower=0.0, upper=1.0)
+                n_eff = float(w_scaled.sum())
+            else:
+                n_eff = 0.0
+        else:
+            n_eff = 0.0
 
         summary_rows.append(
             {
@@ -753,10 +879,11 @@ def sugerencias_topk(
         det["valor"] = df_sub[col]
         det["w_total"] = w_total
         if cfg.use_distance_weights and "distancia" in df_sub.columns:
-            dist_arr2 = pd.to_numeric(df_sub["distancia"], errors="coerce").to_numpy(
-                dtype=float
+            det["w_dist"] = _w_from_dist(
+                pd.to_numeric(df_sub["distancia"], errors="coerce").to_numpy(
+                    dtype=float
+                )
             )
-            det["w_dist"] = 1.0 / (dist_arr2 + float(cfg.eps))
         else:
             det["w_dist"] = np.nan
         if (
@@ -828,7 +955,7 @@ def vista_sugerencias_resumen(summary: pd.DataFrame) -> "pd.io.formats.style.Sty
     cols = [c for c in cols if c in summary.columns]
     dfv = summary[cols].copy()
     fmt = {
-        c: "{:.3f}"
+        c: "{:.2f}"
         for c in dfv.columns
         if c
         not in {
@@ -848,7 +975,7 @@ def vista_sugerencias_resumen(summary: pd.DataFrame) -> "pd.io.formats.style.Sty
     cols_blues = [c for c in ["w_media", "w_mediana"] if c in dfv.columns]
     if cols_blues:
         sty = sty.background_gradient(subset=cols_blues, cmap="Blues")
-    return sty
+    return style_df_2dec(dfv).background_gradient(subset=["n_usados"], cmap="Greens")
 
 
 def widget_sugerencias_param(
@@ -873,7 +1000,11 @@ def widget_sugerencias_param(
         options=params, description="Parámetro:", layout=w.Layout(width="45%")
     )
     out = w.Output()
-    head = w.HTML(f"<h4 style='margin:0'>{titulo}</h4>")
+    # Badge N_efectivo / n_usados
+    badge = w.HTML("")
+    head = w.HBox(
+        [w.HTML(f"<h4 style='margin:0'>{titulo}</h4>"), w.HTML("&nbsp;"), badge]
+    )
 
     def _render(*args):
         with out:
@@ -886,16 +1017,61 @@ def widget_sugerencias_param(
             # Tabla de vecinos usados (orden por peso total desc)
             if "w_total" in usados.columns:
                 usados = usados.sort_values(by="w_total", ascending=False)
+            # Depurar columnas duplicadas de nombre: conservar 'aeronave'
+            name_like = [
+                c
+                for c in usados.columns
+                if c.lower()
+                in {"modelo", "model", "aeronave", "nombre", "name", "aircraft"}
+            ]
+            if "aeronave" in usados.columns:
+                drop_als = [c for c in name_like if c != "aeronave"]
+                if drop_als:
+                    usados = usados.drop(columns=drop_als, errors="ignore")
+            # Formateo homogéneo a 2 decimales para todas las columnas numéricas
+            sty = style_df_2dec(usados.head(50))
+            # refuerza formato en columnas clave si existen (no afecta no-numéricas)
+            sty = sty.format(
+                {
+                    c: "{:.2f}"
+                    for c in ["distancia", "w_total", "w_dist", "w_conf", "valor"]
+                    if c in usados.columns
+                }
+            )
+            # Render como HTML y envolver con scroll horizontal + nowrap
+            html_tbl = sty.set_table_attributes('class="vecinos"').to_html()
+            # añadir cabecera sticky y tooltips
+            css = (
+                "<style>"
+                ".vecinos { border-collapse: separate; border-spacing:0;}"
+                ".vecinos td{ white-space:nowrap;}"
+                ".vecinos thead th{ position:sticky; top:0; background:#fff; z-index:3; box-shadow: 0 1px 0 rgba(0,0,0,0.08);}"
+                "</style>"
+            )
+            js = (
+                "<script>(function(){\n"
+                "var tbl=document.querySelector('.vecinos'); if(!tbl) return;\n"
+                "tbl.querySelectorAll('thead th').forEach(function(th){\n"
+                " var t=(th.textContent||'').trim();\n"
+                " if(t==='aeronave') th.title='Nombre del vecino (fila del ranking).';\n"
+                " else if(t==='distancia') th.title='Distancia agregada respecto al objetivo (menor=mejor).';\n"
+                " else if(t==='valor') th.title='Valor del parámetro en el vecino.';\n"
+                " else if(t==='w_total') th.title='Peso total (0..1), combinación de w_dist y w_conf.';\n"
+                " else if(t==='w_dist') th.title='Peso por distancia (kernel 0..1 en función de la similitud).';\n"
+                " else if(t==='w_conf') th.title='Peso de confianza si aplica (0..1).';\n"
+                "});\n"
+                "})();</script>"
+            )
+            # Envolver con contenedor scrolleable (barras visibles)
+            html_tbl = _wrap_scrollable_html(css + html_tbl + js)
+            # Breve explicación de columnas de insumos
             display(
-                usados.head(30).style.format(
-                    {
-                        "distancia": "{:.3f}",
-                        "w_total": "{:.3f}",
-                        "w_dist": "{:.3f}",
-                        "w_conf": "{:.3f}",
-                    }
+                w.HTML(
+                    "<b>Top‑K vecinos</b> (scroll lateral y vertical): ordenados por <code>w_total</code>. "
+                    "<code>w_total</code> combina <code>w_dist</code> (kernel 0..1 de la distancia) y <code>w_conf</code> (0..1)."
                 )
             )
+            display(w.HTML(value=html_tbl))
 
             # Histograma Top-K con overlay IQR consistente (_fig_parametro_hist_box)
             vals = pd.to_numeric(usados["valor"], errors="coerce").dropna()
@@ -939,12 +1115,32 @@ def widget_sugerencias_param(
                 low=low,
                 high=high,
             )
+            apply_tickformat_2dec(fig)
             display(fig)
+
+            # Badge update (N_efectivo / n_usados)
+            try:
+                n_eff = (
+                    resumen.loc[par, "n_efectivo"]
+                    if resumen is not None and "n_efectivo" in resumen.columns
+                    else None
+                )
+                n_used = (
+                    resumen.loc[par, "n_usados"]
+                    if resumen is not None and "n_usados" in resumen.columns
+                    else None
+                )
+                if n_eff is not None and n_used is not None:
+                    badge.value = f"<span style='background:#eef7ff;border:1px solid #cde3ff;border-radius:10px;padding:2px 8px;font-size:12px;'>N_efectivo={float(n_eff):.2f} / n_usados={int(n_used)}</span>"
+                else:
+                    badge.value = ""
+            except Exception:
+                badge.value = ""
 
             # Mostrar posibles outliers excluidos
             if excl is not None and not isinstance(excl, dict) and not excl.empty:
                 print("Valores excluidos como outliers:")
-                display(excl.head(20))
+                display(style_df_2dec(excl.head(20)))
 
     _render()
     dd.observe(_render, names="value")
@@ -971,7 +1167,7 @@ def _fig_parametro_hist_box(
         name="Top-K",
         nbinsx=12,
         opacity=0.75,
-        hovertemplate="valor=%{x:.3g}<br>frec=%{y}<extra></extra>",
+        hovertemplate="valor=%{x:.2f}<br>frec=%{y:.2f}<extra></extra>",
     )
 
     # BoxPlot adicional (referencia robusta) — mantenido como antes
@@ -1004,7 +1200,7 @@ def _fig_parametro_hist_box(
     fig.update_layout(
         title=dict(
             text=f"Distribución Top-K: {param}<br>"
-            f"<sup>LOW(IQR)={low_iqr:.3g}  ·  HIGH(IQR)={high_iqr:.3g}  ·  n_topk={n_topk}</sup>",
+            f"<sup>LOW(IQR)={f2(low_iqr)}  ·  HIGH(IQR)={f2(high_iqr)}  ·  n_topk={n_topk}</sup>",
             x=0.02,
             xanchor="left",
             y=0.97,
@@ -1214,10 +1410,10 @@ def widget_sugerencias_panel_plotly(
     name_objetivo: str = "Objetivo (usuario)",
 ) -> w.Accordion:
     """
-    Accordion con:
-      1) Resumen de sugerencias por parámetro (tabla)
-      2) Detalle por parámetro (Dropdown + histograma/box Plotly + referencias)
-      3) Insumos Top-K (tabla de vecinos usados)
+    Único módulo expandible que contiene secciones tituladas:
+      - "Sugerencias Top‑K · Resumen" (tabla)
+      - "Detalle por parámetro" (dropdown + histograma/box + referencias)
+      - "Top‑K vecinos" (insumos)
     """
     cfg = dict(
         params=params,
@@ -1291,7 +1487,10 @@ def widget_sugerencias_panel_plotly(
         with out_resumen:
             clear_output(wait=True)
             df_summary = sug["summary"].copy()
-            display(df_summary)
+            try:
+                display(style_df_2dec(df_summary))
+            except Exception:
+                display(df_summary)
 
         # 2) Detalle por parámetro
         with out_detalle:
@@ -1342,6 +1541,10 @@ def widget_sugerencias_panel_plotly(
                     low=low,
                     high=high,
                 )
+                try:
+                    apply_tickformat_2dec(fig)
+                except Exception:
+                    pass
                 display(fig)
 
                 # Números clave
@@ -1356,7 +1559,10 @@ def widget_sugerencias_panel_plotly(
                         "HIGH(IQR)": high,
                     }
                 ]
-                display(pd.DataFrame(rows))
+                try:
+                    display(style_df_2dec(pd.DataFrame(rows)))
+                except Exception:
+                    display(pd.DataFrame(rows))
 
         # 3) Insumos (vecinos usados)
         with out_insumos:
@@ -1365,23 +1571,119 @@ def widget_sugerencias_panel_plotly(
             if df_k is None or df_k.empty:
                 display(w.HTML("<i>Sin vecinos disponibles.</i>"))
             else:
-                display(df_k)
+                # Filtro por parámetro (si existe columna 'parametro' o similar)
+                cols_param = [
+                    c
+                    for c in df_k.columns
+                    if c.lower() in {"parametro", "param", "col"}
+                ]
+                if cols_param:
+                    colp = cols_param[0]
+                    vals = sorted(df_k[colp].dropna().astype(str).unique().tolist())
+                    ddp = w.Dropdown(
+                        options=["(todos)"] + vals,
+                        description="Parámetro:",
+                        layout=w.Layout(width="45%"),
+                    )
+
+                    out_tbl = w.Output()
+
+                    def _render_tbl(*_):
+                        with out_tbl:
+                            out_tbl.clear_output(wait=True)
+                            dff = df_k
+                            if ddp.value and ddp.value != "(todos)":
+                                dff = dff[dff[colp].astype(str) == ddp.value]
+                            # aplicar formato .2f a todas las columnas numéricas SIEMPRE
+                            sty = style_df_2dec(dff)
+                            # reforzar en columnas clave
+                            sty = sty.format(
+                                {
+                                    c: "{:.2f}"
+                                    for c in [
+                                        "w_total",
+                                        "w_dist",
+                                        "w_conf",
+                                        "distancia",
+                                        "valor",
+                                    ]
+                                    if c in dff.columns
+                                }
+                            )
+                            html_tbl = sty.set_table_attributes(
+                                'class="vecinos"'
+                            ).to_html()
+                            # cabecera sticky + scroll visible, sin forzar nowrap en headers
+                            css = (
+                                "<style>"
+                                ".vecinos { border-collapse: separate; border-spacing:0;}"
+                                ".vecinos td{ white-space:nowrap;}"
+                                ".vecinos thead th{ position:sticky; top:0; background:#fff; z-index:3; box-shadow:0 1px 0 rgba(0,0,0,0.08);}"
+                                "</style>"
+                            )
+                            html_tbl = _wrap_scrollable_html(css + html_tbl)
+                            display(w.HTML(value=html_tbl))
+
+                    _render_tbl()
+                    ddp.observe(_render_tbl, names="value")
+                    display(w.VBox([ddp, out_tbl]))
+                else:
+                    # Formato/scroll horizontal directo
+                    dff = df_k
+                    sty = style_df_2dec(dff)
+                    sty = sty.format(
+                        {
+                            c: "{:.2f}"
+                            for c in [
+                                "w_total",
+                                "w_dist",
+                                "w_conf",
+                                "distancia",
+                                "valor",
+                            ]
+                            if c in dff.columns
+                        }
+                    )
+                    html_tbl = sty.set_table_attributes('class="vecinos"').to_html()
+                    css = (
+                        "<style>"
+                        ".vecinos { border-collapse: separate; border-spacing:0;}"
+                        ".vecinos td{ white-space:nowrap;}"
+                        ".vecinos thead th{ position:sticky; top:0; background:#fff; z-index:3; box-shadow:0 1px 0 rgba(0,0,0,0.08);}"
+                        "</style>"
+                    )
+                    html_tbl = _wrap_scrollable_html(css + html_tbl)
+                    display(w.HTML(value=html_tbl))
 
     btn.on_click(lambda _: _render())
 
     # Render inicial
     _render()
 
-    # Armar Accordion
-    box_resumen = w.VBox([header, w.HTML("<hr>"), out_resumen])
-    box_detalle = w.VBox([dd_param, w.HTML("<hr>"), out_detalle])
-    box_insumos = w.VBox([out_insumos])
-
-    acc = w.Accordion(children=[box_resumen, box_detalle, box_insumos])
-    acc.set_title(0, "Sugerencias Top-K · Resumen")
-    acc.set_title(1, "Detalle por parámetro")
-    acc.set_title(2, "Vecinos (insumos)")
-    acc.selected_index = None  # colapsado por defecto
+    # Único módulo con secciones
+    title_main = w.HTML("<b>Sugerencias (Top‑K)</b>")
+    title_res = w.HTML("<b>Sugerencias Top‑K · Resumen</b>")
+    title_det = w.HTML("<b>Detalle por parámetro</b>")
+    title_ins = w.HTML("<b>Top‑K vecinos</b>")
+    body = w.VBox(
+        [
+            title_main,
+            header,
+            w.HTML("<hr>"),
+            title_res,
+            out_resumen,
+            w.HTML("<hr>"),
+            title_det,
+            dd_param,
+            out_detalle,
+            w.HTML("<hr>"),
+            title_ins,
+            out_insumos,
+        ]
+    )
+    acc = w.Accordion(children=[body])
+    acc.set_title(0, "Sugerencias (Top‑K)")
+    acc.selected_index = None
     return acc
 
 
@@ -1427,7 +1729,6 @@ def widget_sugerencias_panel(
             else:
                 display(w.HTML("<i>Sin resumen disponible.</i>"))
 
-        box_resumen = w.VBox([w.HTML(f"<b>{titulo} — resumen</b>"), out_resumen])
         box_detalle = widget_sugerencias_param(
             data, bins=bins, titulo=titulo, get_objetivo=get_objetivo
         )
@@ -1436,15 +1737,72 @@ def widget_sugerencias_panel(
         with out_insumos:
             neigh = data.get("neighbors", None)
             if isinstance(neigh, pd.DataFrame) and not neigh.empty:
-                display(neigh)
+                dff = neigh.copy()
+                name_like = [
+                    c
+                    for c in dff.columns
+                    if c.lower()
+                    in {"modelo", "model", "aeronave", "nombre", "name", "aircraft"}
+                ]
+                if "aeronave" in dff.columns:
+                    dff = dff.drop(
+                        columns=[c for c in name_like if c != "aeronave"],
+                        errors="ignore",
+                    )
+                sty = style_df_2dec(dff)
+                sty = sty.format(
+                    {
+                        c: "{:.2f}"
+                        for c in ["w_total", "w_dist", "w_conf", "distancia", "valor"]
+                        if c in dff.columns
+                    }
+                )
+                html_tbl = sty.set_table_attributes('class="vecinos"').to_html()
+                css = (
+                    "<style>"
+                    ".vecinos { border-collapse: separate; border-spacing:0;}"
+                    ".vecinos td{ white-space:nowrap;}"
+                    ".vecinos thead th{ position:sticky; top:0; background:#fff; z-index:3; box-shadow:0 1px 0 rgba(0,0,0,0.08);}"
+                    "</style>"
+                )
+                js = (
+                    "<script>(function(){\n"
+                    "var tbl=document.querySelector('.vecinos'); if(!tbl) return;\n"
+                    "tbl.querySelectorAll('thead th').forEach(function(th){\n"
+                    " var t=(th.textContent||'').trim();\n"
+                    " if(t==='aeronave') th.title='Nombre del vecino (fila del ranking).';\n"
+                    " else if(t==='distancia') th.title='Distancia agregada respecto al objetivo (menor=mejor).';\n"
+                    " else if(t==='valor') th.title='Valor del parámetro en el vecino.';\n"
+                    " else if(t==='w_total') th.title='Peso total (0..1), combinación de w_dist y w_conf.';\n"
+                    " else if(t==='w_dist') th.title='Peso por distancia (kernel 0..1 en función de la similitud).';\n"
+                    " else if(t==='w_conf') th.title='Peso de confianza si aplica (0..1).';\n"
+                    "});\n"
+                    "})();</script>"
+                )
+                display(w.HTML(value=_wrap_scrollable_html(css + html_tbl + js)))
             else:
                 display(w.HTML("<i>Sin vecinos Top-K disponibles.</i>"))
-        box_insumos = w.VBox([out_insumos])
 
-        acc = w.Accordion(children=[box_resumen, box_detalle, box_insumos])
-        acc.set_title(0, "Resumen")
-        acc.set_title(1, "Detalle por parámetro")
-        acc.set_title(2, "Vecinos (insumos)")
+        # Único módulo con secciones
+        title_main = w.HTML(f"<b>{titulo}</b>")
+        title_res = w.HTML("<b>Resumen</b>")
+        title_det = w.HTML("<b>Detalle por parámetro</b>")
+        title_ins = w.HTML("<b>Top‑K vecinos</b>")
+        body = w.VBox(
+            [
+                title_main,
+                title_res,
+                out_resumen,
+                w.HTML("<hr>"),
+                title_det,
+                box_detalle,
+                w.HTML("<hr>"),
+                title_ins,
+                out_insumos,
+            ]
+        )
+        acc = w.Accordion(children=[body])
+        acc.set_title(0, titulo)
         acc.selected_index = None if collapsed else 0
         return acc
 

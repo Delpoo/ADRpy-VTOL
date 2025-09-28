@@ -30,6 +30,7 @@ from IPython.display import display, clear_output
 # Config (nombre de columna de misión + etiquetas legibles si existen)
 from .config import SEGMENT_COL, SEGMENT_LABELS
 from .guias_tooltips import apply_tooltip
+from .mplutils import apply_tickformat_2dec, style_df_2dec, f2
 
 
 # ------------------------------- Utilidades -------------------------------- #
@@ -118,7 +119,7 @@ def _fit_lineal(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = coef[0] * x + coef[1]
     return FitResult(
         nombre="lineal",
-        ecuacion=f"y = {coef[0]:.4g}·x + {coef[1]:.4g}",
+        ecuacion=f"y = {f2(coef[0])}·x + {f2(coef[1])}",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -135,7 +136,7 @@ def _fit_cuadratico(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = coef[0] * x**2 + coef[1] * x + coef[2]
     return FitResult(
         nombre="cuadrático",
-        ecuacion=f"y = {coef[0]:.4g}·x² + {coef[1]:.4g}·x + {coef[2]:.4g}",
+        ecuacion=f"y = {f2(coef[0])}·x² + {f2(coef[1])}·x + {f2(coef[2])}",
         p=2,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=2),
@@ -156,7 +157,7 @@ def _fit_log(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = a * lx + b
     return FitResult(
         nombre="log",
-        ecuacion=f"y = {a:.4g}·ln(x) + {b:.4g}",
+        ecuacion=f"y = {f2(a)}·ln(x) + {f2(b)}",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -178,7 +179,7 @@ def _fit_exp(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = a * np.exp(b * x)
     return FitResult(
         nombre="exp",
-        ecuacion=f"y = {a:.4g}·e^({b:.4g}·x)",
+        ecuacion=f"y = {f2(a)}·e^({f2(b)}·x)",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -201,7 +202,7 @@ def _fit_potencia(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = a * np.power(x, b)
     return FitResult(
         nombre="potencia",
-        ecuacion=f"y = {a:.4g}·x^{b:.4g}",
+        ecuacion=f"y = {f2(a)}·x^{f2(b)}",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -340,7 +341,7 @@ def fig_tendencias_plotly(
             name="Datos",
             opacity=0.6,
             customdata=np.stack([names, segs], axis=1),
-            hovertemplate="<b>%{customdata[0]}</b><br>seg=%{customdata[1]}<br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+            hovertemplate="<b>%{customdata[0]}</b><br>seg=%{customdata[1]}<br>X=%{x:.2f}<br>Y=%{y:.2f}<extra></extra>",
             marker=dict(size=8),
         )
         best = info.get("global", {}).get("fit", None)
@@ -367,7 +368,7 @@ def fig_tendencias_plotly(
                 name=f"Datos: {lab}",
                 opacity=0.7,
                 customdata=np.stack([nm], axis=1),
-                hovertemplate="<b>%{customdata[0]}</b><br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+                hovertemplate="<b>%{customdata[0]}</b><br>X=%{x:.2f}<br>Y=%{y:.2f}<extra></extra>",
                 marker=dict(size=8),
             )
             obj = (info.get("por_mision", {}) or {}).get(lab, None)
@@ -393,6 +394,12 @@ def fig_tendencias_plotly(
         xaxis_title=x_col,
         yaxis_title=y_col,
     )
+    # Consistent axis formatting
+    try:
+        apply_tickformat_2dec(fig)
+    except Exception:
+        pass
+    apply_tickformat_2dec(fig)
 
     # Tabla de métricas
     rows: list[dict] = []
@@ -675,7 +682,7 @@ def widget_tendencias(
                     y=yvals,
                     mode="markers",
                     name="Datos",
-                    hovertemplate="<b>%{customdata}</b><br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+                    hovertemplate="<b>%{customdata}</b><br>X=%{x:.2f}<br>Y=%{y:.2f}<extra></extra>",
                     customdata=names.reshape(-1, 1),
                     marker=dict(size=8, opacity=0.8),
                 )
@@ -703,7 +710,7 @@ def widget_tendencias(
                         y=yv,
                         mode="markers",
                         name=f"Datos: {lab}",
-                        hovertemplate="<b>%{customdata}</b><br>X=%{x:.3g}<br>Y=%{y:.3g}<extra></extra>",
+                        hovertemplate="<b>%{customdata}</b><br>X=%{x:.2f}<br>Y=%{y:.2f}<extra></extra>",
                         customdata=nm.reshape(-1, 1),
                         marker=dict(size=8, opacity=0.85),
                     )
@@ -751,6 +758,7 @@ def widget_tendencias(
             if ch_logx.value:
                 fig.update_xaxes(type="log")
 
+            apply_tickformat_2dec(fig)
             display(fig)
 
         # tabla de métricas
@@ -791,7 +799,10 @@ def widget_tendencias(
                         }
                     )
             if rows:
-                display(pd.DataFrame(rows))
+                try:
+                    display(style_df_2dec(pd.DataFrame(rows)))
+                except Exception:
+                    display(pd.DataFrame(rows))
 
     # redibujar automáticamente si cambia el control externo (opcional)
     if (x_obj_widget is not None) and bool(auto_from_widget):
@@ -885,7 +896,9 @@ def widget_tendencias_plotly(
     apply_tooltip(it_min, "min_n")
     apply_tooltip(btn, "auto")
 
-    top = w.HBox([dd_x, dd_y, dd_modo, ch_out, ft_iqr, it_min, btn])
+    # Controles en dos filas para evitar scroll horizontal
+    top1 = w.HBox([dd_x, dd_y, dd_modo])
+    top2 = w.HBox([ch_out, ft_iqr, it_min, btn])
     out_plot = w.Output()
     out_tbl = w.Output()
 
@@ -928,16 +941,26 @@ def widget_tendencias_plotly(
                 fig.add_vline(
                     x=vline_val, line=dict(color="gray", width=1, dash="dash")
                 )
+            apply_tickformat_2dec(fig)
+            try:
+                apply_tickformat_2dec(fig)
+            except Exception:
+                pass
             fig.show()
 
         with out_tbl:
             clear_output(wait=True)
             if isinstance(dfm, pd.DataFrame) and not dfm.empty:
-                display(dfm)
+                try:
+                    display(style_df_2dec(dfm))
+                except Exception:
+                    display(dfm)
 
     btn.on_click(lambda _: _render())
     acc = w.Accordion(
-        children=[w.VBox([top, w.HTML("<hr>"), out_plot, w.HTML("<hr>"), out_tbl])]
+        children=[
+            w.VBox([top1, top2, w.HTML("<hr>"), out_plot, w.HTML("<hr>"), out_tbl])
+        ]
     )
     acc.set_title(0, "Tendencias (X–Y)")
     acc.selected_index = None

@@ -5,6 +5,7 @@ import io, datetime as dt
 import numpy as np
 import pandas as pd
 from .guias import compute_param_stats, fmt
+from .mplutils import f2
 
 
 def narrativa_param(
@@ -64,7 +65,7 @@ def _df_to_markdown_simple(df: pd.DataFrame, max_rows: int | None = None) -> str
                 if isinstance(v, (int, np.integer)):
                     cells.append(str(int(v)))
                 elif isinstance(v, (float, np.floating)):
-                    cells.append(f"{float(v):.3g}")
+                    cells.append(f2(v))
                 else:
                     cells.append(_escape_md_cell(v))
             except Exception:

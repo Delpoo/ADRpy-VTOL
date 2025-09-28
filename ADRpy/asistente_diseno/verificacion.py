@@ -23,6 +23,7 @@ import pandas as pd
 from . import config
 from .tipos import VerificationCard
 from .datos import a_numerico_seguro
+from .mplutils import f2
 
 
 # =========================
@@ -585,12 +586,16 @@ def exportar_verificacion_fila_a_excel(
     n_rows = df.shape[0]
 
     def _fmt(x: Any) -> str:
+        """Formato unificado a dos decimales para comentarios/texto en Excel.
+        Devuelve 'NaN' si no es un número finito.
+        """
         try:
-            if x is None or (isinstance(x, float) and (np.isnan(x) or np.isinf(x))):
+            xf = float(x)
+            if not np.isfinite(xf):
                 return "NaN"
-            return f"{float(x):.6g}"
+            return f2(xf)
         except Exception:
-            return str(x)
+            return "NaN"
 
     # Helpers para obtener valores numéricos de manera segura
     def _to_float(x: Any) -> float:

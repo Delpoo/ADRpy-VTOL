@@ -12,9 +12,9 @@ Notas
 """
 
 from __future__ import annotations
-import os, sys, shutil, importlib, warnings
+import os, sys, shutil, importlib, warnings, threading
 from IPython.display import display, clear_output
-from typing import Optional
+from typing import Optional, Any
 from dataclasses import dataclass
 import ipywidgets as w  # widgets used throughout
 import numpy as np
@@ -63,6 +63,25 @@ from asistente_diseno.config import (
     SEGMENT_COL,
 )
 import asistente_diseno.config as _cfg
+
+# --- Forzar reload de módulos clave para evitar versiones "stale" al re-ejecutar desde notebook
+try:
+    import asistente_diseno.similitud as _sim
+    import asistente_diseno.sugerencias as _sug
+    import asistente_diseno.mplutils as _mpl
+
+    _sim = importlib.reload(_sim)
+    _sug = importlib.reload(_sug)
+    _mpl = importlib.reload(_mpl)
+    # Reasignar símbolos usados a las versiones recién recargadas
+    rank = _sim.rank
+    insertar_objetivo_en_ranking = _sim.insertar_objetivo_en_ranking
+    widget_filtrado_ranking = _sim.widget_filtrado_ranking
+    sugerencias_topk = _sug.sugerencias_topk
+    widget_sugerencias_panel = _sug.widget_sugerencias_panel
+except Exception:
+    # Si algo falla, seguimos con los ya importados arriba
+    pass
 
 PARAM_GROUPS = getattr(_cfg, "PARAM_GROUPS", {})
 
@@ -255,6 +274,7 @@ class ParamPanel(w.VBox):
                 ("Fijo (= valor)", "fijo"),
                 ("Máximo (<= valor)", "maximo"),
                 ("Mínimo (>= valor)", "minimo"),
+                ("Rango [min..max]", "rango"),
             ],
             value="__nochange__",
             description="Modo masivo:",
@@ -265,11 +285,24 @@ class ParamPanel(w.VBox):
             description="Peso masivo:",
             layout=w.Layout(width="220px"),
         )
+        # Valores de rango para edición masiva (opcionales)
+        self.ft_bulk_min = w.FloatText(
+            value=None, placeholder="min (masivo)", layout=w.Layout(width="160px")
+        )
+        self.ft_bulk_max = w.FloatText(
+            value=None, placeholder="max (masivo)", layout=w.Layout(width="160px")
+        )
         self.btn_aplicar_bulk = w.Button(
             description="Aplicar a visibles", button_style="info"
         )
         header3 = w.HBox(
-            [self.dd_bulk_mode, self.ft_bulk_weight, self.btn_aplicar_bulk]
+            [
+                self.dd_bulk_mode,
+                self.ft_bulk_weight,
+                self.ft_bulk_min,
+                self.ft_bulk_max,
+                self.btn_aplicar_bulk,
+            ]
         )
 
         # Construir filas para columnas numéricas útiles
@@ -556,6 +589,22 @@ class ParamPanel(w.VBox):
             for r in _visible_rows():
                 if mode_sel != "__nochange__":
                     r.dd_mode.value = mode_sel
+                    # si es rango: setear min/max desde inputs masivos (si hay) o usar stats
+                    if mode_sel == "rango":
+                        try:
+                            if self.ft_bulk_min.value not in (None, ""):
+                                r.ft_min.value = float(self.ft_bulk_min.value)
+                            else:
+                                # prefill desde stats si vacío
+                                if r.ft_min.value in (None, ""):
+                                    self._prefill_range_from_stats(r)
+                            if self.ft_bulk_max.value not in (None, ""):
+                                r.ft_max.value = float(self.ft_bulk_max.value)
+                            else:
+                                if r.ft_max.value in (None, ""):
+                                    self._prefill_range_from_stats(r)
+                        except Exception:
+                            pass
                 r.sl_weight.value = w_val
                 _update_row_view(r)
 
@@ -724,9 +773,20 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
     # --- Panel dinámico de parámetros (reemplaza a los 4 fijos)
     param_panel = ParamPanel(df)
 
-    # Panel derecho: detalle del parámetro + botón de informe + ayuda
+    # Panel derecho: detalle del parámetro + botones (informe/export/guardar) + ayuda
     out_info = w.Output(layout=w.Layout(border="1px solid #ddd", padding="6px"))
     btn_informe = w.Button(description="Generar informe", icon="file")
+    # Exportaciones/tablas + persistencia de sesión
+    btn_export = w.Button(description="Exportar Excel/CSV", icon="download")
+    btn_save = w.Button(description="Guardar sesión", icon="save")
+    dd_load = w.Dropdown(
+        options=["(cargar sesión…)"], value="(cargar sesión…)", description="Sesión:"
+    )
+    ch_autoload = w.Checkbox(
+        value=True,
+        description="Autocargar última",
+        tooltip="Carga automáticamente la última sesión guardada al abrir",
+    )
     # Ayuda global (toggle) + panel de ayuda (Output)
     btn_ayuda = w.ToggleButton(value=False, description="? Ayuda", icon="question")
     try:
@@ -831,8 +891,25 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
     btn_clear.style.button_color = "#f0ad4e"  # naranja
 
     panel_global_1 = w.HBox([sl_alpha, ch_nan, ft_pen_nan, sl_topk, ch_out, ft_iqrf])
+    panel_global_1.layout = w.Layout(
+        flex_flow="row wrap", align_items="center", width="100%"
+    )
     panel_global_2 = w.HBox(
         [dd_segcol, dd_segm_modo, dd_segm_val, sl_pref_fac, btn_run, btn_clear, ch_auto]
+    )
+    panel_global_2.layout = w.Layout(
+        flex_flow="row wrap", align_items="center", width="100%"
+    )
+    # Hacer la barra de controles "sticky" para mejorar visibilidad
+    sticky_bar = w.VBox([panel_global_1, panel_global_2])
+    sticky_bar.layout = w.Layout(
+        position="sticky",
+        top="0",
+        z_index="10",
+        border="1px solid #e0e0e0",
+        padding="6px 8px",
+        background_color="#fafafa",
+        width="100%",
     )
 
     # --- Salidas
@@ -1149,7 +1226,189 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         subset = _current_subset_df()
         param_panel.set_stats_from_df(subset)
 
-    # reporte narrativo
+    # Helpers: serializar/recuperar configuración de objetivo y globals
+    def _collect_config_dict() -> dict:
+        cfg = {
+            "globals": {
+                "alpha": float(sl_alpha.value),
+                "top_k": int(sl_topk.value),
+                "iqr_on": bool(ch_out.value),
+                "iqr_factor": float(ft_iqrf.value),
+                "penalizar_nan": bool(ch_nan.value),
+                "penalidad_nan": float(ft_pen_nan.value),
+                "segmentar_por": (
+                    None if dd_segcol.value == "(ninguno)" else dd_segcol.value
+                ),
+                "segmentar_modo": dd_segm_modo.value,
+                "segmentar_valor": (
+                    None
+                    if dd_segm_val.value in (None, "(ninguno)")
+                    else dd_segm_val.value
+                ),
+                "prefer_factor": float(sl_pref_fac.value),
+            },
+            "params": [],
+        }
+        for r in param_panel.rows:
+            cfg["params"].append(
+                {
+                    "col": r.col,
+                    "label": r.label,
+                    "active": bool(r.ch_active.value),
+                    "mode": str(r.dd_mode.value),
+                    "value": (
+                        None
+                        if r.ft_value.value in (None, "")
+                        else float(r.ft_value.value)
+                    ),
+                    "min": (
+                        None if r.ft_min.value in (None, "") else float(r.ft_min.value)
+                    ),
+                    "max": (
+                        None if r.ft_max.value in (None, "") else float(r.ft_max.value)
+                    ),
+                    "weight": float(r.sl_weight.value),
+                }
+            )
+        return cfg
+
+    def _apply_config_dict(cfg: dict) -> None:
+        try:
+            g = cfg.get("globals", {})
+            if g:
+                sl_alpha.value = float(g.get("alpha", sl_alpha.value))
+                sl_topk.value = int(g.get("top_k", sl_topk.value))
+                ch_out.value = bool(g.get("iqr_on", ch_out.value))
+                ft_iqrf.value = float(g.get("iqr_factor", ft_iqrf.value))
+                ch_nan.value = bool(g.get("penalizar_nan", ch_nan.value))
+                ft_pen_nan.value = float(g.get("penalidad_nan", ft_pen_nan.value))
+                segcol = g.get("segmentar_por", None)
+                dd_segcol.value = segcol if segcol in dd_segcol.options else "(ninguno)"
+                dd_segm_modo.value = str(g.get("segmentar_modo", dd_segm_modo.value))
+                val = g.get("segmentar_valor", None)
+                if val and (val in dd_segm_val.options):
+                    dd_segm_val.value = val
+                sl_pref_fac.value = float(g.get("prefer_factor", sl_pref_fac.value))
+        except Exception:
+            pass
+        # parámetros
+        plist = cfg.get("params", []) or []
+        row_by_col = {r.col: r for r in param_panel.rows}
+        for p in plist:
+            r = row_by_col.get(p.get("col"))
+            if not r:
+                continue
+            try:
+                r.ch_active.value = bool(p.get("active", r.ch_active.value))
+                md = str(p.get("mode", r.dd_mode.value))
+                if md in {"ignorar", "fijo", "maximo", "minimo", "rango"}:
+                    r.dd_mode.value = md
+                if p.get("value") not in (None, ""):
+                    r.ft_value.value = float(p.get("value"))
+                if p.get("min") not in (None, ""):
+                    r.ft_min.value = float(p.get("min"))
+                if p.get("max") not in (None, ""):
+                    r.ft_max.value = float(p.get("max"))
+                r.sl_weight.value = float(p.get("weight", r.sl_weight.value))
+            except Exception:
+                continue
+
+    # Persistencia de sesiones (JSON/Excel) en analisis/Results/perfiles/sesiones
+    perfiles_dir = os.path.join(
+        PROJECT_ROOT, "analisis", "Results", "perfiles", "sesiones"
+    )
+    os.makedirs(perfiles_dir, exist_ok=True)
+
+    def _refresh_profiles_dropdown():
+        try:
+            files = [f for f in os.listdir(perfiles_dir) if f.lower().endswith(".json")]
+            opts = ["(cargar sesión…)"] + sorted(files)
+            dd_load.options = opts
+            dd_load.value = "(cargar sesión…)"
+        except Exception:
+            dd_load.options = ["(cargar sesión…)"]
+            dd_load.value = "(cargar sesión…)"
+
+    _refresh_profiles_dropdown()
+
+    def on_save_profile(_):  # rename kept to minimize diff; acts as 'save session'
+        import json, datetime
+
+        cfg = _collect_config_dict()
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        fname = f"sesion_{stamp}.json"
+        fpath = os.path.join(perfiles_dir, fname)
+        try:
+            with open(fpath, "w", encoding="utf-8") as fh:
+                json.dump(cfg, fh, ensure_ascii=False, indent=2)
+            # Excel amigable (dos hojas: globals, params)
+            try:
+                import pandas as _pd
+
+                with pd.ExcelWriter(
+                    os.path.join(perfiles_dir, f"sesion_{stamp}.xlsx")
+                ) as xw:
+                    _pd.DataFrame([cfg.get("globals", {})]).to_excel(
+                        xw, sheet_name="globals", index=False
+                    )
+                    _pd.DataFrame(cfg.get("params", [])).to_excel(
+                        xw, sheet_name="params", index=False
+                    )
+            except Exception:
+                pass
+            _refresh_profiles_dropdown()
+            with out_info:
+                clear_output(wait=True)
+                display(w.HTML(f"<b>Sesión guardada:</b> {fpath}"))
+        except Exception as e:
+            with out_info:
+                clear_output(wait=True)
+                display(w.HTML(f"<b>Error al guardar sesión:</b> {e}"))
+
+    def on_load_profile(change):  # rename kept; acts as 'load session'
+        if change.get("new") in (None, "(cargar sesión…)"):
+            return
+        sel = str(change.get("new"))
+        fpath = os.path.join(perfiles_dir, sel)
+        try:
+            import json
+
+            with open(fpath, "r", encoding="utf-8") as fh:
+                cfg = json.load(fh)
+            _apply_config_dict(cfg)
+            with out_info:
+                clear_output(wait=True)
+                display(w.HTML(f"<b>Sesión cargada:</b> {sel}"))
+        except Exception as e:
+            with out_info:
+                clear_output(wait=True)
+                display(w.HTML(f"<b>Error al cargar sesión:</b> {e}"))
+
+    # Autocargar la última sesión si está habilitado
+    def _autoload_last_if_enabled():
+        if not ch_autoload.value:
+            return
+        try:
+            files = [f for f in os.listdir(perfiles_dir) if f.lower().endswith(".json")]
+            if not files:
+                return
+            paths = [os.path.join(perfiles_dir, f) for f in files]
+            last = max(paths, key=lambda p: os.path.getmtime(p))
+            import json
+
+            with open(last, "r", encoding="utf-8") as fh:
+                cfg = json.load(fh)
+            _apply_config_dict(cfg)
+            with out_info:
+                clear_output(wait=True)
+                display(w.HTML(f"<b>Sesión auto-cargada:</b> {os.path.basename(last)}"))
+        except Exception:
+            pass
+
+    btn_save.on_click(on_save_profile)
+    dd_load.observe(on_load_profile, names="value")
+
+    # reporte narrativo + exportaciones (Excel/CSV)
     def on_generar_informe(_):
         # construir mapas de objetivo/sugerido
         objetivo_map = {}
@@ -1190,10 +1449,88 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
             p_ht = os.path.join(results_dir, "informe_diseno.html")
             export_markdown(md, p_md)
             export_html(md, p_ht)
+            # Además exportar Excel con hojas: ranking, sugerencias, topk_<param>
+            try:
+                import pandas as _pd
+
+                sug_df = None
+                try:
+                    # Recalcular un resumen de sugerencias coherente al informe
+                    params_sug = [
+                        p.col
+                        for p in (param_panel.collect_params())
+                        if p.active and p.mode != "ignorar" and p.col in df.columns
+                    ]
+                    base_rank = (
+                        df_rank_for_report
+                        if isinstance(df_rank_for_report, pd.DataFrame)
+                        else None
+                    )
+                    if base_rank is not None:
+                        sug_pack = sugerencias_topk(
+                            df_ranked=base_rank,
+                            params=params_sug,
+                            top_k=int(sl_topk.value),
+                            remove_outliers=bool(ch_out.value),
+                            iqr_factor=float(ft_iqrf.value),
+                            use_distance_weights=True,
+                            use_confidence_weights=False,
+                            confidence_cols=None,
+                            beta_dist=1.0,
+                            beta_conf=1.0,
+                            name_objetivo="Objetivo (usuario)",
+                        )
+                    else:
+                        sug_pack = {}
+                    sug_df = sug_pack.get("summary")
+                except Exception:
+                    sug_df = None
+                p_xlsx = os.path.join(results_dir, "informe_diseno.xlsx")
+                with pd.ExcelWriter(p_xlsx) as xw:
+                    if isinstance(df_rank_for_report, pd.DataFrame):
+                        df_rank_for_report.to_excel(
+                            xw, sheet_name="ranking", index=False
+                        )
+                    if isinstance(sug_df, pd.DataFrame):
+                        sug_df.to_excel(xw, sheet_name="sugerencias", index=False)
+                    if sug_df is not None and isinstance(sug_pack, dict):
+                        dets = sug_pack.get("details", {}) or {}
+                        for par, pack in dets.items():
+                            usados = pack.get("usados")
+                            if isinstance(usados, pd.DataFrame) and not usados.empty:
+                                # Evitar columnas duplicadas de nombre si existieran
+                                dfu = usados.copy()
+                                cols = []
+                                seen = set()
+                                for c in dfu.columns:
+                                    cc = c if c not in seen else f"{c}_1"
+                                    seen.add(cc)
+                                    cols.append(cc)
+                                dfu.columns = cols
+                                safe_sheet = "topk_" + str(par)[:25].replace(
+                                    "/", "_"
+                                ).replace("\\", "_")
+                                dfu.to_excel(xw, sheet_name=safe_sheet, index=False)
+                # CSVs básicos como fallback
+                try:
+                    if isinstance(df_rank_for_report, pd.DataFrame):
+                        df_rank_for_report.to_csv(
+                            os.path.join(results_dir, "ranking.csv"), index=False
+                        )
+                    if isinstance(sug_df, pd.DataFrame):
+                        sug_df.to_csv(
+                            os.path.join(results_dir, "sugerencias.csv"), index=False
+                        )
+                except Exception:
+                    pass
+            except Exception:
+                pass
             with out_info:
                 clear_output(wait=True)
                 display(
-                    w.HTML(f"<b>Informe generado</b><br>MD: {p_md}<br>HTML: {p_ht}")
+                    w.HTML(
+                        f"<b>Informe generado</b><br>MD: {p_md}<br>HTML: {p_ht}<br>Excel: {os.path.join(results_dir, 'informe_diseno.xlsx')}"
+                    )
                 )
         except Exception as e:
             with out_info:
@@ -1201,6 +1538,9 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                 display(w.HTML(f"<b>Error al generar informe:</b> {e}"))
 
     btn_informe.on_click(on_generar_informe)
+    btn_export.on_click(on_generar_informe)  # exporta junto con informe
+    # ejecutar autoload al iniciar
+    _autoload_last_if_enabled()
 
     # Panel de ayuda: índice + acordeón con secciones
     def _render_help():
@@ -1238,6 +1578,8 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                 "suger_box": "Boxplot e IQR",
                 "suger_low_high": "LOW/HIGH (IQR)",
                 "suger_w_mediana": "Mediana ponderada",
+                "suger_n_efectivo": "n_efectivo (vecinos útiles)",
+                "suger_pesos": "Definición de pesos",
                 "suger_obj_line": "Línea de objetivo",
                 # Outliers
                 "out_iqr_explain": "Definición IQR",
@@ -1282,14 +1624,20 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                         "report_button",
                     ],
                 ),
-                ("Tendencias X–Y", ["t_x", "t_y", "t_logx", "t_obj_line", "min_n"]),
+                (
+                    "Tendencias X–Y",
+                    ["t_x", "t_y", "t_logx", "t_obj_line", "r2_adj", "min_n"],
+                ),
                 (
                     "Sugerencias (Top‑K)",
                     [
                         "suger_box",
                         "suger_low_high",
                         "suger_w_mediana",
+                        "suger_n_efectivo",
+                        "suger_pesos",
                         "suger_obj_line",
+                        "dispersion_indicator",
                     ],
                 ),
                 ("Outliers", ["out_iqr_explain"]),
@@ -1364,52 +1712,93 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
         dd_segm_val.value = "(seleccioná columna)"
         _render()
 
-    def _maybe_auto(change):
-        if ch_auto.value:
-            _render()
+    # Debounce para auto-recalcular
+    _debounce_timer: dict[str, Any] = {"t": None}
 
-    # Wiring de eventos
-    btn_run.on_click(lambda _: _render())
-    btn_clear.on_click(_clear)
-    dd_segcol.observe(_populate_segment_values, names="value")
-    dd_segm_val.observe(_update_param_stats_for_current_segment, names="value")
-    dd_segm_modo.observe(_update_param_stats_for_current_segment, names="value")
+    def _debounced_render(delay: float = 0.35):
+        try:
+            t: Optional[threading.Timer] = _debounce_timer.get("t")  # type: ignore[assignment]
+            if t is not None:
+                t.cancel()
+        except Exception:
+            pass
 
-    for r in getattr(param_panel, "rows", []):
-        for wdg in (r.ch_active, r.dd_mode, r.ft_value, r.sl_weight):
+        def _do():
             try:
-                wdg.observe(_maybe_auto, names="value")
+                _render()
             except Exception:
                 pass
-    for wdg in (
-        sl_alpha,
-        ch_nan,
-        ft_pen_nan,
-        sl_topk,
-        ch_out,
-        ft_iqrf,
-        dd_segm_modo,
-        dd_segm_val,
-        sl_pref_fac,
-    ):
-        wdg.observe(_maybe_auto, names="value")
+
+        try:
+            timer = threading.Timer(delay, _do)
+            _debounce_timer["t"] = timer
+            timer.daemon = True
+            timer.start()
+        except Exception:
+            _render()
+
+    def on_any_change(change):
+        if ch_auto.value:
+            _debounced_render(0.35)
+
+    def wire_observers():
+        # Botones de acción
+        btn_run.on_click(lambda _: _render())
+        btn_clear.on_click(_clear)
+        # Poblado/estadísticas de segmentación (estos no disparan render, sólo stats)
+        dd_segcol.observe(_populate_segment_values, names="value")
+        dd_segm_val.observe(_update_param_stats_for_current_segment, names="value")
+        dd_segm_modo.observe(_update_param_stats_for_current_segment, names="value")
+        # Observers unificados (globales)
+        for wdg in (
+            sl_alpha,
+            ch_nan,
+            ft_pen_nan,
+            sl_topk,
+            ch_out,
+            ft_iqrf,
+            dd_segm_modo,
+            dd_segm_val,
+            sl_pref_fac,
+        ):
+            try:
+                wdg.observe(on_any_change, names="value")
+            except Exception:
+                pass
+        # Observers unificados (panel dinámico de parámetros)
+        for r in getattr(param_panel, "rows", []):
+            for wdg in (
+                r.ch_active,
+                r.dd_mode,
+                r.ft_value,
+                r.ft_min,
+                r.ft_max,
+                r.sl_weight,
+            ):
+                try:
+                    wdg.observe(on_any_change, names="value")
+                except Exception:
+                    pass
 
     # Render inicial
     _populate_segment_values()
     # Inicializar stats (globales) para prefill de rangos
     param_panel.set_stats_from_df(df)
     header = w.HTML("<h4>Parámetros (dinámico)</h4>")
+    # Orden: sticky bar arriba (siempre visible), luego panel de parámetros
     left_panel = w.VBox(
         [
+            sticky_bar,
             header,
             param_panel,
-            panel_global_1,
-            panel_global_2,
-        ]
+        ],
+        layout=w.Layout(width="100%"),
     )
     right_panel = w.VBox(
         [
-            w.HBox([btn_informe, btn_ayuda]),
+            w.HBox(
+                [btn_informe, btn_export, btn_save, dd_load, ch_autoload, btn_ayuda]
+            ),
             w.HTML("<b>Detalle del parámetro</b>"),
             out_info,
             out_help,
@@ -1429,6 +1818,8 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
             out_outl,
         ]
     )
+    # Conectar observers centralizados y render inicial
+    wire_observers()
     _render()
     return container
 

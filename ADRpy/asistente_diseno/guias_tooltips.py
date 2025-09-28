@@ -34,6 +34,14 @@ HELP: dict[str, str] = {
     "t_y": "Variable Y (dependiente) para la nube y la curva tendencia.",
     "t_logx": "Escala logarítmica en el eje X (útil si X tiene varias órdenes de magnitud).",
     "t_obj_line": "Línea vertical con el valor objetivo de X (si está definido).",
+    "r2_adj": (
+        "R² ajustado: penaliza la complejidad del modelo (n vs parámetros). "
+        "Se calcula como 1 - (1-R²)*(n-1)/(n-p-1); más alto es mejor."
+    ),
+    "dispersion_indicator": (
+        "Indicador de dispersión: diagnóstico rápido de variabilidad relativa en la nube/vecinos. "
+        "Útil para interpretar la confiabilidad de tendencias o sugerencias."
+    ),
     # Sugerencias Top-K (histograma & box)
     "suger_box": (
         "Box overlay: rango intercuartil (Q1–Q3). Bigotes: hasta 1.5×IQR. Puntos fuera: atípicos."
@@ -41,11 +49,39 @@ HELP: dict[str, str] = {
     "suger_obj_line": "Línea vertical del valor objetivo actual del parámetro.",
     "suger_low_high": "LOW/HIGH (IQR): límites internos del box (Q1 y Q3). La mediana se indica como línea central.",
     "suger_w_mediana": "w_mediana: mediana ponderada por similitud (Top‑K más parecidos pesan más).",
+    "suger_n_efectivo": (
+        "n_efectivo: suma de pesos normalizados (0..1) de los vecinos usados; "
+        "se interpreta como 'cantidad equivalente' de vecinos útiles."
+    ),
+    "suger_pesos": (
+        "Pesos: w_dist proviene de un kernel acotado en [0,1] (p.ej., 1/(1+d) o exp(-γ·d)); "
+        "w_conf en [0,1]; w_total=(w_dist^βdist)*(w_conf^βconf)."
+    ),
     # Outliers
     "out_iqr_explain": "IQR=Q3−Q1; se marcan atípicos fuera de [Q1−k·IQR, Q3+k·IQR].",
     # Panel de detalle e informe
     "panel_info": "Panel de detalle del parámetro: muestra distribución, outliers y valores objetivo/sugeridos con acciones de navegación.",
     "narrativa": "Informe narrativo: resumen en Markdown/HTML con tablas y explicaciones listo para compartir.",
+    # Glosario por tablas (encabezados y columnas)
+    "col_dv": (
+        "dv_*: aporte de la columna a la distancia total (ya normalizado por escala robusta e incluido el peso)."
+    ),
+    "col_viol": (
+        "viol_*: indicador de violación de la restricción (True si está fuera de la regla definida para el parámetro)."
+    ),
+    "ranking_cols": (
+        "Ranking: distancia/similitud (y sus medias) resumen la concordancia global con el objetivo; 'alerta' marca objetivos fuera de LOW/HIGH(IQR)."
+    ),
+    "neighbors_gloss": (
+        "Top‑K vecinos: w_total combina w_dist (kernel de distancia 0..1) y w_conf (0..1). Se ordenan por w_total; 'valor' es el del parámetro."
+    ),
+    # Tendencias: guías orientativas
+    "r2_adj_ranges": (
+        "R²_ajustado (orientativo): ≥0.8 alto, 0.5–0.8 medio, <0.5 bajo. Interpretar junto con n y dispersión."
+    ),
+    "mape_guide": (
+        "MAPE (orientativo): <10% bueno, 10–20% aceptable, >20% alto (posible ruido o no linealidad)."
+    ),
 }
 
 

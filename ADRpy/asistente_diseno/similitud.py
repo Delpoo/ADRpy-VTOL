@@ -47,7 +47,7 @@ import numpy as np
 import pandas as pd
 
 # Fix matplotlib backend issues before pandas styling operations
-from asistente_diseno.mplutils import fix_matplotlib_backend
+from asistente_diseno.mplutils import fix_matplotlib_backend, style_df_2dec
 
 fix_matplotlib_backend()
 
@@ -278,6 +278,32 @@ def _distancia_col(
 # =============================================================================
 
 
+def vista_ranking(df_rank: pd.DataFrame) -> "pd.io.formats.style.Styler":
+    """Styler del ranking con formato homogéneo a 2 decimales en todas las columnas numéricas.
+
+    - No altera los valores del DataFrame, solo la presentación.
+    - Aplica gradientes suaves para 'distancia' (Reds_r) y 'similitud' (Greens) si existen.
+    """
+    dfv = df_rank.copy()
+
+    # Asegurar matplotlib para Styler (colormaps/norm) y backend válido
+    try:
+        from asistente_diseno.mplutils import ensure_matplotlib_for_styler
+
+        ensure_matplotlib_for_styler()
+    except Exception:
+        pass
+
+    sty = style_df_2dec(dfv)
+    cols_rojas = [c for c in ["distancia", "distancia_media"] if c in dfv.columns]
+    cols_verdes = [c for c in ["similitud", "similitud_media"] if c in dfv.columns]
+    if cols_rojas:
+        sty = sty.background_gradient(subset=cols_rojas, cmap="Reds_r")
+    if cols_verdes:
+        sty = sty.background_gradient(subset=cols_verdes, cmap="Greens")
+    return sty
+
+
 def vista_topn_en_notebook(
     df_ranked: pd.DataFrame,
     *,
@@ -303,7 +329,7 @@ def vista_topn_en_notebook(
 
     def _format_sim(v):
         try:
-            return f"{v:.3f}"
+            return f"{v:.2f}"
         except Exception:
             return v
 
@@ -324,11 +350,14 @@ def vista_topn_en_notebook(
     except Exception:
         pass
 
-    sty = (
-        dfv.style.format({"distancia": "{:.3f}", "similitud": _format_sim})
-        .background_gradient(subset=["similitud"], cmap="Greens")
-        .background_gradient(subset=["distancia"], cmap="Reds_r")
-    )
+    sty = style_df_2dec(dfv)
+    # Forzar 2 decimales en similitud y distancia
+    try:
+        sty = sty.format({"similitud": _format_sim, "distancia": "{:.2f}"})
+    except Exception:
+        pass
+    sty = sty.background_gradient(subset=["similitud"], cmap="Greens")
+    sty = sty.background_gradient(subset=["distancia"], cmap="Reds_r")
     return sty
 
 
@@ -653,13 +682,23 @@ def vista_topn_detallada(
 
     # Estilos
     fmt_cols = {
-        "distancia": "{:.3f}",
-        "distancia_media": "{:.3f}",
-        "similitud": "{:.3f}",
-        "similitud_media": "{:.3f}",
+        "distancia": "{:.2f}",
+        "distancia_media": "{:.2f}",
+        "similitud": "{:.2f}",
+        "similitud_media": "{:.2f}",
     }
     for c in activos:
-        fmt_cols[f"Δ_{c}"] = "{:.3f}"
+        fmt_cols[f"Δ_{c}"] = "{:.2f}"
+        # también formatear la columna de valor original a 2 decimales, incluso si es dtype 'object'
+        if c in dfv.columns:
+            # usar callable para tolerar strings/no numéricos
+            try:
+                from asistente_diseno.mplutils import f2 as _f2
+
+                dfv[c]  # touch
+                # aplicaremos el callable más abajo vía sty.format
+            except Exception:
+                pass
 
     # Asegurar matplotlib para Styler (colormaps/norm)
     try:
@@ -669,11 +708,32 @@ def vista_topn_detallada(
     except Exception:
         pass
 
-    # Aplicar formato columna por columna para mayor compatibilidad de tipos
-    sty = dfv.style
+    # Aplicar formato a .2f + columnas especiales
+    sty = style_df_2dec(dfv)
+    # aplicar formatos fijos y callables
     for col, fmt in fmt_cols.items():
         if col in dfv.columns:
             sty = sty.format({col: fmt})
+    # para columnas de valor de parámetros (posibles 'object'), aplicar f2 callable
+    try:
+        from asistente_diseno.mplutils import f2 as _f2
+
+        for c in activos:
+            if c in dfv.columns:
+                sty = sty.format({c: (lambda v, _c=c: _f2(v))})
+    except Exception:
+        pass
+
+    # Tooltip sobre 'alerta' para explicar causas (usa el mismo texto de la celda)
+    if "alerta" in dfv.columns:
+        try:
+            import pandas as _pd  # safe local import name
+
+            tt = _pd.DataFrame("", index=dfv.index, columns=dfv.columns)
+            tt["alerta"] = dfv["alerta"].fillna("")
+            sty = sty.set_tooltips(tt)
+        except Exception:
+            pass
 
     # Colorear por aporte |dv_col| si existe
     for c in activos:
@@ -704,7 +764,26 @@ def vista_topn_detallada(
     ]:
         if col in dfv.columns:
             sty = sty.background_gradient(subset=[col], cmap=cmap)
+    # Re-aplicar formato de 2 decimales al final (algunos estilos pueden sobrescribir cache interno)
+    try:
+        from asistente_diseno.mplutils import f2 as _f2
 
+        fmt_cols_final = {}
+        for c in activos:
+            if f"Δ_{c}" in dfv.columns:
+                fmt_cols_final[f"Δ_{c}"] = "{:.2f}"
+        for col, fmt in fmt_cols_final.items():
+            if col in dfv.columns:
+                sty = sty.format({col: fmt})
+        # Aplicar f2 a columnas clave y a valores originales por parámetro
+        for col in ["distancia", "distancia_media", "similitud", "similitud_media"]:
+            if col in dfv.columns:
+                sty = sty.format({col: (lambda v, _c=col: _f2(v))})
+        for c in activos:
+            if c in dfv.columns:
+                sty = sty.format({c: (lambda v, _c=c: _f2(v))})
+    except Exception:
+        pass
     return sty
 
 
@@ -803,15 +882,15 @@ def widget_filtrado_ranking(
         description="Limpiar", button_style="warning", layout=w.Layout(width="15%")
     )
     out = w.Output(layout=w.Layout(width="100%"))
-    # Contenedor con scroll para tablas grandes
+    # Contenedor base (dejamos el scroll al HTML interno para sticky header estable)
     out_container = w.Box(
         [out],
         layout=w.Layout(
             width="100%",
             max_height=f"{int(max_height_px)}px",
-            overflow_y="auto",
-            overflow_x="auto",
-            border="1px solid #ddd",
+            overflow_y="visible",
+            overflow_x="visible",
+            border="0",
         ),
     )
 
@@ -853,7 +932,103 @@ def widget_filtrado_ranking(
             clear_output(wait=True)
             dfv = _filtrar()
             sty = vista_topn_detallada(dfv, restricciones, top_n=len(dfv))
-            display(sty)
+            # Salvaguarda: reforzar .2f en TODAS las numéricas justo antes del render
+            try:
+                num_cols = [
+                    c for c in dfv.columns if pd.api.types.is_numeric_dtype(dfv[c])
+                ]
+                if num_cols:
+                    sty = sty.format("{:.2f}", subset=num_cols)
+            except Exception:
+                pass
+            # Render como HTML en iframe con cabecera sticky, primera columna fija, ordenamiento, y headers con clamp/hover
+            try:
+                sty = sty.set_table_attributes('class="ranktbl"')
+                html_tbl = sty.to_html()
+                inner = (
+                    "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    "<style>\n"
+                    "html,body{margin:0;padding:8px;overflow:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;font-size:12px;color:#111;}\n"
+                    ".ranktbl{table-layout:auto;width:max-content !important;min-width:100%;max-width:100%;border-collapse:separate;border-spacing:0;border:1px solid #ddd;}\n"
+                    ".ranktbl th, .ranktbl td{min-width:12ch;}\n"
+                    ".ranktbl td{white-space:nowrap;padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
+                    ".ranktbl th{padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
+                    ".ranktbl thead th{position:sticky;top:0;background:#fff;z-index:3;box-shadow:0 1px 0 rgba(0,0,0,0.08);font-weight:600;}\n"
+                    ".ranktbl tbody tr:nth-child(odd) td{background:#fafafa;}\n"
+                    ".ranktbl tbody tr:hover td{background:#f0f7ff;}\n"
+                    ".ranktbl th:first-child, .ranktbl td:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:1px 0 0 rgba(0,0,0,0.08);}\n"
+                    ".ranktbl td:nth-child(n+2){text-align:right;}\n"
+                    ".ranktbl .hdr{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word;}\n"
+                    ".ranktbl thead th:hover .hdr{-webkit-line-clamp:unset;max-height:none;}\n"
+                    "</style></head><body>"
+                    "<div id='tbl-wrap'>"
+                    f"{html_tbl}"
+                    "</div>"
+                    "<script>\n"
+                    "(function(){\n"
+                    " var tbl=document.querySelector('.ranktbl'); if(!tbl) return;\n"
+                    " // Envolver headers para clamp/tooltip\n"
+                    " tbl.querySelectorAll('thead th').forEach(function(th){\n"
+                    "   var txt=(th.textContent||'').trim(); th.setAttribute('title', txt);\n"
+                    "   var span=document.createElement('span'); span.className='hdr'; span.textContent=txt;\n"
+                    "   while(th.firstChild){ th.removeChild(th.firstChild);} th.appendChild(span);\n"
+                    " });\n"
+                    " // Tooltips específicos\n"
+                    " tbl.querySelectorAll('thead th').forEach(function(th){\n"
+                    "   var t=(th.textContent||'').trim();\n"
+                    "   if(t.indexOf('dv_')===0) th.title='Aporte a la distancia total para ese parámetro (normalizado y ponderado).';\n"
+                    "   else if(t.indexOf('viol_')===0) th.title='True si la fila viola la restricción definida para el parámetro.';\n"
+                    "   if(t.indexOf('Δ_')===0) th.title='Desvío respecto al objetivo (con signo).';\n"
+                    "   else if(t.indexOf('⚠_')===0) th.title='Violación de la restricción para el parámetro.';\n"
+                    "   else if(t==='distancia') th.title='Distancia total agregada (menor es mejor).';\n"
+                    "   else if(t==='similitud') th.title='Similitud = exp(-α·distancia) en [0,1] (mayor es mejor).';\n"
+                    "   else if(t==='alerta') th.title='Objetivo fuera de LOW/HIGH(IQR) por parámetro.';\n"
+                    " });\n"
+                    " // Ordenamiento simple + formateo a 2 decimales\n"
+                    " function parseVal(s){ var x=parseFloat(String(s).replace(',','.')); return isNaN(x)? null : x; }\n"
+                    " function fmt2(x){ return (Math.round(x*100)/100).toFixed(2); }\n"
+                    " function formatNumericCells(tbl){\n"
+                    "   var rows=tbl.tBodies[0]? Array.prototype.slice.call(tbl.tBodies[0].rows):[];\n"
+                    "   rows.forEach(function(r){ for(var i=1;i<r.cells.length;i++){ var t=(r.cells[i].innerText||'').trim(); var v=parseVal(t); if(v!==null){ r.cells[i].innerText = fmt2(v); r.cells[i].style.textAlign='right'; } } });\n"
+                    " }\n"
+                    " function sortTable(tbl,col,asc){\n"
+                    "   var tb=tbl.tBodies[0]; if(!tb) return;\n"
+                    "   var rows=Array.prototype.slice.call(tb.querySelectorAll('tr'));\n"
+                    "   rows.sort(function(a,b){\n"
+                    "     var ta=(a.cells[col]&&a.cells[col].innerText||'').trim();\n"
+                    "     var tbv=(b.cells[col]&&b.cells[col].innerText||'').trim();\n"
+                    "     var na=parseVal(ta), nb=parseVal(tbv);\n"
+                    "     var cmp=0;\n"
+                    "     if(na!==null && nb!==null){ cmp = na-nb; } else { cmp = ta.localeCompare(tbv); }\n"
+                    "     return asc? cmp : -cmp;\n"
+                    "   });\n"
+                    "   rows.forEach(function(r){ tb.appendChild(r); });\n"
+                    "   formatNumericCells(tbl);\n"
+                    " }\n"
+                    " tbl.querySelectorAll('thead th').forEach(function(th,idx){\n"
+                    "   th.style.cursor='pointer';\n"
+                    "   th.addEventListener('click', function(){\n"
+                    "     var asc = th.getAttribute('data-asc') !== 'true';\n"
+                    "     sortTable(tbl, idx, asc);\n"
+                    "     tbl.querySelectorAll('thead th').forEach(function(t){ t.removeAttribute('data-asc'); });\n"
+                    "     th.setAttribute('data-asc', asc?'true':'false');\n"
+                    "   });\n"
+                    " });\n"
+                    " // Aplicar formateo inicial a 2 decimales\n"
+                    " formatNumericCells(tbl);\n"
+                    "})();\n"
+                    "</script>"
+                    "</body></html>"
+                )
+                escaped = inner.replace("'", "&#39;")
+                iframe = (
+                    f'<iframe style="width:100%;height:{int(max_height_px)}px;border:1px solid #eee;border-radius:4px;" '
+                    f"srcdoc='{escaped}' loading=\"lazy\"></iframe>"
+                )
+                display(w.HTML(value=iframe))
+            except Exception:
+                # Fallback simple
+                display(sty)
 
     def _clear(_):
         dd_seg.value = "Todos"

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
+from asistente_diseno.mplutils import f2
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.comments import Comment
 from openpyxl.styles import Font
 from openpyxl.cell.cell import MergedCell
+
 
 def create_large_comment(text, author="System"):
     """Create a comment with enlarged size for better visibility"""
@@ -14,8 +16,11 @@ def create_large_comment(text, author="System"):
     comment.height = 1000  # Default is around 50, making it 12x
     return comment
 
+
 # Helper function to check if a value is considered missing
 MISSING_VALUES = ["", "nan", "nan ", "-", "#n/d", "n/d", "#¡valor!"]
+
+
 def is_missing(val):
     if val is None:
         return True
@@ -23,16 +28,19 @@ def is_missing(val):
         return pd.isna(val)
     return str(val).strip().lower() in MISSING_VALUES
 
+
 # Helper function to format cell comments with bold titles and italic values
 # Each field is shown on a new line, numeric values with 3 significant digits, section titles in bold
 # openpyxl comments do not support rich text, so we use Markdown-like formatting for clarity
 
+
 def format_comment(dictionary, title=None, indent=0, max_indent=2):
     import numbers
+
     if not dictionary:
-        return ''
+        return ""
     lines = []
-    prefix = '    ' * indent
+    prefix = "    " * indent
     # Separador visual para la sección
     if title and indent == 0:
         lines.append(f"=== {title.upper()} ===")
@@ -42,7 +50,9 @@ def format_comment(dictionary, title=None, indent=0, max_indent=2):
         # Si es un subdiccionario y no estamos en la última anidación
         if isinstance(v, dict) and indent < max_indent:
             lines.append(f"{prefix}{k}:")
-            sub_comment = format_comment(v, None, indent=indent+1, max_indent=max_indent)
+            sub_comment = format_comment(
+                v, None, indent=indent + 1, max_indent=max_indent
+            )
             if sub_comment:
                 lines.append(sub_comment)
         # Si es un subdiccionario en la última anidación, mostrar como lista en una sola línea
@@ -50,19 +60,13 @@ def format_comment(dictionary, title=None, indent=0, max_indent=2):
             sub_items = []
             for subk, subv in v.items():
                 if isinstance(subv, float):
-                    value = f"{subv:.3g}"
-                    if 'e' in value or 'E' in value:
-                        value = f"{float(subv):.3f}"
+                    value = f2(subv)
                 elif isinstance(subv, numbers.Number):
-                    value = f"{float(subv):.3g}"
-                    if 'e' in value or 'E' in value:
-                        value = f"{float(subv):.3f}"
-                elif hasattr(subv, 'item') and callable(getattr(subv, 'item', None)):
+                    value = f2(subv)
+                elif hasattr(subv, "item") and callable(getattr(subv, "item", None)):
                     try:
                         val = subv.item()
-                        value = f"{float(val):.3g}"
-                        if 'e' in value or 'E' in value:
-                            value = f"{float(val):.3f}"
+                        value = f2(val)
                     except Exception:
                         value = str(subv)
                 else:
@@ -74,7 +78,9 @@ def format_comment(dictionary, title=None, indent=0, max_indent=2):
             lines.append(f"{prefix}{k}:")
             for i, subdict in enumerate(v):
                 lines.append(f"{prefix}  - Item {i+1}:")
-                sub_comment = format_comment(subdict, None, indent=indent+2, max_indent=max_indent)
+                sub_comment = format_comment(
+                    subdict, None, indent=indent + 2, max_indent=max_indent
+                )
                 if sub_comment:
                     lines.append(sub_comment)
         # Si es una lista de valores simples, imprimir todos en una sola línea
@@ -82,19 +88,13 @@ def format_comment(dictionary, title=None, indent=0, max_indent=2):
             value_list = []
             for item in v:
                 if isinstance(item, float):
-                    value = f"{item:.3g}"
-                    if 'e' in value or 'E' in value:
-                        value = f"{float(item):.3f}"
+                    value = f2(item)
                 elif isinstance(item, numbers.Number):
-                    value = f"{float(item):.3g}"
-                    if 'e' in value or 'E' in value:
-                        value = f"{float(item):.3f}"
-                elif hasattr(item, 'item') and callable(getattr(item, 'item', None)):
+                    value = f2(item)
+                elif hasattr(item, "item") and callable(getattr(item, "item", None)):
                     try:
                         val = item.item()
-                        value = f"{float(val):.3g}"
-                        if 'e' in value or 'E' in value:
-                            value = f"{float(val):.3f}"
+                        value = f2(val)
                     except Exception:
                         value = str(item)
                 else:
@@ -103,21 +103,19 @@ def format_comment(dictionary, title=None, indent=0, max_indent=2):
             lines.append(f"{prefix}{k}: [{', '.join(value_list)}]")
         # Si es un valor numérico, formatear a 3 cifras significativas y evitar notación científica
         elif isinstance(v, float):
-            value = f"{v:.3g}"
-            if 'e' in value or 'E' in value:
-                value = f"{float(v):.3f}"
+            value = f2(v)
             lines.append(f"{prefix}{k}:   {value}")
         elif isinstance(v, numbers.Number):
-            value = f"{float(v):.3g}"
-            if 'e' in value or 'E' in value:
-                value = f"{float(v):.3f}"
+            value = f2(v)
             lines.append(f"{prefix}{k}:   {value}")
-        elif hasattr(v, 'item') and callable(getattr(v, 'item', None)):
+        elif (
+            (not isinstance(v, dict))
+            and hasattr(v, "item")
+            and callable(getattr(v, "item", None))
+        ):
             try:
                 val = v.item()
-                value = f"{float(val):.3g}"
-                if 'e' in value or 'E' in value:
-                    value = f"{float(val):.3f}"
+                value = f2(val)
             except Exception:
                 value = str(v)
             lines.append(f"{prefix}{k}:   {value}")
@@ -125,10 +123,16 @@ def format_comment(dictionary, title=None, indent=0, max_indent=2):
             lines.append(f"{prefix}{k}:   {str(v)}")
     if indent == 0:
         lines.append("")
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
-def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel, output_file=r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx", origen_por_celda=None):
+def exportar_excel_con_imputaciones(
+    source_file,
+    df_processed,
+    details_for_excel,
+    output_file=r"C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx",
+    origen_por_celda=None,
+):
     """
     Exports the processed DataFrame to an Excel file, preserving the original format.
     Adds colors and comments to cells imputed by similarity, correlation, or both, including full details for each method used.
@@ -139,6 +143,7 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
     :param details_for_excel: List of dicts with details for each imputation (final, similarity, correlation).
     """
     import os
+
     try:
 
         # --- Buscar nombre de archivo disponible para no sobrescribir ---
@@ -148,13 +153,15 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
         while os.path.exists(candidate):
             if base.endswith(")"):
                 # Si ya tiene (n), reemplazarlo
-                base_no_num = base[:base.rfind("(")].rstrip()
+                base_no_num = base[: base.rfind("(")].rstrip()
                 candidate = f"{base_no_num}({i}){ext}"
             else:
                 candidate = f"{base} ({i}){ext}"
             i += 1
         if candidate != output_file:
-            print(f"ℹ️ El archivo '{output_file}' ya existe. Guardando como '{candidate}' para evitar sobrescribir.")
+            print(
+                f"ℹ️ El archivo '{output_file}' ya existe. Guardando como '{candidate}' para evitar sobrescribir."
+            )
         output_file = candidate
 
         print(f"📤 === Exporting data to file: {output_file} ===")
@@ -171,22 +178,39 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
 
         # Freeze panes at B2 (keep top row and first column visible)
         try:
-            ws.freeze_panes = ws['B2']
+            ws.freeze_panes = ws["B2"]
         except Exception:
             pass
 
         # Define fill colors for each imputation method
-        color_similarity = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")  # Yellow
-        color_correlation = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")  # Green
-        color_weighted = PatternFill(start_color="00B0F0", end_color="00B0F0", fill_type="solid")    # Blue
-        color_orange = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")      # Orange
+        color_similarity = PatternFill(
+            start_color="FFFF00", end_color="FFFF00", fill_type="solid"
+        )  # Yellow
+        color_correlation = PatternFill(
+            start_color="00FF00", end_color="00FF00", fill_type="solid"
+        )  # Green
+        color_weighted = PatternFill(
+            start_color="00B0F0", end_color="00B0F0", fill_type="solid"
+        )  # Blue
+        color_orange = PatternFill(
+            start_color="FFA500", end_color="FFA500", fill_type="solid"
+        )  # Orange
 
         # Build a quick-access dictionary by cell (can be empty)
-        details_dict = {(d["Parámetro"], d["Aeronave"]): d for d in details_for_excel} if details_for_excel else {}
+        details_dict = (
+            {(d["Parámetro"], d["Aeronave"]): d for d in details_for_excel}
+            if details_for_excel
+            else {}
+        )
 
         for row in ws.iter_rows(min_row=2, min_col=2):
             for cell in row:
-                if ws is None or cell is None or cell.column is None or cell.row is None:
+                if (
+                    ws is None
+                    or cell is None
+                    or cell.column is None
+                    or cell.row is None
+                ):
                     continue
                 # Skip non-top-left cells of merged ranges
                 if isinstance(cell, MergedCell):
@@ -205,13 +229,24 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
                         imputed_value = df_processed.at[aircraft, parameter]
                     except Exception:
                         imputed_value = None
-                    if imputed_value is not None and not (isinstance(imputed_value, float) and pd.isna(imputed_value)):
+                    if imputed_value is not None and not (
+                        isinstance(imputed_value, float) and pd.isna(imputed_value)
+                    ):
                         cell.value = imputed_value
                         wrote_something = True
                     # Validity check for imputed value
-                    valid_sim = detail["similitud"] and not is_missing(detail["similitud"].get("Valor imputado", None))
-                    valid_corr = detail["correlacion"] and not is_missing(detail["correlacion"].get("Valor imputado", None))
-                    valid_weighted = detail["final"] and not is_missing(detail["final"].get("Valor imputado", None)) and valid_sim and valid_corr
+                    valid_sim = detail["similitud"] and not is_missing(
+                        detail["similitud"].get("Valor imputado", None)
+                    )
+                    valid_corr = detail["correlacion"] and not is_missing(
+                        detail["correlacion"].get("Valor imputado", None)
+                    )
+                    valid_weighted = (
+                        detail["final"]
+                        and not is_missing(detail["final"].get("Valor imputado", None))
+                        and valid_sim
+                        and valid_corr
+                    )
                     # Color logic
                     if valid_weighted:
                         cell.fill = color_weighted
@@ -223,22 +258,26 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
                         # Evaluated but no valid value
                         cell.fill = color_orange
                     # Build clean, ordered comment
-                    comment = ''
+                    comment = ""
                     if detail["final"]:
                         comment += format_comment(detail["final"], "IMPUTED VALUE")
                     if detail["similitud"]:
-                        sim_comment = format_comment(detail["similitud"], "SIMILARITY DETAILS")
+                        sim_comment = format_comment(
+                            detail["similitud"], "SIMILARITY DETAILS"
+                        )
                         if sim_comment:
                             comment += "\n" + sim_comment
                     if detail["correlacion"]:
-                        corr_comment = format_comment(detail["correlacion"], "CORRELATION DETAILS")
+                        corr_comment = format_comment(
+                            detail["correlacion"], "CORRELATION DETAILS"
+                        )
                         if corr_comment:
                             comment += "\n" + corr_comment
                     if comment:
                         # Append to existing comment instead of replacing
                         try:
                             if cell.comment and cell.comment.text:
-                                new_text = (cell.comment.text or '') + "\n" + comment
+                                new_text = (cell.comment.text or "") + "\n" + comment
                                 author = cell.comment.author or "System"
                                 cell.comment = create_large_comment(new_text, author)
                             else:
@@ -251,7 +290,9 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
                         value_df = df_processed.at[aircraft, parameter]
                     except Exception:
                         value_df = None
-                    if value_df is not None and not (isinstance(value_df, float) and pd.isna(value_df)):
+                    if value_df is not None and not (
+                        isinstance(value_df, float) and pd.isna(value_df)
+                    ):
                         cell.value = value_df
                         wrote_something = True
 
@@ -261,7 +302,9 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
                         meta = origen_por_celda.get((aircraft, parameter), {})
                         est = str(meta.get("Estado") or "").upper()
                         fuente = str(meta.get("Fuente") or "").lower()
-                        is_calc = ("CALCUL" in est) or any(k in fuente for k in ("deriv", "cálcul", "calcu"))
+                        is_calc = ("CALCUL" in est) or any(
+                            k in fuente for k in ("deriv", "cálcul", "calcu")
+                        )
                         if is_calc:
                             current_font = cell.font or Font()
                             cell.font = Font(
@@ -279,14 +322,22 @@ def exportar_excel_con_imputaciones(source_file, df_processed, details_for_excel
                                 "formula": meta.get("formula"),
                                 "inputs": meta.get("inputs"),
                             }
-                            calc_comment = format_comment(calc_payload, "CÁLCULO APLICADO")
+                            calc_comment = format_comment(
+                                calc_payload, "CÁLCULO APLICADO"
+                            )
                             if calc_comment:
                                 if cell.comment and cell.comment.text:
-                                    new_text = (cell.comment.text or '') + "\n" + calc_comment
+                                    new_text = (
+                                        (cell.comment.text or "") + "\n" + calc_comment
+                                    )
                                     author = cell.comment.author or "System"
-                                    cell.comment = create_large_comment(new_text, author)
+                                    cell.comment = create_large_comment(
+                                        new_text, author
+                                    )
                                 else:
-                                    cell.comment = create_large_comment(calc_comment, "System")
+                                    cell.comment = create_large_comment(
+                                        calc_comment, "System"
+                                    )
                 except Exception:
                     pass
 

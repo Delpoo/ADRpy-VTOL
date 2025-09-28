@@ -11,7 +11,15 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Tuple
+from typing import Tuple, Iterable, Any
+
+import pandas as pd
+
+# Plotly import is optional; code guards on availability
+try:
+    import plotly.graph_objects as _go  # type: ignore
+except Exception:  # pragma: no cover - optional
+    _go = None
 
 
 def fix_matplotlib_backend() -> None:
@@ -85,3 +93,68 @@ def ensure_matplotlib_for_styler() -> None:
     except Exception:
         # Si matplotlib no está, simplemente no hacemos nada; Styler puede funcionar sin gradientes
         return
+
+
+# ================================
+# Formatting helpers (.2f)
+# ================================
+
+
+def f2(x: Any, sep_miles: bool = False) -> str:
+    """Devuelve el número con 2 decimales fijos. Si sep_miles=True, usa separador de miles.
+
+    - Evita notación científica.
+    - Si no es convertible a float, retorna "-".
+    """
+    try:
+        v = float(x)
+    except Exception:
+        return "-"
+    return f"{v:,.2f}" if sep_miles else f"{v:.2f}"
+
+
+def style_df_2dec(
+    df: pd.DataFrame, cols: Iterable[str] | None = None
+) -> "pd.io.formats.style.Styler":
+    """Return a Styler applying fixed 2-decimal formatting via f2() to numeric columns.
+
+    - Uses f2(v, sep_miles=False) for all numeric columns (or the provided subset).
+    - Sets na_rep to '—'.
+    """
+    sty = df.style
+    try:
+        # Detect numeric columns to target
+        if cols is None:
+            target_cols = [
+                c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])
+            ]
+        else:
+            target_cols = [c for c in cols if c in df.columns]
+
+        if target_cols:
+            try:
+                # Preferred: simple format string with subset
+                sty = sty.format("{:.2f}", subset=target_cols)
+            except Exception:
+                # Fallback: callable formatter
+                sty = sty.format(lambda v: f2(v, False), subset=target_cols)
+        # Set NA representation via format's na_rep where supported
+        try:
+            sty = sty.format(na_rep="—")
+        except Exception:
+            pass
+    except Exception:
+        # If anything fails, return the default styler without formatting
+        return sty
+    return sty
+
+
+def apply_tickformat_2dec(fig: Any) -> Any:
+    """Apply ,.2f tick formats (with thousands separator) to Plotly axes (noop if not Plotly)."""
+    try:
+        if _go is not None and hasattr(fig, "update_xaxes"):
+            fig.update_xaxes(tickformat=",.2f")
+            fig.update_yaxes(tickformat=",.2f")
+    except Exception:
+        pass
+    return fig

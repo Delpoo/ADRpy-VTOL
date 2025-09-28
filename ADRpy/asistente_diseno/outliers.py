@@ -43,6 +43,7 @@ from .config import SEGMENT_COL, SEGMENT_LABELS
 import plotly.graph_objects as go
 import ipywidgets as w
 from IPython.display import display, clear_output
+from .mplutils import style_df_2dec, apply_tickformat_2dec, f2
 
 
 # =============================================================================
@@ -333,21 +334,14 @@ def iqr_summary_table(
 def style_iqr_summary(summary_df: pd.DataFrame):
     """
     Devuelve un Styler con formato para la tabla resumen IQR.
+    Aplica .2f a TODAS las columnas numéricas (incluye %_outliers) para armonizar.
     """
     try:
-        # Aplicamos formato columna por columna
-        sty = summary_df.style
-        numeric_cols = ["Q1", "Q3", "IQR", "low", "high"]
-        percent_cols = ["%_outliers"]
-
-        for col in numeric_cols:
-            if col in summary_df.columns:
-                sty = sty.format({col: "{:.3f}"})
-
-        for col in percent_cols:
-            if col in summary_df.columns:
-                sty = sty.format({col: "{:.1f}"})
-
+        # Formato base a 2 decimales para columnas numéricas
+        sty = style_df_2dec(summary_df)
+        # Asegurar específicamente .2f para el porcentaje si existe
+        if "%_outliers" in summary_df.columns:
+            sty = sty.format(lambda v: f2(v, False), subset=["%_outliers"])
         return sty
     except Exception:
         # Si hay problemas con el styling, devolver DataFrame sin formato
@@ -405,7 +399,13 @@ def plot_outliers_hist(
     info = compute_iqr_bounds(s, factor=factor, min_n=min_n)
 
     fig = go.Figure()
-    fig.add_histogram(x=s, nbinsx=int(bins), name=str(column), opacity=0.85)
+    fig.add_histogram(
+        x=s,
+        nbinsx=int(bins),
+        name=str(column),
+        opacity=0.85,
+        hovertemplate="valor=%{x:.2f}<br>freq=%{y:.2f}<extra></extra>",
+    )
     if info["usable"]:
         for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
             fig.add_vline(
@@ -413,7 +413,7 @@ def plot_outliers_hist(
                 line_width=2,
                 line_dash="dash",
                 line_color="red",
-                annotation_text=label,
+                annotation_text=f"{label} {f2(xline)}",
                 annotation_position="top",
             )
     fig.update_layout(
@@ -423,6 +423,7 @@ def plot_outliers_hist(
         yaxis_title="frecuencia",
         showlegend=False,
     )
+    apply_tickformat_2dec(fig)
     return fig
 
 
@@ -465,7 +466,7 @@ def widget_outliers_plotly(
         max=3.0,
         step=0.1,
         description="factor IQR:",
-        readout_format=".1f",
+        readout_format=".2f",
     )
     sl_bins = w.IntSlider(value=25, min=10, max=80, step=1, description="bins:")
     ch_out = w.Checkbox(value=True, description="Listar outliers")
@@ -522,7 +523,11 @@ def widget_outliers_plotly(
             clear_output(wait=True)
             fig = go.Figure()
             fig.add_histogram(
-                x=s.dropna(), nbinsx=int(sl_bins.value), name=str(col), opacity=0.85
+                x=s.dropna(),
+                nbinsx=int(sl_bins.value),
+                name=str(col),
+                opacity=0.85,
+                hovertemplate="valor=%{x:.2f}<br>freq=%{y:.2f}<extra></extra>",
             )
             if info["usable"]:
                 for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
@@ -532,7 +537,7 @@ def widget_outliers_plotly(
                             line_width=2,
                             line_dash="dash",
                             line_color="red",
-                            annotation_text=label,
+                            annotation_text=f"{label} {f2(xline)}",
                             annotation_position="top",
                         )
             title_suffix = ""
@@ -552,6 +557,11 @@ def widget_outliers_plotly(
                 showlegend=False,
                 title=f"Histograma: {col}{title_suffix}",
             )
+            # Formateo homogéneo de ejes a .2f
+            try:
+                apply_tickformat_2dec(fig)
+            except Exception:
+                pass
             display(fig)
 
         with out_tbl:
@@ -560,16 +570,22 @@ def widget_outliers_plotly(
                 {
                     "columna": col,
                     "n_valido": info["n_valido"],
-                    "Q1": info["Q1"],
-                    "Q3": info["Q3"],
-                    "IQR": info["IQR"],
-                    "LOW": info["low"],
-                    "HIGH": info["high"],
+                    "Q1": f2(info["Q1"]),
+                    "Q3": f2(info["Q3"]),
+                    "IQR": f2(info["IQR"]),
+                    "LOW": f2(info["low"]),
+                    "HIGH": f2(info["high"]),
                     "usable": info["usable"],
                 }
             ]
             df_info = pd.DataFrame(rows)
-            display(df_info)
+            try:
+                display(style_df_2dec(df_info))
+            except Exception:
+                try:
+                    display(df_info.round(2))
+                except Exception:
+                    display(df_info)
 
             if ch_out.value and info["usable"]:
                 mask_low = s < info["low"]
@@ -585,7 +601,13 @@ def widget_outliers_plotly(
                         outs[col] < info["low"], "LOW", "HIGH"
                     )
                     display(w.HTML(f"<b>Outliers ({len(outs)} filas):</b>"))
-                    display(outs.sort_values(col))
+                    try:
+                        display(style_df_2dec(outs.sort_values(col)))
+                    except Exception:
+                        try:
+                            display(outs.sort_values(col).round(2))
+                        except Exception:
+                            display(outs.sort_values(col))
 
     # Render inicial y eventos
     _render()
@@ -823,7 +845,7 @@ def widget_outliers_hist(
         max=3.0,
         step=0.1,
         description="factor IQR:",
-        readout_format=".1f",
+        readout_format=".2f",
     )
     sl_bins = w.IntSlider(value=bins, min=10, max=60, step=1, description="bins:")
     out = w.Output()
@@ -851,7 +873,7 @@ def widget_outliers_hist(
         n_low = int((s < info["low"]).sum()) if info["usable"] else 0
         n_high = int((s > info["high"]).sum()) if info["usable"] else 0
         title = (
-            f"{col}  |  IQR usable={info['usable']}  |  outliers: low={n_low}, high={n_high}"
+            f"{col}  |  IQR usable={info['usable']}  |  outliers: low={n_low:.2f}, high={n_high:.2f}"
             if info["usable"]
             else f"{col}  |  IQR no usable (n<{min_n} o IQR≈0)"
         )
@@ -863,6 +885,11 @@ def widget_outliers_hist(
             showlegend=False,
             title=title,
         )
+        # Aplicar formato de ejes a .2f en todos los histogramas
+        try:
+            apply_tickformat_2dec(fig)
+        except Exception:
+            pass
         return fig
 
     def _on_change(*args):
@@ -892,9 +919,9 @@ def widget_outliers_panel(
     collapsed: bool = True,
 ):
     """
-    Panel colapsable con:
-      - Resumen global (Styler) en Output
-      - Selector + histograma por columna
+    Panel colapsable con un ÚNICO módulo expandible que contiene secciones tituladas:
+      - "Resumen (IQR k=…)" con la tabla resumen y selector de columna
+      - "Histogramas (IQR k=…)" con controles y gráfico/tabla por columna
     """
     try:
         import ipywidgets as w
@@ -902,28 +929,227 @@ def widget_outliers_panel(
     except Exception as e:
         raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
 
-    # 1) Resumen (Styler) → Output (sin depender de outliers_quicklook)
-    out_resumen = w.Output()
-    with out_resumen:
-        cols_sum = []
-        for c in df.columns:
-            s = pd.to_numeric(df[c], errors="coerce")
-            if s.notna().sum() >= min_n:
-                cols_sum.append(c)
-        summary = iqr_summary_table(
-            df, cols_sum, factor=factor, min_n=min_n, keep_na=True
-        )
-        display(style_iqr_summary(summary))
+    # Columnas elegibles (>= min_n válidos)
+    cols_sum = []
+    for c in df.columns:
+        s = pd.to_numeric(df[c], errors="coerce")
+        if s.notna().sum() >= min_n:
+            cols_sum.append(c)
+    summary = iqr_summary_table(df, cols_sum, factor=factor, min_n=min_n, keep_na=True)
 
-    box_resumen = w.VBox([w.HTML(f"<b>{titulo} — resumen</b>"), out_resumen])
-
-    # 2) Explorador Plotly
-    box_detalle = widget_outliers_plotly(
-        df, segment_col=SEGMENT_COL, iqr_factor=factor, min_n=min_n
+    # Selector de columna compartido por ambas secciones
+    dd_col = w.Dropdown(
+        options=sorted(summary["columna"].tolist()) if not summary.empty else [],
+        description="Parámetro:",
+        layout=w.Layout(width="45%"),
     )
 
-    acc = w.Accordion(children=[box_resumen, box_detalle])
-    acc.set_title(0, "Resumen")
-    acc.set_title(1, "Histograma por columna")
+    # Títulos de sección (actualizables con el factor)
+    title_main = w.HTML(f"<b>{titulo}</b>")
+    title_res = w.HTML(f"<b>Resumen (IQR k={factor:.2f})</b>")
+    title_hist = w.HTML(f"<b>Histogramas (IQR k={factor:.2f})</b>")
+
+    # Salida del resumen
+    out_resumen = w.Output()
+    with out_resumen:
+        display(style_iqr_summary(summary))
+
+    # Controles del histograma (reutilizamos lógica de widget_outliers_plotly)
+    sl_factor = w.FloatSlider(
+        value=float(factor),
+        min=0.5,
+        max=3.0,
+        step=0.1,
+        description="factor IQR:",
+        readout_format=".2f",
+    )
+    sl_bins = w.IntSlider(value=25, min=10, max=80, step=1, description="bins:")
+    ch_out = w.Checkbox(value=True, description="Listar outliers")
+
+    seg_widget = None
+    seg_label_to_raw: dict[str, object] = {}
+    seg_raw_to_label: dict[str, str] = {}
+    if SEGMENT_COL and SEGMENT_COL in df.columns:
+        seg_vals = pd.Series(df[SEGMENT_COL]).dropna().astype(str).unique().tolist()
+        seg_vals = [v for v in seg_vals if str(v).strip() != ""]
+        if len(seg_vals) > 1:
+            for raw in seg_vals:
+                label = SEGMENT_LABELS_STR.get(str(raw), str(raw))
+                seg_label_to_raw[label] = raw
+                seg_raw_to_label[str(raw)] = label
+            seg_options = ["Todos"] + sorted(list(seg_label_to_raw.keys()))
+            seg_widget = w.Dropdown(options=seg_options, description="Segmento:")
+
+    out_plot = w.Output()
+    out_tbl = w.Output()
+
+    controls_left = [dd_col, sl_factor, sl_bins]
+    controls_right = [seg_widget] if seg_widget is not None else []
+    controls_right.append(ch_out)
+    top_controls = w.HBox(
+        [
+            w.HBox(controls_left, layout=w.Layout(flex="3")),
+            w.HBox(
+                controls_right, layout=w.Layout(flex="2", justify_content="flex-end")
+            ),
+        ]
+    )
+
+    def _render_hist():
+        # Filtrar por segmento si corresponde
+        df_sel = df
+        if seg_widget is not None and seg_widget.value and seg_widget.value != "Todos":
+            try:
+                chosen_label = str(seg_widget.value)
+                raw_str = seg_label_to_raw.get(chosen_label, chosen_label)
+                df_sel = df[df[SEGMENT_COL].astype(str) == str(raw_str)]
+            except Exception:
+                df_sel = df
+
+        col = (
+            dd_col.value
+            if dd_col.value
+            else (sorted(summary["columna"].tolist())[0] if not summary.empty else None)
+        )
+        if col is None:
+            with out_plot:
+                clear_output(wait=True)
+                display(w.HTML("<i>Sin columnas numéricas suficientes.</i>"))
+            with out_tbl:
+                clear_output(wait=True)
+            return
+
+        s = pd.to_numeric(df_sel[col], errors="coerce")
+        info = compute_iqr_bounds(s, factor=float(sl_factor.value), min_n=min_n)
+
+        with out_plot:
+            clear_output(wait=True)
+            fig = go.Figure()
+            fig.add_histogram(
+                x=s.dropna(),
+                nbinsx=int(sl_bins.value),
+                name=str(col),
+                opacity=0.85,
+                hovertemplate="valor=%{x:.2f}<br>freq=%{y:.2f}<extra></extra>",
+            )
+            if info["usable"]:
+                for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
+                    if pd.notna(xline):
+                        fig.add_vline(
+                            x=float(xline),
+                            line_width=2,
+                            line_dash="dash",
+                            line_color="red",
+                            annotation_text=f"{label} {f2(xline)}",
+                            annotation_position="top",
+                        )
+            title_suffix = ""
+            if (
+                seg_widget is not None
+                and seg_widget.value
+                and seg_widget.value != "Todos"
+            ):
+                chosen_label = str(seg_widget.value)
+                title_suffix = f" — seg: {chosen_label}"
+            fig.update_layout(
+                template="plotly_white",
+                margin=dict(l=40, r=10, t=35, b=40),
+                xaxis_title=str(col),
+                yaxis_title="frecuencia",
+                showlegend=False,
+                title=f"Histograma: {col}{title_suffix}",
+            )
+            try:
+                apply_tickformat_2dec(fig)
+            except Exception:
+                pass
+            display(fig)
+
+        with out_tbl:
+            clear_output(wait=True)
+            rows = [
+                {
+                    "columna": col,
+                    "n_valido": info["n_valido"],
+                    "Q1": f2(info["Q1"]),
+                    "Q3": f2(info["Q3"]),
+                    "IQR": f2(info["IQR"]),
+                    "LOW": f2(info["low"]),
+                    "HIGH": f2(info["high"]),
+                    "usable": info["usable"],
+                }
+            ]
+            df_info = pd.DataFrame(rows)
+            try:
+                display(style_df_2dec(df_info))
+            except Exception:
+                try:
+                    display(df_info.round(2))
+                except Exception:
+                    display(df_info)
+
+            if ch_out.value and info["usable"]:
+                mask_low = s < info["low"]
+                mask_high = s > info["high"]
+                cols_out = [col]
+                name_col = _detectar_columna_nombre(df_sel)
+                if name_col and name_col in df_sel.columns:
+                    cols_out.append(name_col)
+                outs = df_sel.loc[(mask_low | mask_high) & s.notna(), cols_out].copy()
+                if not outs.empty:
+                    if name_col and name_col in outs.columns:
+                        outs.rename(columns={name_col: "aeronave"}, inplace=True)
+                    outs["tipo_outlier"] = np.where(
+                        outs[col] < info["low"], "LOW", "HIGH"
+                    )
+                    display(w.HTML(f"<b>Outliers ({len(outs)} filas):</b>"))
+                    try:
+                        display(style_df_2dec(outs.sort_values(col)))
+                    except Exception:
+                        try:
+                            display(outs.sort_values(col).round(2))
+                        except Exception:
+                            display(outs.sort_values(col))
+
+    # Eventos: cualquier cambio re-renderiza histograma y actualiza títulos
+    def _on_any_change(*_):
+        try:
+            title_res.value = f"<b>Resumen (IQR k={float(sl_factor.value):.2f})</b>"
+            title_hist.value = (
+                f"<b>Histogramas (IQR k={float(sl_factor.value):.2f})</b>"
+            )
+        except Exception:
+            pass
+        _render_hist()
+
+    dd_col.observe(lambda *_: _on_any_change(), names="value")
+    sl_factor.observe(lambda *_: _on_any_change(), names="value")
+    sl_bins.observe(lambda *_: _on_any_change(), names="value")
+    ch_out.observe(lambda *_: _on_any_change(), names="value")
+    if seg_widget is not None:
+        seg_widget.observe(lambda *_: _on_any_change(), names="value")
+
+    # Render inicial
+    _on_any_change()
+
+    # Composición en un único módulo con secciones
+    body = w.VBox(
+        [
+            title_main,
+            title_res,
+            dd_col,
+            out_resumen,
+            w.HTML("<hr>"),
+            title_hist,
+            top_controls,
+            w.HTML("<hr>"),
+            out_plot,
+            w.HTML("<hr>"),
+            out_tbl,
+        ]
+    )
+
+    acc = w.Accordion(children=[body])
+    acc.set_title(0, f"Outliers (IQR k={float(sl_factor.value):.2f})")
     acc.selected_index = None if collapsed else 0
     return acc
