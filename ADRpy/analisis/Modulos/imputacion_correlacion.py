@@ -9,10 +9,40 @@ from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.model_selection import LeaveOneOut
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from asistente_diseno.mplutils import f2
+from .outlier_utils import calcular_pesos_outliers
+
+# === Config helpers ===
+try:
+    from .controller import load_effective_config
+except Exception:
+    from controller import (
+        load_effective_config,
+    )  # fallback cuando se ejecuta fuera de paquete
+
+
+def _CFG() -> dict:
+    try:
+        return load_effective_config()
+    except Exception:
+        return {}
+
+
+def _COR() -> dict:
+    return _CFG().get("correlacion", {})
+
+
+def _OUTLIERS() -> dict:
+    return _CFG().get("correlacion_outliers", {})
+
+
+def _MODELOS() -> dict:
+    return _CFG().get("modelos", {})
+
 
 # ---- CONFIG: mínimos de diversidad (valores únicos) y de muestras por tipo de modelo ----
 
-MIN_UNICOS = {
+# Reglas internas (FALLBACK). La UX puede sobreescribir estos valores.
+MIN_UNICOS_FALLBACK = {
     "exp-1": 5,
     "log-1": 5,
     "pot-1": 5,
@@ -21,7 +51,7 @@ MIN_UNICOS = {
     "linear-2": 8,
     "poly-2": 10,
 }
-MIN_MUESTRAS = {
+MIN_MUESTRAS_FALLBACK = {
     "exp-1": 6,
     "log-1": 6,
     "pot-1": 6,
@@ -45,11 +75,25 @@ Notas:
 - MIN_UNICOS = diversidad mínima: cuántos valores únicos exigimos en y y en cada predictor (tras todos los filtros). 
 Evita modelos entrenados con valores muy repetidos (poca información).
 - MIN_MUESTRAS = tamaño muestral mínimo: cuántas filas efectivas exigimos para poder entrenar ese tipo de modelo.
-- Estas estructuras son la ÚNICA fuente de verdad. Queda prohibido redefinirlas en funciones.
+- La UI/Config domina; estos valores son solo fallback.
 """
 
+
+# Helpers: toman primero la config, si no existe usan fallback.
+def _min_unicos(tipo_modelo: str) -> int:
+    div = _COR().get("diversidad_minima", {})
+    mu = div.get("min_unicos", {}) or {}
+    return int(mu.get(tipo_modelo, MIN_UNICOS_FALLBACK.get(tipo_modelo, 5)))
+
+
+def _min_muestras(tipo_modelo: str) -> int:
+    div = _COR().get("diversidad_minima", {})
+    mm = div.get("min_muestras", {}) or {}
+    return int(mm.get(tipo_modelo, MIN_MUESTRAS_FALLBACK.get(tipo_modelo, 6)))
+
+
 # ---- CONFIG: Chequeos "early-stop" para modelos de 2 predictores ----
-CHECKS_2D = {
+CHECKS_2D_DEFAULT = {
     # Colinealidad / inestabilidad
     "pearson_abs_r_max": 0.90,
     "vif_max": 10.0,
@@ -120,7 +164,24 @@ def _early_checks_2d(X_raw: np.ndarray, tipo: str) -> tuple[bool, dict, list[str
     """Chequeos previos agresivos para modelos de 2 predictores en espacio crudo (X1,X2).
     Devuelve (ok, metrics, reasons). No lanza excepciones.
     """
-    cfg = CHECKS_2D
+    # Mezclar defaults con overrides desde config
+    cfg_all = _COR().get("checks_2d", {})
+    if not cfg_all or not bool(cfg_all.get("enabled", True)):
+        return True, {}, []
+
+    def on(key: str) -> bool:
+        v = cfg_all.get(key, {})
+        if isinstance(v, dict):
+            return bool(v.get("enabled", True))
+        return bool(v) if key != "enabled" else True
+
+    def getv(key: str, sub: str, default):
+        v = cfg_all.get(key, {})
+        if isinstance(v, dict):
+            return v.get(sub, default)
+        return default
+
+    cfg = CHECKS_2D_DEFAULT
     X_raw = np.asarray(X_raw, dtype=float)
     n, k = X_raw.shape if X_raw.ndim == 2 else (0, 0)
     reasons: list[str] = []
@@ -137,12 +198,15 @@ def _early_checks_2d(X_raw: np.ndarray, tipo: str) -> tuple[bool, dict, list[str
         r = np.nan
     metrics["pearson_r"] = r
     if np.isfinite(r):
-        if abs(r) >= cfg["pearson_abs_r_max"]:
-            reasons.append(f"|r|={abs(r):.4f} >= {cfg['pearson_abs_r_max']}")
+        abs_r = abs(r)
+        if on("pearson") and abs_r >= float(getv("pearson", "abs_r_max", 0.90)):
+            reasons.append(
+                f"|r|={abs_r:.4f} >= {float(getv('pearson','abs_r_max',0.90))}"
+            )
         vif = 1.0 / max(1e-12, (1.0 - r * r))
         metrics["vif"] = vif
-        if vif >= cfg["vif_max"]:
-            reasons.append(f"VIF={vif:.2f} >= {cfg['vif_max']}")
+        if on("vif") and vif >= float(getv("vif", "max", 10.0)):
+            reasons.append(f"VIF={vif:.2f} >= {float(getv('vif','max',10.0))}")
     # 2) PCA / rank / condición
     X_cent = np.column_stack([x1 - x1.mean(), x2 - x2.mean()])
     try:
@@ -150,8 +214,8 @@ def _early_checks_2d(X_raw: np.ndarray, tipo: str) -> tuple[bool, dict, list[str
     except Exception:
         rank = 0
     metrics["rank"] = rank
-    if rank < cfg["rank_min"]:
-        reasons.append(f"rank={rank} < {cfg['rank_min']}")
+    if on("rank") and rank < int(getv("rank", "min", 2)):
+        reasons.append(f"rank={rank} < {int(getv('rank','min',2))}")
     try:
         u, s, vh = np.linalg.svd(X_cent, full_matrices=False)
         var_total = float((s**2).sum())
@@ -160,22 +224,26 @@ def _early_checks_2d(X_raw: np.ndarray, tipo: str) -> tuple[bool, dict, list[str
     except Exception:
         pc2_ratio = 0.0
     metrics["pc2_ratio"] = pc2_ratio
-    if pc2_ratio < cfg["pc2_ratio_min"]:
-        reasons.append(f"PC2_ratio={pc2_ratio:.4f} < {cfg['pc2_ratio_min']}")
+    if on("pc2") and pc2_ratio < float(getv("pc2", "ratio_min", 0.03)):
+        reasons.append(
+            f"PC2_ratio={pc2_ratio:.4f} < {float(getv('pc2','ratio_min',0.03))}"
+        )
     try:
         cond_num = float(np.linalg.cond(X_cent))
     except Exception:
         cond_num = np.inf
     metrics["cond"] = cond_num
-    if cond_num > cfg["cond_max"]:
-        reasons.append(f"cond={cond_num:.2e} > {cfg['cond_max']:.1e}")
+    if on("cond") and cond_num > float(getv("cond", "max", 1e5)):
+        reasons.append(f"cond={cond_num:.2e} > {float(getv('cond','max',1e5)):.1e}")
     # 3) Cobertura
     pairs_unique = len({(float(a), float(b)) for a, b in X_raw})
     unique_pair_ratio = pairs_unique / max(1, n)
     metrics["unique_pair_ratio"] = unique_pair_ratio
-    if unique_pair_ratio < cfg["unique_pair_ratio_min"]:
+    if on("coverage_unique_pair") and unique_pair_ratio < float(
+        getv("coverage_unique_pair", "ratio_min", 0.60)
+    ):
         reasons.append(
-            f"unique_pair_ratio={unique_pair_ratio:.2f} < {cfg['unique_pair_ratio_min']}"
+            f"unique_pair_ratio={unique_pair_ratio:.2f} < {float(getv('coverage_unique_pair','ratio_min',0.60))}"
         )
     x1min, x1max = float(np.min(x1)), float(np.max(x1))
     x2min, x2max = float(np.min(x2)), float(np.max(x2))
@@ -212,8 +280,12 @@ def _early_checks_2d(X_raw: np.ndarray, tipo: str) -> tuple[bool, dict, list[str
     metrics["hull_area"] = hull_area
     hull_ratio = (hull_area / bbox_area) if bbox_area > 0 else 0.0
     metrics["hull_ratio"] = hull_ratio
-    if hull_ratio < cfg["hull_ratio_min"]:
-        reasons.append(f"hull_ratio={hull_ratio:.3f} < {cfg['hull_ratio_min']}")
+    if on("coverage_hull") and hull_ratio < float(
+        getv("coverage_hull", "ratio_min", 0.15)
+    ):
+        reasons.append(
+            f"hull_ratio={hull_ratio:.3f} < {float(getv('coverage_hull','ratio_min',0.15))}"
+        )
     # elipse 1σ
     try:
         cov = np.cov(np.vstack((x1, x2)))
@@ -225,29 +297,28 @@ def _early_checks_2d(X_raw: np.ndarray, tipo: str) -> tuple[bool, dict, list[str
     metrics["ellipse_area"] = ellipse_area
     ellipse_ratio = (ellipse_area / bbox_area) if bbox_area > 0 else 0.0
     metrics["ellipse_ratio"] = ellipse_ratio
-    if ellipse_ratio < cfg["ellipse_ratio_min"]:
+    if on("coverage_ellipse") and ellipse_ratio < float(
+        getv("coverage_ellipse", "ratio_min", 0.10)
+    ):
         reasons.append(
-            f"ellipse_ratio={ellipse_ratio:.3f} < {cfg['ellipse_ratio_min']}"
+            f"ellipse_ratio={ellipse_ratio:.3f} < {float(getv('coverage_ellipse','ratio_min',0.10))}"
         )
     # 4) n/p
     if tipo == "linear-2":
         p = 3
-        n_per_param_min = cfg["n_per_param_min_linear2"]
+        n_per_param_min = float(getv("n_per_param", "linear2_min", 8))
     else:
         p = 6
-        n_per_param_min = cfg["n_per_param_min_poly2"]
+        n_per_param_min = float(getv("n_per_param", "poly2_min", 10))
     n_per_p = n / float(p) if p > 0 else 0.0
     metrics["n_per_param"] = n_per_p
-    if n_per_p < n_per_param_min:
-        reasons.append(f"n/p={n_per_p:.2f} < {n_per_param_min} (p={p})")
+    if on("n_per_param") and n < p * n_per_param_min:
+        reasons.append(f"n={n} < p*n_per_param_min={p*n_per_param_min}")
     # agresivo extra
-    if (
-        cfg.get("agresivo", False)
-        and np.isfinite(r)
-        and abs(r) >= 0.95
-        and not any("|r|=" in x for x in reasons)
-    ):
-        reasons.append(f"agresivo: |r|={abs(r):.4f} >= 0.95")
+    if on("agresivo") and np.isfinite(r):
+        abs_min = float(getv("agresivo", "abs_r_min", 0.95))
+        if abs_r >= abs_min and not any("|r|=" in x for x in reasons):
+            reasons.append(f"agresivo: |r|={abs_r:.4f} >= {abs_min}")
     return (len(reasons) == 0), metrics, reasons
 
 
@@ -271,21 +342,170 @@ def cargar_y_validar_datos(path: str) -> pd.DataFrame:
 
 
 def penalizacion_por_k(k: int) -> float:
-    """Return penalization factor based on sample size."""
-    if k > 20:
-        return 1.0
-    return max(
-        0,
-        min(
-            1,
-            0.00002281 * (k / 2) ** 5
-            - 0.00024 * (k / 2) ** 4
-            - 0.0036 * (k / 2) ** 3
-            + 0.046 * (k / 2) ** 2
-            + 0.0095 * (k / 2)
-            + 0.024,
-        ),
+    """Penalización configurable por tamaño muestral."""
+    c = _COR().get("confianza", {}).get("penalizacion_k", {})
+    if c.get("tipo", "polinomica") == "polinomica":
+        p = c.get("params", {})
+        a5 = p.get("a5", 0.00002281)
+        a4 = p.get("a4", -0.00024)
+        a3 = p.get("a3", -0.0036)
+        a2 = p.get("a2", 0.046)
+        a1 = p.get("a1", 0.0095)
+        a0 = p.get("a0", 0.024)
+        x = k / 2
+        val = a5 * x**5 + a4 * x**4 + a3 * x**3 + a2 * x**2 + a1 * x + a0
+        return max(0.0, min(1.0, float(val if k <= 20 else 1.0)))
+    return 1.0
+
+
+# === NUEVO: Cálculo de confianza configurable (entrena + métricas 2D + LOOCV) ===
+def _clamp01(x: float) -> float:
+    return max(0.0, min(1.0, float(x)))
+
+
+def _poly_eval(x: float, coefs: dict) -> float:
+    """
+    Evalúa polinomios con llaves tipo a5..a0, b3..b0 o c2..c0.
+    Usa el dígito de la llave como exponente.
+    """
+    val = 0.0
+    for k, v in (coefs or {}).items():
+        try:
+            p = int(k[1:])
+        except Exception:
+            continue
+        val += float(v) * (x**p)
+    return float(val)
+
+
+def _penalizacion_n(n: int, cfg: dict | None = None) -> float:
+    # Compatibilidad: disponible si alguien lo usa directo
+    c = (cfg or _COR()).get("confianza", {}).get("penalizacion_n", {})
+    if c.get("tipo", "polinomica") == "polinomica":
+        p = c.get("params", {})
+        return _clamp01(_poly_eval(float(n), p))
+    return 1.0
+
+
+def _metric_value_from_stats(metric_key: str, stats: dict) -> float | None:
+    """Mapea claves de penalizaciones_metricas -> valores en stats."""
+    try:
+        if metric_key == "pearson_abs":
+            r = stats.get("pearson_r")
+            if r is None:
+                r = stats.get("pearson_abs")
+            return abs(float(r)) if r is not None else None
+        if metric_key == "vif":
+            _v = stats.get("vif", None)
+            return float(_v) if _v is not None else None
+        if metric_key == "cond":
+            _c = stats.get("cond", None)
+            return float(_c) if _c is not None else None
+        if metric_key == "pc2_ratio":
+            _p = stats.get("pc2_ratio", None)
+            return float(_p) if _p is not None else None
+        if metric_key == "coverage_unique_pair":
+            _u = stats.get("unique_pair_ratio", None)
+            return float(_u) if _u is not None else None
+        if metric_key == "coverage_hull":
+            _h = stats.get("hull_ratio", None)
+            return float(_h) if _h is not None else None
+        if metric_key == "coverage_ellipse":
+            _e = stats.get("ellipse_ratio", None)
+            return float(_e) if _e is not None else None
+    except Exception:
+        return None
+    return None
+
+
+def _clasificar_loocv(mape: float, r2: float, cfg: dict | None = None) -> str:
+    """Clasifica LOOCV en robusto | no_robusto | rechazado según criterios de config."""
+    crit = (cfg or _COR()).get("loocv", {}).get("criterios", {})
+    rob = crit.get("robusto", {"mape_max": 7.5, "r2_min": 0.6})
+    nor = crit.get("no_robusto", {"mape_max": 12.5, "r2_min": 0.45})
+    try:
+        if mape <= float(rob.get("mape_max", 7.5)) and r2 >= float(
+            rob.get("r2_min", 0.6)
+        ):
+            return "robusto"
+        if mape <= float(nor.get("mape_max", 12.5)) and r2 >= float(
+            nor.get("r2_min", 0.45)
+        ):
+            return "no_robusto"
+    except Exception:
+        pass
+    return "rechazado"
+
+
+def calcular_confianza_modelo(stats: dict, cfg: dict | None = None) -> float:
+    """
+    Calcula la confianza final del modelo combinando:
+      - base por r2 y mape,
+      - penalización por k (histórico),
+      - penalización por N (nuevo),
+      - penalizaciones métricas 2D (opcional, producto),
+      - y aporte LOOCV por clase (mezcla convexa).
+    Campos esperados en stats (opcionales):
+      r2, mape, k, n, pearson_abs, vif, cond, pc2_ratio,
+      coverage_unique_pair, coverage_hull, coverage_ellipse, loocv_class
+    """
+    if cfg is None:
+        cfg = _CFG()
+    conf_cfg = cfg.get("correlacion", {}).get("confianza", {})
+
+    # 1) base por r2 y mape
+    w_r2 = float(conf_cfg.get("w_r2", 0.5))
+    w_mp = float(conf_cfg.get("w_mape", 0.5))
+    divm = max(1e-6, float(conf_cfg.get("mape_divisor", 15.0)))
+    r2_term = _clamp01(float(stats.get("r2", 0.0)))
+    mape_term = _clamp01(1.0 - float(stats.get("mape", 1e9)) / divm)
+    base = _clamp01(w_r2 * r2_term + w_mp * mape_term)
+
+    # 2) penalización por k (histórico)
+    pk = conf_cfg.get("penalizacion_k", {}).get("params", {})
+    k = float(stats.get("k", 1.0))
+    # Compatibilidad: evaluar polinomio en k/2 (mismo escalado que penalizacion_por_k)
+    pen_k = _clamp01(_poly_eval(k / 2.0, pk)) if pk else 1.0
+
+    # 3) penalización por N (nuevo)
+    pn = conf_cfg.get("penalizacion_n", {}).get("params", {})
+    n = float(stats.get("n", k))
+    pen_n = _clamp01(_poly_eval(n, pn)) if pn else 1.0
+
+    # 4) penalizaciones métricas 2D (producto)
+    pm = conf_cfg.get("penalizaciones_metricas", {}) or {}
+    prod = 1.0
+    aliases = {
+        "pearson_abs": "pearson_abs",
+        "vif": "vif",
+        "cond": "cond",
+        "pc2_ratio": "pc2_ratio",
+        "coverage_unique_pair": "coverage_unique_pair",
+        "coverage_hull": "coverage_hull",
+        "coverage_ellipse": "coverage_ellipse",
+    }
+    for name, spec in pm.items():
+        if not spec or not bool(spec.get("usar", True)):
+            continue
+        x = float(stats.get(aliases.get(name, name), 0.0))
+        prod *= _clamp01(_poly_eval(x, spec.get("params", {})))
+
+    conf_base = _clamp01(base * pen_k * pen_n * prod)
+
+    # 5) aporte LOOCV (mezcla convexa por clase)
+    la = conf_cfg.get(
+        "loocv_aporte",
+        {
+            "w": 0.2,
+            "factor_por_clase": {"robusto": 1.0, "no_robusto": 0.85, "rechazado": 0.6},
+        },
     )
+    w_lo = _clamp01(float(la.get("w", 0.2)))
+    fpc = la.get("factor_por_clase", {})
+    clase = str(stats.get("loocv_class", "robusto"))
+    fac = float(fpc.get(clase, 1.0))
+    conf_final = _clamp01(conf_base * ((1.0 - w_lo) + w_lo * fac))
+    return conf_final
 
 
 def seleccionar_predictores_validos(
@@ -293,6 +513,7 @@ def seleccionar_predictores_validos(
     objetivo: str,
     idx_objetivo: int,
     nivel_familia: Optional[int] = None,
+    min_datos_validos: int = 5,
 ) -> Tuple[pd.DataFrame, str, bool]:
     """
     Devuelve un DF para imputar la fila idx_objetivo y la familia utilizada.
@@ -300,8 +521,9 @@ def seleccionar_predictores_validos(
     • NO elimina filas con NaNs en otros predictores.
     • Elimina columnas que en idx_objetivo valgan NaN.
     • Aplica filtrado progresivo de familia (F0, F1, F2, sin filtro) cuando nivel_familia es None.
-    • Si nivel_familia es 0,1,2 intenta SOLO esa familia; si no reúne criterio (>=5 válidos) retorna DF vacío y familia_usada="".
-    • El filtrado por rango es estricto (0% tolerancia): se elimina cualquier predictor cuyo valor en la aeronave objetivo esté fuera de [min, max] del entrenamiento.
+    • Si nivel_familia es 0,1,2 intenta SOLO esa familia; si no reúne criterio (>=min_datos_validos válidos) retorna DF vacío y familia_usada="".
+        • Filtrado por rango configurable: por defecto estricto (0% tolerancia). Si correlacion.extrapolacion.modo_predictores == 'permitir_con_tolerancia',
+            se permite una tolerancia relativa al span del entrenamiento (tolerancia_pct).
     """
     # 1) Conservar idx_objetivo + filas con objetivo conocido
     df = df[(df.index == idx_objetivo) | df[objetivo].notna()].copy()
@@ -338,7 +560,7 @@ def seleccionar_predictores_validos(
                 mask &= (df[attr] == val).values
             df_fam = df[mask]
             n_validos = df_fam[objetivo].notna().sum()
-            if n_validos >= 5:
+            if n_validos >= min_datos_validos:
                 # Nota: Umbral fijo (>=5) para asegurar base mínima por familia.
                 # Es independiente de MIN_MUESTRAS (que se valida luego por tipo de modelo).
                 df = df_fam
@@ -359,7 +581,7 @@ def seleccionar_predictores_validos(
                     mask &= (df[attr] == val).values
                 df_fam = df[mask]
                 n_validos = df_fam[objetivo].notna().sum()
-                if n_validos >= 5:
+                if n_validos >= min_datos_validos:
                     # Igual criterio (>=5) aquí; mantiene consistencia de filtrado previo al modelado.
                     df = df_fam
                     familia_usada = f"F{i}"
@@ -377,7 +599,14 @@ def seleccionar_predictores_validos(
         if col in df.columns:
             df = df.drop(columns=[col])
 
-    # 4) Validación estricta de rango: eliminar predictores si el valor objetivo está fuera del rango de entrenamiento
+    # 4) Validación de rango: eliminar predictores según política de extrapolación
+    ex_cfg = _COR().get("extrapolacion", {})
+    modo_pred = ex_cfg.get("modo_predictores", "eliminar")
+    tol_pct = (
+        float(ex_cfg.get("tolerancia_pct", 0.0))
+        if modo_pred == "permitir_con_tolerancia"
+        else 0.0
+    )
     columnas_a_eliminar = []
     for col in df.columns:
         if col == df.columns[0] or col == objetivo:
@@ -389,15 +618,21 @@ def seleccionar_predictores_validos(
             columnas_a_eliminar.append(col)
             continue
 
-        # Usar rango estricto del entrenamiento (sin tolerancia)
+        # Usar rango del entrenamiento con tolerancia opcional
         mn, mx = valores.min(), valores.max()
         valor_objetivo = pd.to_numeric(df.at[idx_objetivo, col], errors="coerce")
 
-        # CAMBIO CRÍTICO: Si el valor está fuera del rango de entrenamiento, eliminar el predictor completamente
-        if not (pd.notna(valor_objetivo) and mn <= valor_objetivo <= mx):
+        # Tolerancia relativa al span
+        span = float(mx - mn) if pd.notna(mx) and pd.notna(mn) else 0.0
+        pad = span * tol_pct
+
+        # Si el valor está fuera del rango (con pad), eliminar el predictor completamente
+        if not (
+            pd.notna(valor_objetivo) and (mn - pad) <= valor_objetivo <= (mx + pad)
+        ):
             columnas_a_eliminar.append(col)
             logger.debug(
-                f"Eliminando predictor '{col}': valor_objetivo={valor_objetivo} fuera del rango [{mn:.3f}, {mx:.3f}]"
+                f"Eliminando predictor '{col}': valor_objetivo={valor_objetivo} fuera del rango [{mn - pad:.3f}, {mx + pad:.3f}] (pad={pad:.3f})"
             )
 
     df = df.drop(columns=columnas_a_eliminar)
@@ -418,6 +653,13 @@ def entrenar_modelo(
     poly: bool,
     idx: int,
     modelo_extra: Optional[str] = None,
+    # Opcionales de manejo de outliers (por defecto activado y sin remoción dura)
+    manejar_outliers: bool = True,
+    umbral_z_suave: float = 3.0,
+    umbral_z_duro: float = 6.0,
+    alpha_pesos: float = 0.5,
+    w_min: float = 0.2,
+    remover_duro: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Train linear, polynomial, log, power, or exponential model and compute metrics.
 
@@ -439,6 +681,10 @@ def entrenar_modelo(
         "y_original": y_original.tolist(),  # Lista para JSON
         "columnas_predictores": list(predictores),  # Nombres de columnas
     }
+    # Datos de entrenamiento efectivos (post outliers duros si aplica)
+    datos_entrenamiento = datos_originales
+    indices_entrenamiento = df_train.index.tolist()
+    X_entrenamiento_original_list = X_df_original.values.tolist()
     # Inicializar variables comunes
     modelo = None
     coef_original = []
@@ -507,7 +753,7 @@ def entrenar_modelo(
     n_unique_y = len(np.unique(y_raw))
     n_samples = len(y_raw)
     # diversidad_requerida y minimos_muestras_requeridas eliminados; usar MIN_UNICOS / MIN_MUESTRAS
-    min_unique = MIN_UNICOS.get(tipo_prelim, 5)
+    min_unique = _min_unicos(tipo_prelim)
     # Chequeo en y
     if n_unique_y < min_unique:
         raise ModeloDescartado(
@@ -545,9 +791,43 @@ def entrenar_modelo(
             X_df = df_train[list(predictores)]
             if (X_df <= 0).any().any():
                 return None
-            X_transformed = np.log(np.array(X_df.values, dtype=float))
-            y_transformed = np.array(df_train[objetivo].values, dtype=float)
-            min_required = MIN_MUESTRAS.get("log-1", 5)
+            X_vals = np.array(X_df.values, dtype=float).reshape(-1, 1)
+            y_vals = np.array(df_train[objetivo].values, dtype=float)
+            # Pesos robustos (sobre espacio original)
+            w_fit = None
+            mask_keep = np.ones(X_vals.shape[0], dtype=bool)
+            if manejar_outliers:
+                w, mask, info_out = calcular_pesos_outliers(
+                    X_vals.ravel(),
+                    y_vals,
+                    umbral_z_suave=umbral_z_suave,
+                    umbral_z_duro=umbral_z_duro,
+                    alpha_pesos=alpha_pesos,
+                    w_min=w_min,
+                    remover_duro=remover_duro,
+                )
+                mask_keep = mask
+                # Aplicar exclusión dura solo si mantiene el mínimo
+                min_req = _min_muestras("log-1")
+                if remover_duro and np.count_nonzero(mask_keep) >= min_req:
+                    X_vals = X_vals[mask_keep]
+                    y_vals = y_vals[mask_keep]
+                    w_fit = w[mask_keep]
+                    indices_entrenamiento = df_train.index[mask_keep].tolist()
+                else:
+                    w_fit = w
+                    indices_entrenamiento = df_train.index.tolist()
+                # Actualizar datos de entrenamiento efectivos
+                datos_entrenamiento = {
+                    "X_original": X_vals.tolist(),
+                    "y_original": y_vals.tolist(),
+                    "columnas_predictores": list(predictores),
+                }
+                X_entrenamiento_original_list = X_vals.tolist()
+            # Transformaciones específicas
+            X_transformed = np.log(X_vals)
+            y_transformed = y_vals
+            min_required = _min_muestras("log-1")
             tipo = "log-1"
             tipo_transformacion = "logarítmica"
             pf = None
@@ -556,7 +836,14 @@ def entrenar_modelo(
             if len(df_train) < min_required:
                 return None
             # Entrenar modelo
-            modelo = LinearRegression().fit(X_transformed.reshape(-1, 1), y_transformed)
+            if manejar_outliers and w_fit is not None:
+                modelo = LinearRegression().fit(
+                    X_transformed.reshape(-1, 1), y_transformed, sample_weight=w_fit
+                )
+            else:
+                modelo = LinearRegression().fit(
+                    X_transformed.reshape(-1, 1), y_transformed
+                )
             pred_transformed = modelo.predict(X_transformed.reshape(-1, 1))
 
             # Coeficientes ya están en unidades originales
@@ -577,9 +864,40 @@ def entrenar_modelo(
             y_df = df_train[objetivo]
             if (X_df <= 0).any().any() or (y_df <= 0).any():
                 return None
-            X_transformed = np.log(np.array(X_df.values, dtype=float))
-            y_transformed = np.log(np.array(y_df.values, dtype=float))
-            min_required = MIN_MUESTRAS.get("pot-1", 5)
+            X_vals = np.array(X_df.values, dtype=float).reshape(-1, 1)
+            y_vals = np.array(y_df.values, dtype=float)
+            # Pesos robustos
+            w_fit = None
+            mask_keep = np.ones(X_vals.shape[0], dtype=bool)
+            if manejar_outliers:
+                w, mask, info_out = calcular_pesos_outliers(
+                    X_vals.ravel(),
+                    y_vals,
+                    umbral_z_suave=umbral_z_suave,
+                    umbral_z_duro=umbral_z_duro,
+                    alpha_pesos=alpha_pesos,
+                    w_min=w_min,
+                    remover_duro=remover_duro,
+                )
+                mask_keep = mask
+                min_req = _min_muestras("pot-1")
+                if remover_duro and np.count_nonzero(mask_keep) >= min_req:
+                    X_vals = X_vals[mask_keep]
+                    y_vals = y_vals[mask_keep]
+                    w_fit = w[mask_keep]
+                    indices_entrenamiento = df_train.index[mask_keep].tolist()
+                else:
+                    w_fit = w
+                    indices_entrenamiento = df_train.index.tolist()
+                datos_entrenamiento = {
+                    "X_original": X_vals.tolist(),
+                    "y_original": y_vals.tolist(),
+                    "columnas_predictores": list(predictores),
+                }
+                X_entrenamiento_original_list = X_vals.tolist()
+            X_transformed = np.log(X_vals)
+            y_transformed = np.log(y_vals)
+            min_required = _min_muestras("pot-1")
             tipo = "pot-1"
             tipo_transformacion = "potencia"
             pf = None
@@ -589,7 +907,14 @@ def entrenar_modelo(
                 return None
 
             # Entrenar modelo
-            modelo = LinearRegression().fit(X_transformed.reshape(-1, 1), y_transformed)
+            if manejar_outliers and w_fit is not None:
+                modelo = LinearRegression().fit(
+                    X_transformed.reshape(-1, 1), y_transformed, sample_weight=w_fit
+                )
+            else:
+                modelo = LinearRegression().fit(
+                    X_transformed.reshape(-1, 1), y_transformed
+                )
             pred_transformed = modelo.predict(X_transformed.reshape(-1, 1))
 
             # Revertir transformación: y = a*x^b
@@ -610,9 +935,40 @@ def entrenar_modelo(
             y_df = df_train[objetivo]
             if (y_df <= 0).any():
                 return None
-            X_transformed = np.array(X_df.values, dtype=float)
-            y_transformed = np.log(np.array(y_df.values, dtype=float))
-            min_required = MIN_MUESTRAS.get("exp-1", 5)
+            X_vals = np.array(X_df.values, dtype=float).reshape(-1, 1)
+            y_vals = np.array(y_df.values, dtype=float)
+            # Pesos robustos
+            w_fit = None
+            mask_keep = np.ones(X_vals.shape[0], dtype=bool)
+            if manejar_outliers:
+                w, mask, info_out = calcular_pesos_outliers(
+                    X_vals.ravel(),
+                    y_vals,
+                    umbral_z_suave=umbral_z_suave,
+                    umbral_z_duro=umbral_z_duro,
+                    alpha_pesos=alpha_pesos,
+                    w_min=w_min,
+                    remover_duro=remover_duro,
+                )
+                mask_keep = mask
+                min_req = _min_muestras("exp-1")
+                if remover_duro and np.count_nonzero(mask_keep) >= min_req:
+                    X_vals = X_vals[mask_keep]
+                    y_vals = y_vals[mask_keep]
+                    w_fit = w[mask_keep]
+                    indices_entrenamiento = df_train.index[mask_keep].tolist()
+                else:
+                    w_fit = w
+                    indices_entrenamiento = df_train.index.tolist()
+                datos_entrenamiento = {
+                    "X_original": X_vals.tolist(),
+                    "y_original": y_vals.tolist(),
+                    "columnas_predictores": list(predictores),
+                }
+                X_entrenamiento_original_list = X_vals.tolist()
+            X_transformed = X_vals
+            y_transformed = np.log(y_vals)
+            min_required = _min_muestras("exp-1")
             tipo = "exp-1"
             tipo_transformacion = "exponencial"
             pf = None
@@ -622,7 +978,14 @@ def entrenar_modelo(
                 return None
 
             # Entrenar modelo
-            modelo = LinearRegression().fit(X_transformed.reshape(-1, 1), y_transformed)
+            if manejar_outliers and w_fit is not None:
+                modelo = LinearRegression().fit(
+                    X_transformed.reshape(-1, 1), y_transformed, sample_weight=w_fit
+                )
+            else:
+                modelo = LinearRegression().fit(
+                    X_transformed.reshape(-1, 1), y_transformed
+                )
             pred_transformed = modelo.predict(X_transformed.reshape(-1, 1))
 
             # Revertir transformación: y = a*exp(b*x)
@@ -639,15 +1002,53 @@ def entrenar_modelo(
             # Modelos lineales y polinómicos
             if poly:
                 tipo_poly = f"poly-{len(predictores)}"
-                min_required = MIN_MUESTRAS.get(tipo_poly, 5)
+                min_required = _min_muestras(tipo_poly)
             else:
                 tipo_lin = f"linear-{len(predictores)}"
-                min_required = MIN_MUESTRAS.get(tipo_lin, 5)
+                min_required = _min_muestras(tipo_lin)
             if len(df_train) < min_required:
                 return None
             X_df = df_train[list(predictores)]
             X_raw = np.array(X_df.values, dtype=float)
             y_raw = np.array(df_train[objetivo].values, dtype=float)
+
+            # Pesos robustos en espacio original (1D: ravel, 2D: norma fila)
+            w_fit = None
+            mask_keep = np.ones(X_raw.shape[0], dtype=bool)
+            if manejar_outliers:
+                if X_raw.shape[1] == 1:
+                    x_for_out = X_raw.ravel()
+                else:
+                    x_for_out = np.linalg.norm(X_raw, axis=1)
+                w, mask, info_out = calcular_pesos_outliers(
+                    x_for_out,
+                    y_raw,
+                    umbral_z_suave=umbral_z_suave,
+                    umbral_z_duro=umbral_z_duro,
+                    alpha_pesos=alpha_pesos,
+                    w_min=w_min,
+                    remover_duro=remover_duro,
+                )
+                mask_keep = mask
+                # Decidir tipo prelim para mínimo de muestras
+                tipo_min = (
+                    f"poly-{len(predictores)}" if poly else f"linear-{len(predictores)}"
+                )
+                min_req = _min_muestras(tipo_min)
+                if remover_duro and np.count_nonzero(mask_keep) >= min_req:
+                    X_raw = X_raw[mask_keep]
+                    y_raw = y_raw[mask_keep]
+                    w_fit = w[mask_keep]
+                    indices_entrenamiento = df_train.index[mask_keep].tolist()
+                else:
+                    w_fit = w
+                    indices_entrenamiento = df_train.index.tolist()
+                datos_entrenamiento = {
+                    "X_original": X_raw.tolist(),
+                    "y_original": y_raw.tolist(),
+                    "columnas_predictores": list(predictores),
+                }
+                X_entrenamiento_original_list = X_raw.tolist()
 
             # Normalización
             if poly:
@@ -699,7 +1100,12 @@ def entrenar_modelo(
                 raise ModeloDescartado("Variable objetivo y es constante")
 
             # Entrenar modelo
-            modelo = LinearRegression().fit(X_trans, y_transformed)
+            if manejar_outliers and w_fit is not None:
+                modelo = LinearRegression().fit(
+                    X_trans, y_transformed, sample_weight=w_fit
+                )
+            else:
+                modelo = LinearRegression().fit(X_trans, y_transformed)
             coeficientes = modelo.coef_
             intercepto = modelo.intercept_
 
@@ -746,8 +1152,62 @@ def entrenar_modelo(
             mean_absolute_percentage_error(y_original_metrics, pred_original) * 100
         )
         r2 = r2_score(y_original_metrics, pred_original)
-        corr = 0.5 * r2 + 0.5 * (1 - mape / 15)
-        confianza = max(0, float(corr * penalizacion_por_k(len(df_train))))
+        # Preparar stats para confianza avanzada
+        try:
+            n_eff = int(len(y_vals)) if "y_vals" in locals() else int(len(y_raw))
+        except Exception:
+            n_eff = len(df_train)
+        stats_conf: dict[str, float] = {
+            "r2": float(r2),
+            "mape": float(mape),
+            "k": int(n_eff),
+            "n": int(n_eff),
+        }
+        # Si 2D, adjuntar métricas geométricas/calculadas del early check
+        if len(predictores) == 2:
+            # Recalcular o usar geom_metrics si estaba disponible
+            try:
+                X_tmp = np.array(df_train[list(predictores)].values, dtype=float)
+                ok2d, geom_metrics, reasons = _early_checks_2d(X_tmp, tipo_prelim)
+                # Guardar métricas aunque ok2d sea False (no descartar aquí)
+                stats_conf.update(
+                    {
+                        "pearson_r": float(geom_metrics.get("pearson_r", np.nan)),
+                        "vif": float(geom_metrics.get("vif", np.nan)),
+                        "cond": float(geom_metrics.get("cond", np.nan)),
+                        "pc2_ratio": float(geom_metrics.get("pc2_ratio", np.nan)),
+                        "unique_pair_ratio": float(
+                            geom_metrics.get("unique_pair_ratio", np.nan)
+                        ),
+                        "hull_ratio": float(geom_metrics.get("hull_ratio", np.nan)),
+                        "ellipse_ratio": float(
+                            geom_metrics.get("ellipse_ratio", np.nan)
+                        ),
+                    }
+                )
+                # Añadir alias esperados por penalizaciones (pearson_abs y coverage_*)
+                try:
+                    if "pearson_r" in stats_conf and np.isfinite(
+                        stats_conf["pearson_r"]
+                    ):
+                        stats_conf["pearson_abs"] = abs(float(stats_conf["pearson_r"]))
+                except Exception:
+                    pass
+                if "unique_pair_ratio" in stats_conf:
+                    stats_conf["coverage_unique_pair"] = stats_conf["unique_pair_ratio"]
+                if "hull_ratio" in stats_conf:
+                    stats_conf["coverage_hull"] = stats_conf["hull_ratio"]
+                if "ellipse_ratio" in stats_conf:
+                    stats_conf["coverage_ellipse"] = stats_conf["ellipse_ratio"]
+            except Exception:
+                pass
+        # Calcular correlación base para reporte y confianza avanzada para ranking
+        conf_cfg = _COR().get("confianza", {})
+        w_r2 = float(conf_cfg.get("w_r2", 0.5))
+        w_mp = float(conf_cfg.get("w_mape", 0.5))
+        div_m = float(conf_cfg.get("mape_divisor", 15.0))
+        corr = w_r2 * r2 + w_mp * (1 - min(mape / max(div_m, 1e-9), 1.0))
+        confianza = calcular_confianza_modelo(stats_conf)
         # Calcular pesos de predictores originales para polinómicos y lineales (normalizados)
         pesos_predictores = []
         if poly and pf is not None and hasattr(pf, "powers_"):
@@ -794,12 +1254,12 @@ def entrenar_modelo(
             "predictores": predictores,
             "tipo": tipo,
             "tipo_transformacion": tipo_transformacion,
-            "n": len(df_train),
+            "n": n_eff,
             "n_predictores": len(predictores),
             "datos_originales": datos_originales,
-            "datos_entrenamiento": datos_originales,
-            "indices_entrenamiento": df_train.index.tolist(),
-            "X_entrenamiento_original": X_df_original.values.tolist(),
+            "datos_entrenamiento": datos_entrenamiento,
+            "indices_entrenamiento": indices_entrenamiento,
+            "X_entrenamiento_original": X_entrenamiento_original_list,
             "coeficientes_originales": coef_original,
             "intercepto_original": intercepto_original,
             "Peso de predictores": pesos_predictores,
@@ -816,6 +1276,39 @@ def entrenar_modelo(
             "scaler_y": scaler_y if "scaler_y" in locals() else None,
             "ratio_MAPE_val_vs_train": ratio_MAPE_val_vs_train,
         }
+        # Propagar métricas 2D y n/k al resultado para uso posterior (LOOCV/penalizaciones)
+        try:
+            resultado["k"] = int(stats_conf.get("k", len(df_train)))
+            resultado["n"] = int(stats_conf.get("n", len(df_train)))
+            for kmet in (
+                "pearson_r",
+                "vif",
+                "cond",
+                "pc2_ratio",
+                "unique_pair_ratio",
+                "hull_ratio",
+                "ellipse_ratio",
+            ):
+                if kmet in stats_conf:
+                    resultado[kmet] = stats_conf[kmet]
+        except Exception:
+            pass
+        # Info de outliers (si se calcularon)
+        if manejar_outliers:
+            try:
+                # info_out puede no existir si no se ejecutó el bloque (p.ej., sin remover)
+                resultado["Outliers_duros_removidos"] = int(
+                    np.nansum(~mask_keep) if remover_duro else int(0)
+                )
+                # Suaves: estimación aproximada (no duros) marcados por soft en utilitario; si no está disponible, usar 0
+                # Nota: Para simplicidad, registramos la cantidad total de pesos < 1 como 'suaves'.
+                if "w_fit" in locals() and w_fit is not None:
+                    resultado["Outliers_suaves_pesados"] = int(np.sum((w_fit < 0.9999)))
+                else:
+                    resultado["Outliers_suaves_pesados"] = 0
+            except Exception:
+                resultado["Outliers_duros_removidos"] = 0
+                resultado["Outliers_suaves_pesados"] = 0
         # Agregar advertencia de información efectiva si corresponde
         if warning_msg is not None:
             resultado["Advertencia"] = warning_msg
@@ -840,22 +1333,31 @@ def filtrar_mejores_modelos(
     """Return top models per type based on Confianza."""
     # Nueva lógica de robustez y descarte
     modelos_filtrados = []
+    sel_cfg = _COR().get("seleccion_modelos", {})
+    pre = sel_cfg.get("pre_filtro", {"mape_max": 18.0, "r2_min": 0.4})
+    train_thr = sel_cfg.get("train", {"mape_max": 7.5, "r2_min": 0.6})
     for m in modelos:
         if m is None:
             continue
         mape = m.get("mape", np.inf)
         r2 = m.get("r2", -np.inf)
         # Descartar modelos inválidos
-        if mape > 18 or r2 < 0.4:
+        if mape > float(pre.get("mape_max", 18.0)) or r2 < float(
+            pre.get("r2_min", 0.4)
+        ):
             continue
         # Etiquetar como no robusto si está en zona intermedia
         motivo = ""
-        if (7.5 < mape <= 18) or (0.4 < r2 < 0.6):
+        if (
+            float(train_thr.get("mape_max", 7.5))
+            < mape
+            <= float(pre.get("mape_max", 18.0))
+        ) or (float(pre.get("r2_min", 0.4)) < r2 < float(train_thr.get("r2_min", 0.6))):
             motivo = "Modelo no robusto: "
-            if 7.5 < mape <= 18:
-                motivo += f"MAPE fuera de rango (>{7.5}%, <=18%) "
-            if 0.4 < r2 < 0.6:
-                motivo += f"R2 fuera de rango (>{0.4}, <0.6)"
+            if mape > float(train_thr.get("mape_max", 7.5)):
+                motivo += f"MAPE fuera de rango (>{float(train_thr.get('mape_max',7.5))}%, <= {float(pre.get('mape_max',18.0))}%) "
+            if r2 < float(train_thr.get("r2_min", 0.6)):
+                motivo += f"R2 fuera de rango (>{float(pre.get('r2_min',0.4))}, < {float(train_thr.get('r2_min',0.6))})"
             m["motivo"] = motivo.strip()
             m["no_robusto"] = True
         else:
@@ -943,7 +1445,45 @@ def validar_con_loocv(
         y_tr = scaler_y.transform(y_tr_arr).ravel()
 
         # Entrenar y predecir con desescalado
-        reg = LinearRegression().fit(X_tr, y_tr)
+        # Pesos de outliers opcionales en LOOCV
+        usar_pesos = bool(
+            _MODELOS().get("loocv_usa_pesos", False)
+            or _COR().get("loocv", {}).get("usar_pesos_outliers", False)
+        )
+        sample_weight = None
+        if usar_pesos:
+            # Pesar en espacio original: x como norma/ravel de X_tr_raw, y como y_tr_raw
+            try:
+                if X_tr_raw.shape[1] == 1:
+                    x_for_out = X_tr_raw.ravel()
+                else:
+                    x_for_out = np.linalg.norm(X_tr_raw, axis=1)
+            except Exception:
+                x_for_out = np.arange(y_tr.shape[0])  # fallback estable
+            w, mask_keep, _ = calcular_pesos_outliers(
+                x_for_out,
+                y_tr_raw,
+                umbral_z_suave=_OUTLIERS().get("umbral_z_suave", 3.0),
+                umbral_z_duro=_OUTLIERS().get("umbral_z_duro", 6.0),
+                alpha_pesos=_OUTLIERS().get("alpha_pesos", 0.5),
+                w_min=_OUTLIERS().get("w_min", 0.2),
+                remover_duro=_OUTLIERS().get("remover_duro", False),
+            )
+            # aplicar máscara si corresponde
+            try:
+                if (
+                    mask_keep is not None
+                    and mask_keep.shape[0] == y_tr.shape[0]
+                    and np.any(~mask_keep)
+                ):
+                    X_tr = X_tr[mask_keep]
+                    y_tr = y_tr[mask_keep]
+                    sample_weight = w[mask_keep]
+                else:
+                    sample_weight = w
+            except Exception:
+                sample_weight = w
+        reg = LinearRegression().fit(X_tr, y_tr, sample_weight=sample_weight)
         y_hat_scaled = reg.predict(X_te)[0]
         y_hat = scaler_y.inverse_transform([[y_hat_scaled]])[0, 0]
 
@@ -954,7 +1494,11 @@ def validar_con_loocv(
 
     MAPE_LOOCV = errors.mean() * 100
     R2_LOOCV = r2_score(np.array(y_full), np.array(preds))
-    Corr_LOOCV = 0.5 * R2_LOOCV + 0.5 * (1 - MAPE_LOOCV / 15)
+    conf_cfg = _COR().get("confianza", {})
+    w_r2 = float(conf_cfg.get("w_r2", 0.5))
+    w_mp = float(conf_cfg.get("w_mape", 0.5))
+    div_m = float(conf_cfg.get("mape_divisor", 15.0))
+    Corr_LOOCV = w_r2 * R2_LOOCV + w_mp * (1 - min(MAPE_LOOCV / max(div_m, 1e-9), 1.0))
     Conf_cv = max(0, Corr_LOOCV * penalizacion_por_k(n_LOOCV))
 
     return {
@@ -1024,16 +1568,73 @@ def imputar_valores_celda(
             else:
                 valor = y_norm
 
-    # ── advertencia de extrapolación (0% tolerancia) ─────────
+    # ── Extrapolación configurable ───────────────────────────
     advert_extrap = ""
     df_train = df_filtrado.dropna(subset=[objetivo, *info["predictores"]])
-    for col in info["predictores"]:
-        rango_min = df_train[col].min()
-        rango_max = df_train[col].max()
-        v = df_filtrado.at[idx, col]
-        if pd.isna(v) or not (rango_min <= v <= rango_max):
-            advert_extrap = "Extrapolacion"
-            break
+    ex_cfg = _COR().get("extrapolacion", {})
+    modo_pred = ex_cfg.get("modo_predictores", "eliminar")
+    tol_pct = float(ex_cfg.get("tolerancia_pct", 0.0))
+    modo_2d = ex_cfg.get("modo_2d", "marginal")
+    hull_pad = float(ex_cfg.get("tolerancia_hull_pad", 0.0))
+
+    # Marginal: permite tolerancia sobre el rango [min,max]
+    def _marginal_ok(col, v):
+        rmin = df_train[col].min()
+        rmax = df_train[col].max()
+        span = float(rmax - rmin) if pd.notna(rmax) and pd.notna(rmin) else 0.0
+        pad = span * tol_pct
+        return (pd.notna(v)) and ((rmin - pad) <= v <= (rmax + pad))
+
+    # Convex hull (2D): punto dentro del hull (con padding aproximado)
+    def _in_convex_hull(
+        xy_train: np.ndarray, pt: tuple[float, float], pad: float = 0.0
+    ) -> bool:
+        pts = sorted(set(map(tuple, xy_train.tolist())))
+        if len(pts) < 3:
+            return True  # sin hull útil => no consideramos extrapolación
+
+        def cross(o, a, b):
+            return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+        lower = []
+        for p in pts:
+            while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+                lower.pop()
+            lower.append(p)
+        upper = []
+        for p in reversed(pts):
+            while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+                upper.pop()
+            upper.append(p)
+        hull = lower[:-1] + upper[:-1]
+        x, y = pt
+        inside = False
+        for i in range(len(hull)):
+            x1, y1 = hull[i]
+            x2, y2 = hull[(i + 1) % len(hull)]
+            if ((y1 > y) != (y2 > y)) and (
+                x < (x2 - x1) * (y - y1) / (y2 - y1 + 1e-9) + x1
+            ):
+                inside = not inside
+        return inside
+
+    preds = info["predictores"]
+    if len(preds) == 2 and modo_2d == "convex_hull":
+        xy = df_train[preds].dropna().values
+        vx = _to_float_safe(df_filtrado.at[idx, preds[0]])
+        vy = _to_float_safe(df_filtrado.at[idx, preds[1]])
+        try:
+            if np.isfinite(vx) and np.isfinite(vy):
+                if not _in_convex_hull(xy, (vx, vy), pad=hull_pad):
+                    advert_extrap = "Extrapolacion"
+        except Exception:
+            pass
+    else:
+        for col in preds:
+            v = df_filtrado.at[idx, col]
+            if not _marginal_ok(col, v):
+                advert_extrap = "Extrapolacion"
+                break
     # Unificación de advertencias: solo se usa la clave 'Advertencia'
     advert_prev = info.get("Advertencia", "")
     if advert_prev and advert_extrap:
@@ -1068,6 +1669,8 @@ def imputar_valores_celda(
         "R2_LOOCV": info.get("R2_LOOCV", np.nan),
         "Método predictivo": "Correlacion",
         "Advertencia": advertencia_final,
+        "Outliers_duros_removidos": info.get("Outliers_duros_removidos", 0),
+        "Outliers_suaves_pesados": info.get("Outliers_suaves_pesados", 0),
     }
 
     return df_resultado, imputacion
@@ -1078,6 +1681,21 @@ def imputaciones_correlacion(
     exportar_modelos: bool = False,
     ruta_export: Optional[str] = None,
     permitir_sin_filtro: bool = False,
+    # Config knobs (opcionales, con defaults que replican el comportamiento actual)
+    min_datos_validos: int = 5,
+    modelos_habilitados: Optional[Dict[str, bool]] = None,
+    umbral_mape_max: float = 7.5,
+    usar_loocv: bool = True,
+    loocv_usa_pesos: bool = False,
+    # Control de verbosidad
+    verbose: bool = True,
+    # Outliers/robustez
+    manejar_outliers: bool = True,
+    umbral_z_suave: float = 3.0,
+    umbral_z_duro: float = 6.0,
+    alpha_pesos: float = 0.5,
+    w_min: float = 0.2,
+    remover_duro: bool = False,
 ) -> Tuple[pd.DataFrame, List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Imputa valores faltantes por correlación/modelado.
 
@@ -1091,6 +1709,12 @@ def imputaciones_correlacion(
     df = df.rename(columns=lambda c: str(c).strip())
     # Reemplazar valores inválidos por np.nan
     df.replace("", np.nan, inplace=True)
+
+    # Logger interno controlado por 'verbose'
+    def _log(*args, **kwargs):
+        if verbose:
+            print(*args, **kwargs)
+
     df_original = df.copy()  # <- Copia del DF original antes de filtrar
     df_completo = df.copy()  # NUEVO: DataFrame completo para exportar
     df_resultado = df_original.copy()
@@ -1110,7 +1734,11 @@ def imputaciones_correlacion(
             # 1. Intentar con filtros de familia en orden F0, F1, F2 (explícito)
             for capa in (0, 1, 2):
                 df_filtrado, fam, filtro = seleccionar_predictores_validos(
-                    df_original, objetivo, idx, nivel_familia=capa
+                    df_original,
+                    objetivo,
+                    idx,
+                    nivel_familia=capa,
+                    min_datos_validos=min_datos_validos,
                 )
                 if fam != f"F{capa}" or df_filtrado is None or df_filtrado.empty:
                     continue
@@ -1124,9 +1752,35 @@ def imputaciones_correlacion(
                 modelos = []
                 for combo in generar_combinaciones(predictores):
                     for poly in (False, True):
+                        # Respetar configuraciones de modelos habilitados
+                        if poly:
+                            if (
+                                modelos_habilitados is not None
+                                and not modelos_habilitados.get("polinomico2", True)
+                            ):
+                                continue
+                        else:
+                            if (
+                                modelos_habilitados is not None
+                                and not modelos_habilitados.get("lineal", True)
+                            ):
+                                continue
                         try:
                             modelos.append(
-                                entrenar_modelo(df_filtrado, objetivo, combo, poly, idx)
+                                entrenar_modelo(
+                                    df_filtrado,
+                                    objetivo,
+                                    combo,
+                                    poly,
+                                    idx,
+                                    # Outliers/robustez
+                                    manejar_outliers=manejar_outliers,
+                                    umbral_z_suave=umbral_z_suave,
+                                    umbral_z_duro=umbral_z_duro,
+                                    alpha_pesos=alpha_pesos,
+                                    w_min=w_min,
+                                    remover_duro=remover_duro,
+                                )
                             )
                         except ModeloDescartado as e:
                             modelos.append(
@@ -1142,6 +1796,22 @@ def imputaciones_correlacion(
                             )
                     if len(combo) == 1:
                         for modelo_extra in ("log", "potencia", "exp"):
+                            if modelos_habilitados is not None:
+                                if (
+                                    modelo_extra == "log"
+                                    and not modelos_habilitados.get("log", True)
+                                ):
+                                    continue
+                                if (
+                                    modelo_extra == "potencia"
+                                    and not modelos_habilitados.get("potencia", True)
+                                ):
+                                    continue
+                                if (
+                                    modelo_extra == "exponencial"
+                                    and not modelos_habilitados.get("exponencial", True)
+                                ):
+                                    continue
                             try:
                                 modelos.append(
                                     entrenar_modelo(
@@ -1151,6 +1821,13 @@ def imputaciones_correlacion(
                                         False,
                                         idx,
                                         modelo_extra=modelo_extra,
+                                        # Outliers/robustez
+                                        manejar_outliers=manejar_outliers,
+                                        umbral_z_suave=umbral_z_suave,
+                                        umbral_z_duro=umbral_z_duro,
+                                        alpha_pesos=alpha_pesos,
+                                        w_min=w_min,
+                                        remover_duro=remover_duro,
                                     )
                                 )
                             except ModeloDescartado as e:
@@ -1173,8 +1850,13 @@ def imputaciones_correlacion(
                     and m.get("tipo") != "constante"
                     and not m.get("descartado", False)
                 ]
+                train_cfg = _COR().get("seleccion_modelos", {}).get("train", {})
+                train_mape_max = float(train_cfg.get("mape_max", umbral_mape_max))
+                train_r2_min = float(train_cfg.get("r2_min", 0.6))
                 validos = [
-                    m for m in predictivos if m["mape"] <= 7.5 and m["r2"] >= 0.6
+                    m
+                    for m in predictivos
+                    if m["mape"] <= train_mape_max and m["r2"] >= train_r2_min
                 ]
                 if validos:
                     modelos_validos = validos
@@ -1201,7 +1883,11 @@ def imputaciones_correlacion(
                 if permitir_sin_filtro:
                     # Intentar recién ahora modo progresivo que puede terminar en 'sin filtro'
                     df_filtrado, fam, filtro = seleccionar_predictores_validos(
-                        df_original, objetivo, idx, nivel_familia=None
+                        df_original,
+                        objetivo,
+                        idx,
+                        nivel_familia=None,
+                        min_datos_validos=min_datos_validos,
                     )
                     if (
                         fam == "sin filtro"
@@ -1217,10 +1903,36 @@ def imputaciones_correlacion(
                             modelos = []
                             for combo in generar_combinaciones(predictores):
                                 for poly in (False, True):
+                                    if poly:
+                                        if (
+                                            modelos_habilitados is not None
+                                            and not modelos_habilitados.get(
+                                                "polinomico2", True
+                                            )
+                                        ):
+                                            continue
+                                    else:
+                                        if (
+                                            modelos_habilitados is not None
+                                            and not modelos_habilitados.get(
+                                                "lineal", True
+                                            )
+                                        ):
+                                            continue
                                     try:
                                         modelos.append(
                                             entrenar_modelo(
-                                                df_filtrado, objetivo, combo, poly, idx
+                                                df_filtrado,
+                                                objetivo,
+                                                combo,
+                                                poly,
+                                                idx,
+                                                manejar_outliers=manejar_outliers,
+                                                umbral_z_suave=umbral_z_suave,
+                                                umbral_z_duro=umbral_z_duro,
+                                                alpha_pesos=alpha_pesos,
+                                                w_min=w_min,
+                                                remover_duro=remover_duro,
                                             )
                                         )
                                     except ModeloDescartado as e:
@@ -1237,6 +1949,28 @@ def imputaciones_correlacion(
                                         )
                                 if len(combo) == 1:
                                     for modelo_extra in ("log", "potencia", "exp"):
+                                        if modelos_habilitados is not None:
+                                            if (
+                                                modelo_extra == "log"
+                                                and not modelos_habilitados.get(
+                                                    "log", True
+                                                )
+                                            ):
+                                                continue
+                                            if (
+                                                modelo_extra == "potencia"
+                                                and not modelos_habilitados.get(
+                                                    "potencia", True
+                                                )
+                                            ):
+                                                continue
+                                            if (
+                                                modelo_extra == "exponencial"
+                                                and not modelos_habilitados.get(
+                                                    "exponencial", True
+                                                )
+                                            ):
+                                                continue
                                         try:
                                             modelos.append(
                                                 entrenar_modelo(
@@ -1246,6 +1980,12 @@ def imputaciones_correlacion(
                                                     False,
                                                     idx,
                                                     modelo_extra=modelo_extra,
+                                                    manejar_outliers=manejar_outliers,
+                                                    umbral_z_suave=umbral_z_suave,
+                                                    umbral_z_duro=umbral_z_duro,
+                                                    alpha_pesos=alpha_pesos,
+                                                    w_min=w_min,
+                                                    remover_duro=remover_duro,
                                                 )
                                             )
                                         except ModeloDescartado as e:
@@ -1270,10 +2010,18 @@ def imputaciones_correlacion(
                                 and m.get("tipo") != "constante"
                                 and not m.get("descartado", False)
                             ]
+                            train_cfg = (
+                                _COR().get("seleccion_modelos", {}).get("train", {})
+                            )
+                            train_mape_max = float(
+                                train_cfg.get("mape_max", umbral_mape_max)
+                            )
+                            train_r2_min = float(train_cfg.get("r2_min", 0.6))
                             validos = [
                                 m
                                 for m in predictivos
-                                if m["mape"] <= 7.5 and m["r2"] >= 0.6
+                                if m["mape"] <= train_mape_max
+                                and m["r2"] >= train_r2_min
                             ]
                             if validos:
                                 modelos_validos = validos
@@ -1314,30 +2062,56 @@ def imputaciones_correlacion(
                     continue
             if modelos_validos and df_filtrado_usado is not None:
                 if modelos_validos[0].get("tipo") != "constante":
-                    for m in modelos_validos:
-                        m.update(validar_con_loocv(df_filtrado_usado, objetivo, m))
-                        m["Confianza_promedio"] = (
-                            m["Confianza"] + m["Confianza_LOOCV"]
-                        ) / 2
-                        mape = m.get("mape", None)
-                        mape_loocv = m.get("MAPE_LOOCV", None)
-                        if mape is not None and mape_loocv is not None:
-                            if mape == 0:
-                                ratio = np.inf
-                            else:
-                                ratio = mape_loocv / mape
-                            m["ratio_MAPE_val_vs_train"] = ratio
-                            if ratio > 5:
-                                advert_msg = (
-                                    f"Advertencia: El MAPE de validación es más de 5 veces mayor que el de entrenamiento "
-                                    f"({mape_loocv:.2f}% vs {mape:.2f}%). Posible sobreajuste."
+                    if usar_loocv:
+                        for m in modelos_validos:
+                            lo = validar_con_loocv(df_filtrado_usado, objetivo, m)
+                            m.update(lo)
+                            # Clasificar LOOCV (opcional, para trazabilidad/penalizaciones externas)
+                            lo_class = _clasificar_loocv(
+                                m.get("MAPE_LOOCV", np.inf), m.get("R2_LOOCV", -np.inf)
+                            )
+                            m["loocv_class"] = lo_class
+                            # Mezcla final de confianza: base vs LOOCV segun peso w
+                            la = _COR().get("confianza", {}).get("loocv_aporte", {})
+                            w = float(la.get("w", 0.2))
+                            w = max(0.0, min(1.0, w))
+                            conf_base = float(m.get("Confianza", 0.0))
+                            conf_loocv = float(m.get("Confianza_LOOCV", 0.0))
+                            conf_mix = (1.0 - w) * conf_base + w * conf_loocv
+                            m["Confianza_promedio"] = conf_mix
+                            m["Confianza"] = conf_mix
+                            # Ratio de validación vs entrenamiento por modelo
+                            mape_tr = m.get("mape", None)
+                            mape_val = m.get("MAPE_LOOCV", None)
+                            if mape_tr is not None and mape_val is not None:
+                                ratio = np.inf if mape_tr == 0 else mape_val / mape_tr
+                                m["ratio_MAPE_val_vs_train"] = ratio
+                                limite_ratio = float(
+                                    _COR()
+                                    .get("loocv", {})
+                                    .get("ratio_val_train_alerta", 5.0)
                                 )
-                                if "Advertencia" in m and m["Advertencia"]:
-                                    m["Advertencia"] += "; " + advert_msg
-                                else:
-                                    m["Advertencia"] = advert_msg
-                        else:
-                            m["ratio_MAPE_val_vs_train"] = None
+                                if ratio > limite_ratio:
+                                    advert_msg = (
+                                        f"Advertencia: El MAPE de validación es más de {limite_ratio:.0f} veces mayor que el de entrenamiento "
+                                        f"({mape_val:.2f}% vs {mape_tr:.2f}%). Posible sobreajuste."
+                                    )
+                                    if "Advertencia" in m and m["Advertencia"]:
+                                        m["Advertencia"] += "; " + advert_msg
+                                    else:
+                                        m["Advertencia"] = advert_msg
+                            else:
+                                m["ratio_MAPE_val_vs_train"] = None
+                    else:
+                        for m in modelos_validos:
+                            m["n_LOOCV"] = m.get("n", 0)
+                            m["MAPE_LOOCV"] = m["mape"]
+                            m["R2_LOOCV"] = m["r2"]
+                            m["Corr_LOOCV"] = m["corr"]
+                            m["Confianza_LOOCV"] = m["Confianza"]
+                            m["Confianza_promedio"] = m["Confianza"]
+                            # En modo sin LOOCV, el ratio es 1 por construcción
+                            m["ratio_MAPE_val_vs_train"] = 1.0
                     for m in modelos_validos:
                         if m is not None and not m.get("descartado", False):
                             columnas_grafico = list(m["predictores"]) + [objetivo]
@@ -1381,7 +2155,9 @@ def imputaciones_correlacion(
                                     "MAPE_LOOCV": m.get("MAPE_LOOCV"),
                                     "R2_LOOCV": m.get("R2_LOOCV"),
                                     "Advertencia": m.get("Advertencia", None),
-                                    "datos_entrenamiento": m["datos_originales"],
+                                    "datos_entrenamiento": m.get(
+                                        "datos_entrenamiento", m["datos_originales"]
+                                    ),
                                     "indices_entrenamiento": m.get(
                                         "indices_entrenamiento", []
                                     ),
@@ -1399,16 +2175,26 @@ def imputaciones_correlacion(
                                     "df_filtrado": df_filtrado_graf,
                                 }
                             )
+                    crit = _COR().get("loocv", {}).get("criterios", {})
+                    rob = crit.get("robusto", {"mape_max": 7.5, "r2_min": 0.6})
+                    nor = crit.get("no_robusto", {"mape_max": 12.5, "r2_min": 0.45})
                     robustos = [
                         m
                         for m in modelos_validos
-                        if m["MAPE_LOOCV"] <= 7.5 and m["R2_LOOCV"] >= 0.6
+                        if m["MAPE_LOOCV"] <= float(rob.get("mape_max", 7.5))
+                        and m["R2_LOOCV"] >= float(rob.get("r2_min", 0.6))
                     ]
                     no_robustos = [
                         m
                         for m in modelos_validos
-                        if (m["MAPE_LOOCV"] <= 12.5 and m["R2_LOOCV"] >= 0.45)
-                        and not (m["MAPE_LOOCV"] <= 7.5 and m["R2_LOOCV"] >= 0.6)
+                        if (
+                            m["MAPE_LOOCV"] <= float(nor.get("mape_max", 12.5))
+                            and m["R2_LOOCV"] >= float(nor.get("r2_min", 0.45))
+                        )
+                        and not (
+                            m["MAPE_LOOCV"] <= float(rob.get("mape_max", 7.5))
+                            and m["R2_LOOCV"] >= float(rob.get("r2_min", 0.6))
+                        )
                     ]
                     if robustos:
                         mejor = max(robustos, key=lambda x: x["Confianza_promedio"])
@@ -1442,9 +2228,10 @@ def imputaciones_correlacion(
                         mejor["Advertencia"] = warning_text
                     mejor["Familia"] = familia_usada
                     if not pd.isna(df_resultado.at[idx, objetivo]):
-                        print(
-                            f"⚠️ [ADVERTENCIA] Ya se imputó {objetivo} en fila {idx}. No debería ocurrir."
-                        )
+                        if verbose:
+                            print(
+                                f"⚠️ [ADVERTENCIA] Ya se imputó {objetivo} en fila {idx}. No debería ocurrir."
+                            )
                     df_resultado, imputacion = imputar_valores_celda(
                         df_resultado, df_filtrado_usado, objetivo, mejor, idx
                     )

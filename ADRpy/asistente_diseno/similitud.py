@@ -813,7 +813,6 @@ def widget_filtrado_ranking(
     """
     try:
         import ipywidgets as w
-        from IPython.display import display, clear_output
     except Exception as e:
         raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
 
@@ -881,10 +880,11 @@ def widget_filtrado_ranking(
     btn_clear = w.Button(
         description="Limpiar", button_style="warning", layout=w.Layout(width="15%")
     )
-    out = w.Output(layout=w.Layout(width="100%"))
+    # Contenedor HTML (sin autodisplay): el iframe/tabla se asigna a .value
+    html = w.HTML(value="", layout=w.Layout(width="100%"))
     # Contenedor base (dejamos el scroll al HTML interno para sticky header estable)
     out_container = w.Box(
-        [out],
+        [html],
         layout=w.Layout(
             width="100%",
             max_height=f"{int(max_height_px)}px",
@@ -928,107 +928,106 @@ def widget_filtrado_ranking(
         return dfv
 
     def _render(*args):
-        with out:
-            clear_output(wait=True)
-            dfv = _filtrar()
-            sty = vista_topn_detallada(dfv, restricciones, top_n=len(dfv))
-            # Salvaguarda: reforzar .2f en TODAS las numéricas justo antes del render
+        dfv = _filtrar()
+        sty = vista_topn_detallada(dfv, restricciones, top_n=len(dfv))
+        # Salvaguarda: reforzar .2f en TODAS las numéricas justo antes del render
+        try:
+            num_cols = [c for c in dfv.columns if pd.api.types.is_numeric_dtype(dfv[c])]
+            if num_cols:
+                sty = sty.format("{:.2f}", subset=num_cols)
+        except Exception:
+            pass
+        # Render como HTML en iframe con cabecera sticky, primera columna fija, ordenamiento, y headers con clamp/hover
+        try:
+            sty = sty.set_table_attributes('class="ranktbl"')
+            html_tbl = sty.to_html()
+            inner = (
+                "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                "<style>\n"
+                "html,body{margin:0;padding:8px;overflow:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;font-size:12px;color:#111;}\n"
+                ".ranktbl{table-layout:auto;width:max-content !important;min-width:100%;max-width:100%;border-collapse:separate;border-spacing:0;border:1px solid #ddd;}\n"
+                ".ranktbl th, .ranktbl td{min-width:12ch;}\n"
+                ".ranktbl td{white-space:nowrap;padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
+                ".ranktbl th{padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
+                ".ranktbl thead th{position:sticky;top:0;background:#fff;z-index:3;box-shadow:0 1px 0 rgba(0,0,0,0.08);font-weight:600;}\n"
+                ".ranktbl tbody tr:nth-child(odd) td{background:#fafafa;}\n"
+                ".ranktbl tbody tr:hover td{background:#f0f7ff;}\n"
+                ".ranktbl th:first-child, .ranktbl td:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:1px 0 0 rgba(0,0,0,0.08);}\n"
+                ".ranktbl td:nth-child(n+2){text-align:right;}\n"
+                ".ranktbl .hdr{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word;}\n"
+                ".ranktbl thead th:hover .hdr{-webkit-line-clamp:unset;max-height:none;}\n"
+                "</style></head><body>"
+                "<div id='tbl-wrap'>"
+                f"{html_tbl}"
+                "</div>"
+                "<script>\n"
+                "(function(){\n"
+                " var tbl=document.querySelector('.ranktbl'); if(!tbl) return;\n"
+                " // Envolver headers para clamp/tooltip\n"
+                " tbl.querySelectorAll('thead th').forEach(function(th){\n"
+                "   var txt=(th.textContent||'').trim(); th.setAttribute('title', txt);\n"
+                "   var span=document.createElement('span'); span.className='hdr'; span.textContent=txt;\n"
+                "   while(th.firstChild){ th.removeChild(th.firstChild);} th.appendChild(span);\n"
+                " });\n"
+                " // Tooltips específicos\n"
+                " tbl.querySelectorAll('thead th').forEach(function(th){\n"
+                "   var t=(th.textContent||'').trim();\n"
+                "   if(t.indexOf('dv_')===0) th.title='Aporte a la distancia total para ese parámetro (normalizado y ponderado).';\n"
+                "   else if(t.indexOf('viol_')===0) th.title='True si la fila viola la restricción definida para el parámetro.';\n"
+                "   if(t.indexOf('Δ_')===0) th.title='Desvío respecto al objetivo (con signo).';\n"
+                "   else if(t.indexOf('⚠_')===0) th.title='Violación de la restricción para el parámetro.';\n"
+                "   else if(t==='distancia') th.title='Distancia total agregada (menor es mejor).';\n"
+                "   else if(t==='similitud') th.title='Similitud = exp(-α·distancia) en [0,1] (mayor es mejor).';\n"
+                "   else if(t==='alerta') th.title='Objetivo fuera de LOW/HIGH(IQR) por parámetro.';\n"
+                " });\n"
+                " // Ordenamiento simple + formateo a 2 decimales\n"
+                " function parseVal(s){ var x=parseFloat(String(s).replace(',','.')); return isNaN(x)? null : x; }\n"
+                " function fmt2(x){ return (Math.round(x*100)/100).toFixed(2); }\n"
+                " function formatNumericCells(tbl){\n"
+                "   var rows=tbl.tBodies[0]? Array.prototype.slice.call(tbl.tBodies[0].rows):[];\n"
+                "   rows.forEach(function(r){ for(var i=1;i<r.cells.length;i++){ var t=(r.cells[i].innerText||'').trim(); var v=parseVal(t); if(v!==null){ r.cells[i].innerText = fmt2(v); r.cells[i].style.textAlign='right'; } } });\n"
+                " }\n"
+                " function sortTable(tbl,col,asc){\n"
+                "   var tb=tbl.tBodies[0]; if(!tb) return;\n"
+                "   var rows=Array.prototype.slice.call(tb.querySelectorAll('tr'));\n"
+                "   rows.sort(function(a,b){\n"
+                "     var ta=(a.cells[col]&&a.cells[col].innerText||'').trim();\n"
+                "     var tbv=(b.cells[col]&&b.cells[col].innerText||'').trim();\n"
+                "     var na=parseVal(ta), nb=parseVal(tbv);\n"
+                "     var cmp=0;\n"
+                "     if(na!==null && nb!==null){ cmp = na-nb; } else { cmp = ta.localeCompare(tbv); }\n"
+                "     return asc? cmp : -cmp;\n"
+                "   });\n"
+                "   rows.forEach(function(r){ tb.appendChild(r); });\n"
+                "   formatNumericCells(tbl);\n"
+                " }\n"
+                " tbl.querySelectorAll('thead th').forEach(function(th,idx){\n"
+                "   th.style.cursor='pointer';\n"
+                "   th.addEventListener('click', function(){\n"
+                "     var asc = th.getAttribute('data-asc') !== 'true';\n"
+                "     sortTable(tbl, idx, asc);\n"
+                "     tbl.querySelectorAll('thead th').forEach(function(t){ t.removeAttribute('data-asc'); });\n"
+                "     th.setAttribute('data-asc', asc?'true':'false');\n"
+                "   });\n"
+                " });\n"
+                " // Aplicar formateo inicial a 2 decimales\n"
+                " formatNumericCells(tbl);\n"
+                "})();\n"
+                "</script>"
+                "</body></html>"
+            )
+            escaped = inner.replace("'", "&#39;")
+            iframe = (
+                f'<iframe style="width:100%;height:{int(max_height_px)}px;border:1px solid #eee;border-radius:4px;" '
+                f"srcdoc='{escaped}' loading=\"lazy\"></iframe>"
+            )
+            html.value = iframe
+        except Exception:
+            # Fallback simple
             try:
-                num_cols = [
-                    c for c in dfv.columns if pd.api.types.is_numeric_dtype(dfv[c])
-                ]
-                if num_cols:
-                    sty = sty.format("{:.2f}", subset=num_cols)
+                html.value = sty.to_html()
             except Exception:
-                pass
-            # Render como HTML en iframe con cabecera sticky, primera columna fija, ordenamiento, y headers con clamp/hover
-            try:
-                sty = sty.set_table_attributes('class="ranktbl"')
-                html_tbl = sty.to_html()
-                inner = (
-                    "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                    "<style>\n"
-                    "html,body{margin:0;padding:8px;overflow:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;font-size:12px;color:#111;}\n"
-                    ".ranktbl{table-layout:auto;width:max-content !important;min-width:100%;max-width:100%;border-collapse:separate;border-spacing:0;border:1px solid #ddd;}\n"
-                    ".ranktbl th, .ranktbl td{min-width:12ch;}\n"
-                    ".ranktbl td{white-space:nowrap;padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
-                    ".ranktbl th{padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
-                    ".ranktbl thead th{position:sticky;top:0;background:#fff;z-index:3;box-shadow:0 1px 0 rgba(0,0,0,0.08);font-weight:600;}\n"
-                    ".ranktbl tbody tr:nth-child(odd) td{background:#fafafa;}\n"
-                    ".ranktbl tbody tr:hover td{background:#f0f7ff;}\n"
-                    ".ranktbl th:first-child, .ranktbl td:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:1px 0 0 rgba(0,0,0,0.08);}\n"
-                    ".ranktbl td:nth-child(n+2){text-align:right;}\n"
-                    ".ranktbl .hdr{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word;}\n"
-                    ".ranktbl thead th:hover .hdr{-webkit-line-clamp:unset;max-height:none;}\n"
-                    "</style></head><body>"
-                    "<div id='tbl-wrap'>"
-                    f"{html_tbl}"
-                    "</div>"
-                    "<script>\n"
-                    "(function(){\n"
-                    " var tbl=document.querySelector('.ranktbl'); if(!tbl) return;\n"
-                    " // Envolver headers para clamp/tooltip\n"
-                    " tbl.querySelectorAll('thead th').forEach(function(th){\n"
-                    "   var txt=(th.textContent||'').trim(); th.setAttribute('title', txt);\n"
-                    "   var span=document.createElement('span'); span.className='hdr'; span.textContent=txt;\n"
-                    "   while(th.firstChild){ th.removeChild(th.firstChild);} th.appendChild(span);\n"
-                    " });\n"
-                    " // Tooltips específicos\n"
-                    " tbl.querySelectorAll('thead th').forEach(function(th){\n"
-                    "   var t=(th.textContent||'').trim();\n"
-                    "   if(t.indexOf('dv_')===0) th.title='Aporte a la distancia total para ese parámetro (normalizado y ponderado).';\n"
-                    "   else if(t.indexOf('viol_')===0) th.title='True si la fila viola la restricción definida para el parámetro.';\n"
-                    "   if(t.indexOf('Δ_')===0) th.title='Desvío respecto al objetivo (con signo).';\n"
-                    "   else if(t.indexOf('⚠_')===0) th.title='Violación de la restricción para el parámetro.';\n"
-                    "   else if(t==='distancia') th.title='Distancia total agregada (menor es mejor).';\n"
-                    "   else if(t==='similitud') th.title='Similitud = exp(-α·distancia) en [0,1] (mayor es mejor).';\n"
-                    "   else if(t==='alerta') th.title='Objetivo fuera de LOW/HIGH(IQR) por parámetro.';\n"
-                    " });\n"
-                    " // Ordenamiento simple + formateo a 2 decimales\n"
-                    " function parseVal(s){ var x=parseFloat(String(s).replace(',','.')); return isNaN(x)? null : x; }\n"
-                    " function fmt2(x){ return (Math.round(x*100)/100).toFixed(2); }\n"
-                    " function formatNumericCells(tbl){\n"
-                    "   var rows=tbl.tBodies[0]? Array.prototype.slice.call(tbl.tBodies[0].rows):[];\n"
-                    "   rows.forEach(function(r){ for(var i=1;i<r.cells.length;i++){ var t=(r.cells[i].innerText||'').trim(); var v=parseVal(t); if(v!==null){ r.cells[i].innerText = fmt2(v); r.cells[i].style.textAlign='right'; } } });\n"
-                    " }\n"
-                    " function sortTable(tbl,col,asc){\n"
-                    "   var tb=tbl.tBodies[0]; if(!tb) return;\n"
-                    "   var rows=Array.prototype.slice.call(tb.querySelectorAll('tr'));\n"
-                    "   rows.sort(function(a,b){\n"
-                    "     var ta=(a.cells[col]&&a.cells[col].innerText||'').trim();\n"
-                    "     var tbv=(b.cells[col]&&b.cells[col].innerText||'').trim();\n"
-                    "     var na=parseVal(ta), nb=parseVal(tbv);\n"
-                    "     var cmp=0;\n"
-                    "     if(na!==null && nb!==null){ cmp = na-nb; } else { cmp = ta.localeCompare(tbv); }\n"
-                    "     return asc? cmp : -cmp;\n"
-                    "   });\n"
-                    "   rows.forEach(function(r){ tb.appendChild(r); });\n"
-                    "   formatNumericCells(tbl);\n"
-                    " }\n"
-                    " tbl.querySelectorAll('thead th').forEach(function(th,idx){\n"
-                    "   th.style.cursor='pointer';\n"
-                    "   th.addEventListener('click', function(){\n"
-                    "     var asc = th.getAttribute('data-asc') !== 'true';\n"
-                    "     sortTable(tbl, idx, asc);\n"
-                    "     tbl.querySelectorAll('thead th').forEach(function(t){ t.removeAttribute('data-asc'); });\n"
-                    "     th.setAttribute('data-asc', asc?'true':'false');\n"
-                    "   });\n"
-                    " });\n"
-                    " // Aplicar formateo inicial a 2 decimales\n"
-                    " formatNumericCells(tbl);\n"
-                    "})();\n"
-                    "</script>"
-                    "</body></html>"
-                )
-                escaped = inner.replace("'", "&#39;")
-                iframe = (
-                    f'<iframe style="width:100%;height:{int(max_height_px)}px;border:1px solid #eee;border-radius:4px;" '
-                    f"srcdoc='{escaped}' loading=\"lazy\"></iframe>"
-                )
-                display(w.HTML(value=iframe))
-            except Exception:
-                # Fallback simple
-                display(sty)
+                html.value = dfv.to_html()
 
     def _clear(_):
         dd_seg.value = "Todos"

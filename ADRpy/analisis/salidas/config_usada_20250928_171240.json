@@ -1,0 +1,377 @@
+{
+  "entorno": {
+    "debug_mode": false,
+    "seed": 42,
+    "ruta_excel": "Datos_aeronaves.xlsx",
+    "max_rows": 200,
+    "max_columns": 120
+  },
+  "orquestacion": {
+    "max_iteraciones": 5,
+    "ejecutar_similitud": true,
+    "ejecutar_correlacion": true,
+    "permitir_sin_filtro": false,
+    "min_datos_validos": 5,
+    "mostrar_consola": true
+  },
+  "similitud": {
+    "umbral_pct_diferencia": 0.2,
+    "min_familias": 3,
+    "excepcion_min_familias": {
+      "min_familias": 2,
+      "min_parametros": 6
+    },
+    "k_min": 3,
+    "k_max": 10,
+    "peso_confianza_similitud": 0.7,
+    "peso_confianza_cv": 0.3,
+    "verbosidad": 0,
+    "familias": {
+      "fisica": [
+        "Peso máximo al despegue (MTOW)",
+        "Peso Vacio (MTOW - payload)",
+        "Payload"
+      ],
+      "geometrica": [
+        "Área del ala",
+        "Envergadura",
+        "Longitud del fuselaje",
+        "Ancho del fuselaje",
+        "Relación de aspecto del ala"
+      ],
+      "prestacional": [
+        "Potencia específica (P/W)",
+        "Autonomía de la aeronave",
+        "Alcance de la aeronave",
+        "Velocidad a la que se realiza el crucero (m/s TAS)",
+        "Velocidad máxima (m/s IAS)",
+        "Rango de comunicación",
+        "Potencia HP",
+        "Potencia Watts"
+      ]
+    },
+    "familias_usadas": [
+      "fisica",
+      "geometrica",
+      "prestacional"
+    ],
+    "funcion_similitud": {
+      "tipo": "polinomica",
+      "coef": {
+        "a2": -0.002,
+        "a1": -0.01,
+        "a0": 1.0
+      },
+      "dominio_max_pct": 20.0
+    },
+    "vecinos": {
+      "modo": "todos",
+      "top_k": 10,
+      "enforce_k_min": true
+    },
+    "confianza": {
+      "cv_ref": 0.5,
+      "penalizacion_k": {
+        "tipo": "polinomica",
+        "params": {
+          "a5": 2.281e-05,
+          "a4": -0.00024,
+          "a3": -0.0036,
+          "a2": 0.046,
+          "a1": 0.0095,
+          "a0": 0.024
+        }
+      }
+    },
+    "umbral_pct_por_familia": {
+      "fisica": null,
+      "geometrica": null,
+      "prestacional": null
+    },
+    "outliers": {
+      "usar": false,
+      "umbral_z_suave": 3.0,
+      "umbral_z_duro": 6.0,
+      "alpha_pesos": 0.5,
+      "w_min": 0.2,
+      "remover_duro": false
+    }
+  },
+  "correlacion_outliers": {
+    "manejar_outliers": true,
+    "umbral_z_suave": 3.0,
+    "umbral_z_duro": 6.0,
+    "alpha_pesos": 0.5,
+    "w_min": 0.2,
+    "remover_duro": false,
+    "permitir_extrapolacion": false,
+    "tolerancia_fuera_rango": null
+  },
+  "modelos": {
+    "habilitados": {
+      "lineal": true,
+      "polinomico2": true,
+      "log": true,
+      "potencia": true,
+      "exponencial": true
+    },
+    "umbral_mape_max": 7.5,
+    "ponderaciones_seleccion": {
+      "mape": 0.5,
+      "r2": 0.2,
+      "corr": 0.2,
+      "confianza": 0.1
+    },
+    "usar_loocv": true,
+    "loocv_usa_pesos": false
+  },
+  "excel": {
+    "colores": {
+      "similitud": "#FFF59D",
+      "correlacion": "#A5D6A7",
+      "combinado": "#90CAF9",
+      "evaluado": "#FFCC80"
+    },
+    "comentarios_grandes": true,
+    "permitir_sobrescribir": false,
+    "congelar_panes": true,
+    "decimales": 2
+  },
+  "html": {
+    "decimales": 3,
+    "ancho_px": 1200,
+    "alto_px": 600
+  },
+  "correlacion": {
+    "checks_2d": {
+      "enabled": true,
+      "pearson": {
+        "enabled": true,
+        "abs_r_max": 0.9
+      },
+      "vif": {
+        "enabled": true,
+        "max": 10.0
+      },
+      "pc2": {
+        "enabled": true,
+        "ratio_min": 0.03
+      },
+      "rank": {
+        "enabled": true,
+        "min": 2.0
+      },
+      "cond": {
+        "enabled": true,
+        "max": 100000.0
+      },
+      "coverage_unique_pair": {
+        "enabled": true,
+        "ratio_min": 0.6
+      },
+      "coverage_hull": {
+        "enabled": true,
+        "ratio_min": 0.15
+      },
+      "coverage_ellipse": {
+        "enabled": true,
+        "ratio_min": 0.1
+      },
+      "n_per_param": {
+        "enabled": true,
+        "linear2_min": 8.0,
+        "poly2_min": 10.0
+      },
+      "agresivo": {
+        "enabled": true,
+        "abs_r_min": 0.95
+      }
+    },
+    "diversidad_minima": {
+      "min_unicos": {
+        "exp-1": 5,
+        "log-1": 5,
+        "pot-1": 5,
+        "linear-1": 5,
+        "poly-1": 7,
+        "linear-2": 8,
+        "poly-2": 10
+      },
+      "min_muestras": {
+        "exp-1": 6,
+        "log-1": 6,
+        "pot-1": 6,
+        "linear-1": 6,
+        "poly-1": 10,
+        "linear-2": 10,
+        "poly-2": 12
+      }
+    },
+    "extrapolacion": {
+      "modo_predictores": "eliminar",
+      "tolerancia_pct": 0.0,
+      "modo_2d": "marginal",
+      "tolerancia_hull_pad": 0.0
+    },
+    "modelos": {
+      "permitir_1d": true,
+      "permitir_2d": true,
+      "poly_grado": 2
+    },
+    "constante": {
+      "habilitar": true,
+      "respaldo_min": 8,
+      "porcentaje_min_total_validos": 0.5
+    },
+    "pesos_predictores": {
+      "metodo": "abs_coef"
+    },
+    "confianza": {
+      "w_r2": 0.5,
+      "w_mape": 0.5,
+      "mape_divisor": 15.0,
+      "penalizacion_k": {
+        "tipo": "polinomica",
+        "params": {
+          "a5": 2.281e-05,
+          "a4": -0.00024,
+          "a3": -0.0036,
+          "a2": 0.046,
+          "a1": 0.0095,
+          "a0": 0.024
+        }
+      },
+      "penalizacion_n": {
+        "tipo": "polinomica",
+        "params": {
+          "b3": 0.0,
+          "b2": 0.0025,
+          "b1": 0.02,
+          "b0": 0.1
+        }
+      },
+      "penalizaciones_metricas": {
+        "pearson_abs": {
+          "usar": true,
+          "tipo": "polinomica",
+          "params": {
+            "c2": -1.2,
+            "c1": 1.2,
+            "c0": 0.2
+          }
+        },
+        "vif": {
+          "usar": true,
+          "tipo": "polinomica",
+          "params": {
+            "c2": -0.02,
+            "c1": -0.1,
+            "c0": 1.2
+          }
+        },
+        "cond": {
+          "usar": true,
+          "tipo": "polinomica",
+          "params": {
+            "c2": -1e-10,
+            "c1": -1e-05,
+            "c0": 1.0
+          }
+        },
+        "pc2_ratio": {
+          "usar": true,
+          "tipo": "polinomica",
+          "params": {
+            "c2": 2.0,
+            "c1": 0.0,
+            "c0": 0.0
+          }
+        },
+        "coverage_unique_pair": {
+          "usar": true,
+          "tipo": "polinomica",
+          "params": {
+            "c2": 0.0,
+            "c1": 0.8,
+            "c0": 0.2
+          }
+        },
+        "coverage_hull": {
+          "usar": true,
+          "tipo": "polinomica",
+          "params": {
+            "c2": 0.0,
+            "c1": 0.8,
+            "c0": 0.2
+          }
+        },
+        "coverage_ellipse": {
+          "usar": true,
+          "tipo": "polinomica",
+          "params": {
+            "c2": 0.0,
+            "c1": 0.8,
+            "c0": 0.2
+          }
+        }
+      },
+      "loocv_aporte": {
+        "w": 0.0,
+        "factor_por_clase": {
+          "robusto": 1.0,
+          "no_robusto": 0.85,
+          "rechazado": 0.6
+        }
+      }
+    },
+    "loocv": {
+      "usar": true,
+      "usar_pesos_outliers": false,
+      "criterios": {
+        "robusto": {
+          "mape_max": 7.5,
+          "r2_min": 0.6
+        },
+        "no_robusto": {
+          "mape_max": 12.5,
+          "r2_min": 0.45
+        }
+      },
+      "ratio_val_train_alerta": 5.0
+    },
+    "seleccion_modelos": {
+      "train": {
+        "mape_max": 7.5,
+        "r2_min": 0.6
+      },
+      "pre_filtro": {
+        "mape_max": 18.0,
+        "r2_min": 0.4
+      }
+    }
+  },
+  "loop": {
+    "orden": [
+      "similitud",
+      "correlacion"
+    ],
+    "combinacion": {
+      "metodo": "promedio_ponderado",
+      "conf_min": 0.0
+    },
+    "stop": {
+      "min_nuevas_por_iter": 1,
+      "sin_mejora_consecutivas": 1
+    },
+    "export": {
+      "json": {
+        "enabled": true,
+        "dir": "Results",
+        "fname": "modelos_completos_por_celda.json"
+      },
+      "html_df_base": {
+        "mostrar": true
+      }
+    }
+  }
+}

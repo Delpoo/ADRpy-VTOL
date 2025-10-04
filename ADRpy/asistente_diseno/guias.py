@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Mapping
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
 import ipywidgets as w
-from IPython.display import display, clear_output
 
 # Reusamos IQR y config
 from .outliers import compute_iqr_bounds
+from .mplutils import numeric_2dec_styler, plotly_apply_2dec
 
 try:
     from . import config as _cfg
@@ -135,28 +136,119 @@ def fig_param_distribution(
         fig.update_layout(height=240)
         fig.add_annotation(text="Sin datos numéricos", x=0.5, y=0.5, showarrow=False)
         return fig
-    # hist
-    fig.add_trace(go.Histogram(x=s, name="Distribución", opacity=0.7))
-    # box horizontal
+    # Histograma (transparente) + Box horizontal
+    fig.add_trace(go.Histogram(x=s, name="Distribución", opacity=0.55, nbinsx=None))
     fig.add_trace(go.Box(x=s, name="Box", boxmean=True, orientation="h"))
-    # líneas LOW/HIGH
+    # Líneas LOW/HIGH
     if low is not None:
         fig.add_vline(x=low, line_width=1.5, line_dash="dot")
     if high is not None:
         fig.add_vline(x=high, line_width=1.5, line_dash="dot")
-    # objetivo/sugerido
+    # Objetivo / sugerido
     if objetivo is not None and np.isfinite(objetivo):
-        fig.add_vline(x=float(objetivo), line_width=2.2)
+        fig.add_vline(x=float(objetivo), line_color="#0d6efd", line_width=2)
     if sugerido is not None and np.isfinite(sugerido):
-        fig.add_vline(x=float(sugerido), line_width=2.2)
+        fig.add_vline(x=float(sugerido), line_color="#198754", line_width=2)
     fig.update_layout(
-        height=300,
-        margin=dict(l=50, r=10, t=30, b=40),
+        height=260,
+        margin=dict(l=8, r=8, t=28, b=24),
         showlegend=False,
-        title=f"Distribución: {col}",
-        xaxis_title=col,
-        yaxis_title="",
+        template="plotly_white",
+        bargap=0.07,
     )
+    fig.update_xaxes(title=col)
+    # Formato 2 decimales (ticks/hover) con helper común
+    try:
+        plotly_apply_2dec(fig)
+    except Exception:
+        pass
+    return fig
+
+
+# ------------------------ piezas de render reutilizables ------------------------ #
+def render_resumen_parametro(
+    df: pd.DataFrame,
+    col: str,
+    *,
+    get_objetivo: Optional[Callable[[str], Optional[float]]] = None,
+    get_sugerido: Optional[Callable[[str], Optional[float]]] = None,
+    factor_iqr: float = 1.5,
+) -> w.Widget:
+    """Devuelve un widget con una tabla resumen estilizada a 2 decimales para 'col'."""
+    obj = get_objetivo(col) if get_objetivo else None
+    sug = get_sugerido(col) if get_sugerido else None
+    st = compute_param_stats(df, col, factor=factor_iqr, max_list=5)
+    data = {
+        "n_total": [st.n_total],
+        "n_val": [st.n_val],
+        "%NaN": [st.pct_nan],
+        "min": [st.vmin],
+        "Q1": [st.q1],
+        "mediana": [st.median],
+        "media": [st.mean],
+        "Q3": [st.q3],
+        "max": [st.vmax],
+        "LOW(IQR)": [st.low],
+        "HIGH(IQR)": [st.high],
+        "objetivo": [obj],
+        "sugerido": [sug],
+    }
+    df_sum = pd.DataFrame(data)
+    try:
+        sty = numeric_2dec_styler(df_sum)
+        html = sty.to_html()
+        return w.HTML(html)
+    except Exception:
+        return w.HTML(df_sum.to_html(index=False))
+
+
+def render_rangos_iqr(
+    df: pd.DataFrame,
+    col: str,
+    *,
+    factor_iqr: float = 1.5,
+    max_list: int = 5,
+) -> w.Widget:
+    """Devuelve un widget con tabla de outliers (bajos/altos) y rangos IQR estilizados."""
+    st = compute_param_stats(df, col, factor=factor_iqr, max_list=max_list)
+    rows = []
+    for n, v in st.out_low:
+        rows.append({"tipo": "bajo", "nombre": n, "valor": v})
+    for n, v in st.out_high:
+        rows.append({"tipo": "alto", "nombre": n, "valor": v})
+    if not rows:
+        rows.append({"tipo": "—", "nombre": "(sin atípicos)", "valor": np.nan})
+    df_out = pd.DataFrame(rows)
+    # Agregar fila de rangos
+    df_rng = pd.DataFrame(
+        [{"tipo": "rango", "nombre": "IQR confiable", "valor": np.nan}]
+    )
+    try:
+        sty = numeric_2dec_styler(df_out)
+        html = sty.to_html() + "<br>" + df_rng.to_html(index=False)
+        return w.HTML(html)
+    except Exception:
+        return w.HTML(
+            df_out.to_html(index=False) + "<br>" + df_rng.to_html(index=False)
+        )
+
+
+def render_distribucion(
+    df: pd.DataFrame,
+    col: str,
+    *,
+    objetivo: Optional[float] = None,
+    sugerido: Optional[float] = None,
+    factor_iqr: float = 1.5,
+) -> go.Figure:
+    st = compute_param_stats(df, col, factor=factor_iqr, max_list=5)
+    fig = fig_param_distribution(
+        df, col, objetivo=objetivo, sugerido=sugerido, low=st.low, high=st.high
+    )
+    try:
+        fig = plotly_apply_2dec(fig)
+    except Exception:
+        pass
     return fig
 
 
@@ -213,17 +305,14 @@ def widget_info_param(
         btn_out.on_click(lambda _: on_open_outliers(col))
     sec2 = w.VBox([w.HTML(html2), btn_out])
 
-    # Sección 3: Distribución (Plotly)
+    # Sección 3: Distribución (Plotly) -> HTML embebido (sin autodisplay)
     fig = fig_param_distribution(
         df, col, objetivo=obj, sugerido=sug, low=stats.low, high=stats.high
     )
     try:
-        import plotly.io as pio
-
-        out_fig = w.Output()
-        with out_fig:
-            clear_output(wait=True)
-            pio.show(fig)
+        fig = plotly_apply_2dec(fig)
+        html_fig = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")  # type: ignore[arg-type]
+        out_fig = w.HTML(html_fig)
     except Exception:
         out_fig = w.HTML("<i>No se pudo renderizar el gráfico Plotly.</i>")
 
@@ -244,3 +333,70 @@ def widget_info_param(
     acc.set_title(2, "Distribución & accesos")
     acc.selected_index = 0
     return acc
+
+
+# === Tooltips unificados ===
+# Export público de HELP/apply_tooltip junto con las guías
+__all__ = [
+    "compute_param_stats",
+    "fig_param_distribution",
+    "render_resumen_parametro",
+    "render_rangos_iqr",
+    "render_distribucion",
+    "widget_info_param",
+    "apply_tooltip",
+    "HELP",
+]
+
+# Textos cortos y claros para tooltips de controles.
+HELP: dict[str, str] = {
+    # Panel izquierdo (ranking / similitud)
+    "modo_param": (
+        "Cómo usar cada parámetro en la comparación: • ignorar: no participa • mínimo/máximo: actúa como restricción blanda • "
+        "fijo: busca cercanía al valor indicado."
+    ),
+    "valor_param": "Valor objetivo del parámetro (se usa si Modo=fijo/máximo/mínimo).",
+    "peso_param": "Peso relativo del parámetro al combinar similitudes (1=neutral).",
+    "alpha_sim": "α (agregación): α=1 promedio; α>1 penaliza desvíos grandes; α<1 suaviza.",
+    "penalizar_nan": "Si hay NaN en un parámetro, agrega penalidad para no favorecer filas incompletas.",
+    "penalidad_nan": "Cuánto sumar/restar a la distancia cuando hay NaN (sólo si Penalizar NaN está activo).",
+    "segmentar_por": "Corte del dataset para trabajar por segmentos (p.ej. misión). (ninguno)=global.",
+    "modo_global_familia": "Global: un único set. Por misión: agrupa y compara sólo dentro de cada misión.",
+    "top_k": "Cantidad de vecinos más similares para calcular el sugerido.",
+    # X–Y
+    "t_x": "Variable en el eje X.",
+    "t_y": "Variable en el eje Y.",
+    "iqr_on": "Si está activo, dibuja rangos IQR y marca atípicos.",
+    "iqr_factor": "Factor multiplicador del IQR (1.5 por defecto).",
+    "min_n": "Mínimo de datos válidos para considerar el IQR confiable.",
+    "t_logx": "Aplica log a X si procede (sólo valores positivos).",
+    # Varios
+    "auto": "Actualiza el panel automáticamente al cambiar opciones.",
+}
+
+
+def apply_tooltip(
+    widget: w.Widget, key: str | None, defaults: Mapping[str, str] = HELP
+) -> None:
+    """Asigna tooltips de forma robusta a distintos tipos de widgets, sin autodisplay."""
+    if key is None:
+        return
+    txt = defaults.get(key)
+    if not txt:
+        return
+    # Widgets con 'description_tooltip' (Dropdown, Checkbox, FloatText, Sliders, etc.)
+    if hasattr(widget, "description_tooltip"):
+        try:
+            setattr(widget, "description_tooltip", txt)
+            return
+        except Exception:
+            pass
+    # Botones y otros widgets
+    if hasattr(widget, "tooltip"):
+        try:
+            setattr(widget, "tooltip", txt)
+        except Exception:
+            pass
+
+
+# __all__ ya definido explícitamente arriba

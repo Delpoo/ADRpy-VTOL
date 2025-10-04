@@ -102,3 +102,221 @@ def columnas_numericas_utiles(
         if n_valid >= int(min_valid) and var > 0.0:
             out.append(c)
     return out
+
+
+# ------------------------------------------------------------
+# Alcance de datos (Ámbito): helpers para filtrar según "state"
+# ------------------------------------------------------------
+from typing import Any, Dict, Tuple as _Tuple
+
+
+def _fullmask(df: pd.DataFrame) -> pd.Series:
+    return pd.Series(True, index=df.index, dtype=bool)
+
+
+def _safe_numeric_series(df: pd.DataFrame, col: str) -> pd.Series:
+    if col not in df.columns:
+        return pd.Series([np.nan] * len(df), index=df.index)
+    return pd.to_numeric(df[col], errors="coerce")
+
+
+def _apply_param_mask(
+    df: pd.DataFrame, base_mask: pd.Series, p: Dict[str, Any], penalizar_nan: bool
+) -> pd.Series:
+    """Aplicar una restricción de parámetro sobre base_mask.
+
+    p admite claves flexibles:
+      - col (str), active (bool, opcional), mode (str)
+      - value (float, opcional), tol/tolerance (float, opcional)
+      - min (float, opcional), max (float, opcional)
+
+    Modos soportados: ignorar, fijo|objetivo, minimo, maximo, rango
+    """
+    try:
+        col = str(p.get("col"))
+        if not col or col not in df.columns:
+            return base_mask
+        mode = str(p.get("mode", "ignorar"))
+        # Sólo aplicar si está activo o el modo no es ignorar
+        if not bool(p.get("active", mode != "ignorar")):
+            return base_mask
+
+        s_num = _safe_numeric_series(df, col)
+        s_raw = df[col]
+
+        m = pd.Series(True, index=df.index, dtype=bool)
+        if mode in {"fijo", "objetivo"}:
+            v = p.get("value", None)
+            tol = p.get("tol", p.get("tolerance", None))
+            if v is None:
+                return base_mask
+            try:
+                vv = float(v)
+            except Exception:
+                # Si no es numérico, comparar por string exacto
+                m &= s_raw.astype(str) == str(v)
+            else:
+                if tol not in (None, ""):
+                    try:
+                        tt = float(tol)
+                    except Exception:
+                        tt = 0.0
+                    m &= (s_num - vv).abs() <= tt
+                else:
+                    # Igualdad exacta para numéricos (puede ser estricta)
+                    m &= s_num == vv
+        elif mode == "minimo":
+            v = p.get("value", None)
+            if v in (None, ""):
+                return base_mask
+            try:
+                vv = float(v)
+            except Exception:
+                return base_mask
+            m &= s_num >= vv
+        elif mode == "maximo":
+            v = p.get("value", None)
+            if v in (None, ""):
+                return base_mask
+            try:
+                vv = float(v)
+            except Exception:
+                return base_mask
+            m &= s_num <= vv
+        elif mode == "rango":
+            vmin = p.get("min", None)
+            vmax = p.get("max", None)
+            if vmin not in (None, ""):
+                try:
+                    m &= s_num >= float(vmin)
+                except Exception:
+                    pass
+            if vmax not in (None, ""):
+                try:
+                    m &= s_num <= float(vmax)
+                except Exception:
+                    pass
+        else:
+            # ignorar u otros: no afectan
+            return base_mask
+
+        if penalizar_nan:
+            m &= s_raw.notna()
+
+        return base_mask & m
+    except Exception:
+        return base_mask
+
+
+def _apply_segment_mask(
+    df: pd.DataFrame, base_mask: pd.Series, state: Dict[str, Any]
+) -> pd.Series:
+    col = state.get("segmentar_por")
+    modo = state.get("segmentar_modo", "off")
+    val = state.get("segmentar_valor")
+    if not col or col not in df.columns:
+        return base_mask
+    if val in (None, "(ninguno)"):
+        return base_mask
+    if str(modo) == "off":
+        return base_mask
+
+    seg_labels = state.get("segment_labels")
+    s_raw = df[col].astype(str)
+    target = str(val)
+
+    if isinstance(seg_labels, dict) and seg_labels:
+        # seg_labels: raw -> label; permitir match por label
+        s_map = s_raw.map(lambda x: str(seg_labels.get(x, x)))
+        m = (s_map == target) | (s_raw == target)
+    else:
+        m = s_raw == target
+
+    return base_mask & m
+
+
+def get_scope_view(
+    df_base: pd.DataFrame, state: Dict[str, Any]
+) -> _Tuple[pd.DataFrame, pd.Series, Dict[str, Any]]:
+    """
+    Construye una vista del DataFrame según el alcance (Ámbito) indicado en 'state'.
+
+    Devuelve (df_view, mask, info) donde:
+      - df_view = df_base[mask]
+      - mask = Serie booleana alineada al índice de df_base
+      - info = {"n": len(df_view), "scope": ambito | "topk-empty"}
+    """
+    try:
+        ambito = str(state.get("ambito", "global"))
+    except Exception:
+        ambito = "global"
+
+    if ambito == "global":
+        mask = _fullmask(df_base)
+        return df_base, mask, {"n": len(df_base), "scope": "global"}
+
+    if ambito == "topk":
+        topk_idx = state.get("topk_index")
+        if not topk_idx:
+            mask = _fullmask(df_base)
+            return df_base, mask, {"n": len(df_base), "scope": "topk-empty"}
+        try:
+            mask = df_base.index.isin(list(topk_idx))
+            mask = pd.Series(mask, index=df_base.index)
+        except Exception:
+            mask = _fullmask(df_base)
+            return df_base, mask, {"n": len(df_base), "scope": "topk-empty"}
+        df_view = df_base[mask]
+        return df_view, mask, {"n": len(df_view), "scope": "topk"}
+
+    # ambito == "filtrado" (o cualquier otro → tratar como filtrado)
+    mask = _fullmask(df_base)
+    penalizar_nan = bool(state.get("penalizar_nan", False))
+    # Parametrización proveniente del panel dinámico
+    param_config = state.get("param_config") or []
+    # Aceptar también 'restricciones' (formato dict) como respaldo
+    if not param_config:
+        restr_any = state.get("restricciones")
+        if isinstance(restr_any, dict):
+            restr_dict: Dict[str, Any] = restr_any
+            for col, d in restr_dict.items():
+                if not isinstance(d, dict):
+                    continue
+                mode = str(d.get("tipo", d.get("mode", "ignorar")))
+                item = {
+                    "col": col,
+                    "active": True,
+                    "mode": mode,
+                    "value": d.get("valor", d.get("value")),
+                    "min": d.get("min"),
+                    "max": d.get("max"),
+                    "tol": d.get("tol"),
+                }
+                param_config.append(item)
+
+    # Aplicar parámetros activos (modo != ignorar)
+    if isinstance(param_config, list):
+        for p in param_config:
+            try:
+                if str(p.get("mode", "ignorar")) == "ignorar":
+                    continue
+            except Exception:
+                continue
+            mask = _apply_param_mask(df_base, mask, p, penalizar_nan)
+
+    # Intersectar con segmentación/misión si existe
+    mask = _apply_segment_mask(df_base, mask, state)
+
+    df_view = df_base[mask]
+    return df_view, mask, {"n": len(df_view), "scope": "filtrado"}
+
+
+def scope_or_global(
+    df_base: pd.DataFrame, state: Dict[str, Any]
+) -> _Tuple[pd.DataFrame, pd.Series, Dict[str, Any]]:
+    """Devuelve (df_view, mask, info) según Ámbito, con fallback al global si queda vacío."""
+    df_view, mask, info = get_scope_view(df_base, state)
+    if len(df_view) == 0:
+        full = _fullmask(df_base)
+        return df_base, full, {"n": len(df_base), "scope": "fallback-global"}
+    return df_view, mask, info

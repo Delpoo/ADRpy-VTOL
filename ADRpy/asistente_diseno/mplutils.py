@@ -11,9 +11,12 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Tuple, Iterable, Any
+from typing import Tuple, Iterable, Any, ContextManager
 
+import numpy as np  # optional, useful for type checks or future helpers
 import pandas as pd
+from IPython.display import display, clear_output
+import ipywidgets as w
 
 # Plotly import is optional; code guards on availability
 try:
@@ -158,3 +161,166 @@ def apply_tickformat_2dec(fig: Any) -> Any:
     except Exception:
         pass
     return fig
+
+
+# ================================
+# New common helpers (Sprint: Ámbito + Anti-duplicados + Formato 2 decimales)
+# ================================
+
+# Fixed-format string with thousands separator and 2 decimals
+FMT2 = "{:,.2f}"
+
+
+def fmt2(x: Any) -> str:
+    """Return number as fixed two-decimals string without scientific notation.
+
+    - Uses thousands separator.
+    - Returns "—" for None/NaN/non-convertible values.
+    """
+    try:
+        v = float(x)
+        if not (v == v):  # NaN check without numpy
+            return "—"
+    except Exception:
+        return "—"
+    try:
+        return FMT2.format(v)
+    except Exception:
+        return f"{v:.2f}"
+
+
+def numeric_2dec_styler(df: pd.DataFrame) -> "pd.io.formats.style.Styler":
+    """Apply fixed 2-decimal formatting to all numeric columns with na_rep="—".
+
+    This complements style_df_2dec; it always targets all numeric columns.
+    """
+    sty = df.style
+    try:
+        num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+        if num_cols:
+            try:
+                sty = sty.format(FMT2, subset=num_cols)
+            except Exception:
+                sty = sty.format(lambda v: fmt2(v), subset=num_cols)
+        try:
+            sty = sty.format(na_rep="—")
+        except Exception:
+            pass
+        return sty
+    except Exception:
+        return sty
+
+
+def plotly_apply_2dec(fig: Any) -> Any:
+    """Enforce .2f tick and hover formatting across a Plotly figure.
+
+    - Axis ticks: tickformat=".2f", exponentformat="none".
+    - Traces: if x/y are numeric, set hovertemplate with :.2f and <extra></extra>.
+    """
+    try:
+        if _go is not None and hasattr(fig, "update_xaxes"):
+            fig.update_xaxes(tickformat=".2f", exponentformat="none")
+            fig.update_yaxes(tickformat=".2f", exponentformat="none")
+        # Update traces' hovertemplate when applicable
+        if hasattr(fig, "data"):
+            for tr in list(getattr(fig, "data", [])):
+                try:
+                    x_is_num = (
+                        hasattr(tr, "x")
+                        and tr.x is not None
+                        and len(tr.x) > 0
+                        and all(
+                            isinstance(v, (int, float)) for v in tr.x if v is not None
+                        )
+                    )
+                except Exception:
+                    x_is_num = False
+                try:
+                    y_is_num = (
+                        hasattr(tr, "y")
+                        and tr.y is not None
+                        and len(tr.y) > 0
+                        and all(
+                            isinstance(v, (int, float)) for v in tr.y if v is not None
+                        )
+                    )
+                except Exception:
+                    y_is_num = False
+
+                if x_is_num and y_is_num:
+                    # Preserve customdata usage if already present by not overwriting when set
+                    if not getattr(tr, "hovertemplate", None):
+                        tr.hovertemplate = "%{x:.2f} → %{y:.2f}<extra></extra>"
+        return fig
+    except Exception:
+        return fig
+
+
+# Context manager to clear an ipywidgets.Output before rendering
+class with_cleared(ContextManager[Any]):
+    """Usage: with with_cleared(output): display(...)
+
+    Calls output.clear_output(wait=True) on __enter__, no-op on __exit__.
+    """
+
+    def __init__(self, output_widget: Any):
+        self._out = output_widget
+
+    def __enter__(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+        try:
+            if hasattr(self._out, "clear_output"):
+                self._out.clear_output(wait=True)
+        except Exception:
+            pass
+        return self._out
+
+    def __exit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
+        return None
+
+
+# Additional simple helpers requested
+
+
+def format_df_2dec(df: pd.DataFrame) -> pd.DataFrame:
+    """Round numeric columns to 2 decimals in-place and return df."""
+    try:
+        num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+        if num:
+            df[num] = df[num].round(2)
+    except Exception:
+        pass
+    return df
+
+
+def format_2dec_df(df: pd.DataFrame, cols: list[str] | None = None):
+    """Return a Styler formatting numeric columns to 2 decimals.
+
+    - If cols is None, target all numeric columns.
+    - Uses Styler.format with a single format string and subset to avoid typing issues.
+    - Falls back to the raw DataFrame if Styler isn't available.
+    """
+    try:
+        if cols is None:
+            cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+        if not cols:
+            return df.style
+        try:
+            return df.style.format("{:.2f}", subset=cols)
+        except Exception:
+            # Fallback: try callable
+            return df.style.format(lambda v: f"{v:.2f}", subset=cols)
+    except Exception:
+        return df
+
+
+def render_figure_once(fig: Any, out=None) -> w.Output:
+    """Render a Plotly/Matplotlib figure inside a single Output, clearing previous content."""
+    out = out or w.Output()
+    try:
+        with out:
+            clear_output(wait=True)
+            display(fig)
+    except Exception:
+        # best-effort fallback
+        pass
+    return out

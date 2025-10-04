@@ -23,14 +23,19 @@ import pandas as pd
 # Reutilizamos límites IQR del módulo de atípicos
 from .outliers import compute_iqr_bounds
 
-# Para UI
+# Para UI (sin autodisplay dentro del módulo)
 import ipywidgets as w
-from IPython.display import display, clear_output
+import plotly.io as pio
 
 # Config (nombre de columna de misión + etiquetas legibles si existen)
 from .config import SEGMENT_COL, SEGMENT_LABELS
-from .guias_tooltips import apply_tooltip
-from .mplutils import apply_tickformat_2dec, style_df_2dec, f2
+from .guias import apply_tooltip
+from .mplutils import (
+    plotly_apply_2dec,
+    numeric_2dec_styler,
+    fmt2,
+    format_df_2dec,
+)
 
 
 # ------------------------------- Utilidades -------------------------------- #
@@ -119,7 +124,7 @@ def _fit_lineal(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = coef[0] * x + coef[1]
     return FitResult(
         nombre="lineal",
-        ecuacion=f"y = {f2(coef[0])}·x + {f2(coef[1])}",
+        ecuacion=f"y = {fmt2(coef[0])}·x + {fmt2(coef[1])}",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -136,7 +141,7 @@ def _fit_cuadratico(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = coef[0] * x**2 + coef[1] * x + coef[2]
     return FitResult(
         nombre="cuadrático",
-        ecuacion=f"y = {f2(coef[0])}·x² + {f2(coef[1])}·x + {f2(coef[2])}",
+        ecuacion=f"y = {fmt2(coef[0])}·x² + {fmt2(coef[1])}·x + {fmt2(coef[2])}",
         p=2,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=2),
@@ -157,7 +162,7 @@ def _fit_log(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = a * lx + b
     return FitResult(
         nombre="log",
-        ecuacion=f"y = {f2(a)}·ln(x) + {f2(b)}",
+        ecuacion=f"y = {fmt2(a)}·ln(x) + {fmt2(b)}",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -179,7 +184,7 @@ def _fit_exp(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = a * np.exp(b * x)
     return FitResult(
         nombre="exp",
-        ecuacion=f"y = {f2(a)}·e^({f2(b)}·x)",
+        ecuacion=f"y = {fmt2(a)}·e^({fmt2(b)}·x)",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -202,7 +207,7 @@ def _fit_potencia(x: np.ndarray, y: np.ndarray) -> Optional[FitResult]:
     y_hat = a * np.power(x, b)
     return FitResult(
         nombre="potencia",
-        ecuacion=f"y = {f2(a)}·x^{f2(b)}",
+        ecuacion=f"y = {fmt2(a)}·x^{fmt2(b)}",
         p=1,
         y_hat=y_hat,
         r2_adj=_adj_r2(y, y_hat, p=1),
@@ -394,12 +399,11 @@ def fig_tendencias_plotly(
         xaxis_title=x_col,
         yaxis_title=y_col,
     )
-    # Consistent axis formatting
+    # Consistent axis formatting (.2f, no exponent)
     try:
-        apply_tickformat_2dec(fig)
+        plotly_apply_2dec(fig)
     except Exception:
         pass
-    apply_tickformat_2dec(fig)
 
     # Tabla de métricas
     rows: list[dict] = []
@@ -413,7 +417,7 @@ def fig_tendencias_plotly(
                     "n": r.n,
                     "modelo": r.modelo,
                     "ecuación": r.ecuacion,
-                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
+                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 2),
                     "MAPE_%": None if r.mape is None else round(r.mape, 2),
                     "calidad_n": r.calidad_n,
                     "IQR": "ON" if remove_outliers else "OFF",
@@ -429,7 +433,7 @@ def fig_tendencias_plotly(
                     "n": r.n,
                     "modelo": r.modelo,
                     "ecuación": r.ecuacion,
-                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
+                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 2),
                     "MAPE_%": None if r.mape is None else round(r.mape, 2),
                     "calidad_n": r.calidad_n,
                     "IQR": "ON" if remove_outliers else "OFF",
@@ -555,7 +559,6 @@ def widget_tendencias(
 ) -> w.Accordion:
     """Versión Plotly interactiva (sin matplotlib)."""
     import plotly.graph_objects as go
-    from IPython.display import display, clear_output
 
     # columnas numéricas candidatas
     num_cols = [
@@ -621,8 +624,9 @@ def widget_tendencias(
     apply_tooltip(btn, "auto")
 
     top = w.HBox([dd_x, dd_y, dd_modo, ch_out, ft_iqr, it_min, ch_logx, btn])
-    out_plot = w.Output()
-    out_tbl = w.Output()
+    # HTML plano; sin display en este módulo
+    out_plot = w.HTML()
+    out_tbl = w.HTML()
 
     def _fit_to_xs(best, xs):
         if best is None or not np.isfinite(best.r2_adj):
@@ -649,160 +653,158 @@ def widget_tendencias(
         return None
 
     def _render(*_):
-        with out_plot:
-            clear_output(wait=True)
-            info = preparar_tendencias(
-                df,
-                dd_x.value,
-                dd_y.value,
-                segment_col=SEGMENT_COL,
-                modo=dd_modo.value,
-                remove_outliers=bool(ch_out.value),
-                iqr_factor=float(ft_iqr.value),
-                min_n=int(it_min.value),
+        # Build info and figure (single Output for the plot)
+        info = preparar_tendencias(
+            df,
+            dd_x.value,
+            dd_y.value,
+            segment_col=SEGMENT_COL,
+            modo=dd_modo.value,
+            remove_outliers=bool(ch_out.value),
+            iqr_factor=float(ft_iqr.value),
+            min_n=int(it_min.value),
+        )
+        datos = info["datos"]
+        sub = datos[datos["mask"]]
+        if sub.empty:
+            out_plot.value = "<i>Sin datos válidos con los filtros actuales.</i>"
+            out_tbl.value = ""
+            return
+
+        # figura
+        fig = go.Figure()
+        xvals = sub["x"].to_numpy()
+        yvals = sub["y"].to_numpy()
+        names = nombres.loc[sub.index].to_numpy()
+
+        if dd_modo.value == "global":
+            # nube global
+            fig.add_scatter(
+                x=xvals,
+                y=yvals,
+                mode="markers",
+                name="Datos",
+                hovertemplate="<b>%{customdata}</b><br>X=%{x:.2f}<br>Y=%{y:.2f}<extra></extra>",
+                customdata=names.reshape(-1, 1),
+                marker=dict(size=8, opacity=0.8),
             )
-            datos = info["datos"]
-            sub = datos[datos["mask"]]
-            if sub.empty:
-                display(w.HTML("<i>Sin datos válidos con los filtros actuales.</i>"))
-                with out_tbl:
-                    clear_output(wait=True)
-                return
-
-            # figura
-            fig = go.Figure()
-            xvals = sub["x"].to_numpy()
-            yvals = sub["y"].to_numpy()
-            names = nombres.loc[sub.index].to_numpy()
-
-            if dd_modo.value == "global":
-                # nube global
+            # mejor ajuste
+            best = info.get("global", {}).get("fit", None)
+            if best is not None and np.isfinite(best.r2_adj):
+                xs = np.linspace(np.nanmin(xvals), np.nanmax(xvals), 220)
+                ys = _fit_to_xs(best, xs)
+                if ys is not None:
+                    fig.add_scatter(
+                        x=xs,
+                        y=ys,
+                        mode="lines",
+                        name=f"Tendencia ({best.nombre})",
+                        line=dict(width=3),
+                    )
+        else:
+            # por misión
+            for lab, grupo in sub.groupby("segmento"):
+                xv = grupo["x"].to_numpy()
+                yv = grupo["y"].to_numpy()
+                nm = nombres.loc[grupo.index].to_numpy()
                 fig.add_scatter(
-                    x=xvals,
-                    y=yvals,
+                    x=xv,
+                    y=yv,
                     mode="markers",
-                    name="Datos",
+                    name=f"Datos: {lab}",
                     hovertemplate="<b>%{customdata}</b><br>X=%{x:.2f}<br>Y=%{y:.2f}<extra></extra>",
-                    customdata=names.reshape(-1, 1),
-                    marker=dict(size=8, opacity=0.8),
+                    customdata=nm.reshape(-1, 1),
+                    marker=dict(size=8, opacity=0.85),
                 )
-                # mejor ajuste
-                best = info.get("global", {}).get("fit", None)
-                if best is not None and np.isfinite(best.r2_adj):
-                    xs = np.linspace(np.nanmin(xvals), np.nanmax(xvals), 220)
-                    ys = _fit_to_xs(best, xs)
+                obj = info.get("por_mision", {}).get(lab, None)
+                if (
+                    obj
+                    and obj.get("fit", None) is not None
+                    and np.isfinite(obj["fit"].r2_adj)
+                ):
+                    xs = np.linspace(np.nanmin(xv), np.nanmax(xv), 180)
+                    ys = _fit_to_xs(obj["fit"], xs)
                     if ys is not None:
                         fig.add_scatter(
                             x=xs,
                             y=ys,
                             mode="lines",
-                            name=f"Tendencia ({best.nombre})",
-                            line=dict(width=3),
+                            name=f"Tendencia: {lab}",
+                            line=dict(width=2.5),
                         )
-            else:
-                # por misión
-                for lab, grupo in sub.groupby("segmento"):
-                    xv = grupo["x"].to_numpy()
-                    yv = grupo["y"].to_numpy()
-                    nm = nombres.loc[grupo.index].to_numpy()
-                    fig.add_scatter(
-                        x=xv,
-                        y=yv,
-                        mode="markers",
-                        name=f"Datos: {lab}",
-                        hovertemplate="<b>%{customdata}</b><br>X=%{x:.2f}<br>Y=%{y:.2f}<extra></extra>",
-                        customdata=nm.reshape(-1, 1),
-                        marker=dict(size=8, opacity=0.85),
+
+        # Línea vertical vinculada (si corresponde)
+        if (
+            (x_obj_widget is not None)
+            and (x_obj_col_name is not None)
+            and dd_x.value == x_obj_col_name
+        ):
+            try:
+                v = float(getattr(x_obj_widget, "value", np.nan))
+                if np.isfinite(v):
+                    fig.add_vline(
+                        x=float(v), line=dict(color="gray", width=1, dash="dash")
                     )
-                    obj = info.get("por_mision", {}).get(lab, None)
-                    if (
-                        obj
-                        and obj.get("fit", None) is not None
-                        and np.isfinite(obj["fit"].r2_adj)
-                    ):
-                        xs = np.linspace(np.nanmin(xv), np.nanmax(xv), 180)
-                        ys = _fit_to_xs(obj["fit"], xs)
-                        if ys is not None:
-                            fig.add_scatter(
-                                x=xs,
-                                y=ys,
-                                mode="lines",
-                                name=f"Tendencia: {lab}",
-                                line=dict(width=2.5),
-                            )
+            except Exception:
+                pass
 
-            # Línea vertical vinculada (si corresponde)
-            if (
-                (x_obj_widget is not None)
-                and (x_obj_col_name is not None)
-                and dd_x.value == x_obj_col_name
-            ):
-                try:
-                    v = float(getattr(x_obj_widget, "value", np.nan))
-                    if np.isfinite(v):
-                        fig.add_vline(
-                            x=float(v), line=dict(color="gray", width=1, dash="dash")
-                        )
-                except Exception:
-                    pass
+        fig.update_layout(
+            template="plotly_white",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+            margin=dict(l=40, r=10, t=30, b=40),
+            xaxis_title=dd_x.value,
+            yaxis_title=dd_y.value,
+        )
+        if ch_logx.value:
+            fig.update_xaxes(type="log")
 
-            fig.update_layout(
-                template="plotly_white",
-                legend=dict(
-                    orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0
-                ),
-                margin=dict(l=40, r=10, t=30, b=40),
-                xaxis_title=dd_x.value,
-                yaxis_title=dd_y.value,
-            )
-            if ch_logx.value:
-                fig.update_xaxes(type="log")
-
-            apply_tickformat_2dec(fig)
-            display(fig)
+        # Formato de ejes/hover: .2f sin notación científica
+        try:
+            plotly_apply_2dec(fig)
+        except Exception:
+            pass
+        out_plot.value = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")  # type: ignore[arg-type]
 
         # tabla de métricas
-        with out_tbl:
-            clear_output(wait=True)
-            rows = []
-            if dd_modo.value == "global":
-                g = info.get("global", {})
-                r = g.get("resumen", None)
-                if r:
-                    rows.append(
-                        {
-                            "ámbito": "Global",
-                            "n": r.n,
-                            "modelo": r.modelo,
-                            "ecuación": r.ecuacion,
-                            "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
-                            "MAPE_%": None if r.mape is None else round(r.mape, 2),
-                            "calidad_n": r.calidad_n,
-                            "IQR": "ON" if ch_out.value else "OFF",
-                            "min_n": int(it_min.value),
-                        }
-                    )
-            else:
-                for lab, obj in (info.get("por_mision", {}) or {}).items():
-                    r = obj["resumen"]
-                    rows.append(
-                        {
-                            "ámbito": lab,
-                            "n": r.n,
-                            "modelo": r.modelo,
-                            "ecuación": r.ecuacion,
-                            "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
-                            "MAPE_%": None if r.mape is None else round(r.mape, 2),
-                            "calidad_n": r.calidad_n,
-                            "IQR": "ON" if ch_out.value else "OFF",
-                            "min_n": int(it_min.value),
-                        }
-                    )
-            if rows:
-                try:
-                    display(style_df_2dec(pd.DataFrame(rows)))
-                except Exception:
-                    display(pd.DataFrame(rows))
+        rows = []
+        if dd_modo.value == "global":
+            g = info.get("global", {})
+            r = g.get("resumen", None)
+            if r:
+                rows.append(
+                    {
+                        "ámbito": "Global",
+                        "n": r.n,
+                        "modelo": r.modelo,
+                        "ecuación": r.ecuacion,
+                        "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
+                        "MAPE_%": None if r.mape is None else round(r.mape, 2),
+                        "calidad_n": r.calidad_n,
+                        "IQR": "ON" if ch_out.value else "OFF",
+                        "min_n": int(it_min.value),
+                    }
+                )
+        else:
+            for lab, obj in (info.get("por_mision", {}) or {}).items():
+                r = obj["resumen"]
+                rows.append(
+                    {
+                        "ámbito": lab,
+                        "n": r.n,
+                        "modelo": r.modelo,
+                        "ecuación": r.ecuacion,
+                        "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
+                        "MAPE_%": None if r.mape is None else round(r.mape, 2),
+                        "calidad_n": r.calidad_n,
+                        "IQR": "ON" if ch_out.value else "OFF",
+                        "min_n": int(it_min.value),
+                    }
+                )
+        if rows:
+            try:
+                out_tbl.value = numeric_2dec_styler(pd.DataFrame(rows)).to_html()
+            except Exception:
+                out_tbl.value = pd.DataFrame(rows).to_html(index=False)
 
     # redibujar automáticamente si cambia el control externo (opcional)
     if (x_obj_widget is not None) and bool(auto_from_widget):
@@ -899,62 +901,59 @@ def widget_tendencias_plotly(
     # Controles en dos filas para evitar scroll horizontal
     top1 = w.HBox([dd_x, dd_y, dd_modo])
     top2 = w.HBox([ch_out, ft_iqr, it_min, btn])
-    out_plot = w.Output()
-    out_tbl = w.Output()
+    # HTML plano; sin display dentro del módulo
+    out_plot = w.HTML()
+    out_tbl = w.HTML()
 
     def _render(*_):
-        with out_plot:
-            clear_output(wait=True)
-            fig, dfm = fig_tendencias_plotly(
-                df,
-                dd_x.value,
-                dd_y.value,
-                modo=dd_modo.value,
-                remove_outliers=bool(ch_out.value),
-                iqr_factor=float(ft_iqr.value),
-                min_n=int(it_min.value),
-            )
-            # Línea vertical vinculada (si corresponde)
-            # 1) Preferimos el objetivo centralizado si está disponible
-            vline_val: Optional[float] = None
-            if callable(get_objetivo):
+        fig, dfm = fig_tendencias_plotly(
+            df,
+            dd_x.value,
+            dd_y.value,
+            modo=dd_modo.value,
+            remove_outliers=bool(ch_out.value),
+            iqr_factor=float(ft_iqr.value),
+            min_n=int(it_min.value),
+        )
+        # Línea vertical vinculada (si corresponde)
+        # 1) Preferimos el objetivo centralizado si está disponible
+        vline_val: Optional[float] = None
+        if callable(get_objetivo):
+            try:
+                ov = get_objetivo(dd_x.value)
+                if ov is not None and np.isfinite(float(ov)):
+                    vline_val = float(ov)
+            except Exception:
+                vline_val = None
+        # 2) Fallback al widget externo (compatibilidad original)
+        if vline_val is None:
+            if (
+                (x_obj_widget is not None)
+                and (x_obj_col_name is not None)
+                and dd_x.value == x_obj_col_name
+            ):
                 try:
-                    ov = get_objetivo(dd_x.value)
-                    if ov is not None and np.isfinite(float(ov)):
-                        vline_val = float(ov)
+                    v = float(getattr(x_obj_widget, "value", np.nan))
+                    if np.isfinite(v):
+                        vline_val = float(v)
                 except Exception:
                     vline_val = None
-            # 2) Fallback al widget externo (compatibilidad original)
-            if vline_val is None:
-                if (
-                    (x_obj_widget is not None)
-                    and (x_obj_col_name is not None)
-                    and dd_x.value == x_obj_col_name
-                ):
-                    try:
-                        v = float(getattr(x_obj_widget, "value", np.nan))
-                        if np.isfinite(v):
-                            vline_val = float(v)
-                    except Exception:
-                        vline_val = None
-            if vline_val is not None:
-                fig.add_vline(
-                    x=vline_val, line=dict(color="gray", width=1, dash="dash")
-                )
-            apply_tickformat_2dec(fig)
-            try:
-                apply_tickformat_2dec(fig)
-            except Exception:
-                pass
-            fig.show()
+        if vline_val is not None:
+            fig.add_vline(x=vline_val, line=dict(color="gray", width=1, dash="dash"))
+        try:
+            plotly_apply_2dec(fig)
+        except Exception:
+            pass
+        out_plot.value = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")  # type: ignore[arg-type]
 
-        with out_tbl:
-            clear_output(wait=True)
-            if isinstance(dfm, pd.DataFrame) and not dfm.empty:
+        if isinstance(dfm, pd.DataFrame) and not dfm.empty:
+            try:
+                out_tbl.value = numeric_2dec_styler(format_df_2dec(dfm)).to_html()
+            except Exception:
                 try:
-                    display(style_df_2dec(dfm))
+                    out_tbl.value = format_df_2dec(dfm).to_html()
                 except Exception:
-                    display(dfm)
+                    out_tbl.value = dfm.to_html()
 
     btn.on_click(lambda _: _render())
     acc = w.Accordion(
