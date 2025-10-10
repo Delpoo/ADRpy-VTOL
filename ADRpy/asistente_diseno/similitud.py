@@ -60,7 +60,8 @@ from asistente_diseno.outliers import compute_iqr_bounds, mad_mask
 # =============================================================================
 
 # Representación de un parámetro dinámico seleccionado en la UI (opcional)
-Modo = Literal["ignorar", "minimo", "maximo", "fijo"]
+# Ampliamos modos para cubrir lo que usa la UI: objetivo (valor/tol) y rango (min/max)
+Modo = Literal["ignorar", "minimo", "maximo", "fijo", "objetivo", "rango"]
 
 
 @dataclass
@@ -71,6 +72,10 @@ class ParamSpec:
     mode: Modo
     value: Optional[float]
     weight: float
+    # nuevos campos opcionales para modos richer
+    tol: Optional[float] = None  # para 'objetivo'
+    min_value: Optional[float] = None  # para 'rango'
+    max_value: Optional[float] = None  # para 'rango'
 
 
 def _params_to_restricciones(params: Optional[List[ParamSpec]]) -> Dict[str, dict]:
@@ -85,11 +90,21 @@ def _params_to_restricciones(params: Optional[List[ParamSpec]]) -> Dict[str, dic
         ):
             continue
         r = {"tipo": p.mode, "peso": float(p.weight)}
-        if p.mode in ("minimo", "maximo", "fijo") and p.value is not None:
-            try:
+        try:
+            if p.mode in ("minimo", "maximo", "fijo") and p.value is not None:
                 r["valor"] = float(p.value)
-            except Exception:
-                pass
+            elif p.mode == "objetivo" and p.value is not None:
+                r["valor"] = float(p.value)
+                if p.tol is not None:
+                    r["tol"] = float(p.tol)
+            elif p.mode == "rango":
+                if p.min_value is not None:
+                    r["min"] = float(p.min_value)
+                if p.max_value is not None:
+                    r["max"] = float(p.max_value)
+        except Exception:
+            # si algún campo viene mal tipado, ignoramos silenciosamente ese extra
+            pass
         restr[p.col] = r
     return restr
 
@@ -416,10 +431,12 @@ def rank(
 
     El resto del comportamiento es idéntico a la V2 (distancia_media/similitud_media, etc.).
     """
-    # Si vienen params dinámicos, conviértelos a restricciones
-    if params is not None:
+    # Si vienen params dinámicos y NO se pasaron 'restricciones' explícitas,
+    # generamos el dict desde params. Si ya hay 'restricciones', las respetamos.
+    if params is not None and not restricciones:
         restricciones = _params_to_restricciones(params)
-    restricciones = restricciones or {}
+    else:
+        restricciones = restricciones or {}
 
     # Determinar columnas a usar
     cols_restr = [c for c in restricciones.keys() if c in df.columns]
@@ -1047,5 +1064,11 @@ def widget_filtrado_ranking(
 
     controls1 = w.HBox([dd_seg, sl_sim])
     controls2 = w.HBox([txt_busca, dd_sort, dd_sort_dir, sl_top, btn_clear])
-    box = w.VBox([controls1, controls2, out_container])
+    help_html = w.HTML(
+        "<div style='font-size:12px;line-height:1.35em;margin:4px 0 6px 0;'>"
+        "<b>Similitud (ranking)</b>: ordena todas las aeronaves por cercanía al objetivo (no filtra). "
+        "<b>Top-K (vecinos)</b>: trabaja sólo con los K más cercanos para sugerencias locales y análisis detallado."
+        "</div>"
+    )
+    box = w.VBox([help_html, controls1, controls2, out_container])
     return box

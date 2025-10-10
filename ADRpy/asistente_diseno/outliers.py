@@ -34,30 +34,50 @@ fig = plot_outliers_hist(df, "Envergadura") ; fig  # histograma con límites IQR
 """
 
 from __future__ import annotations
-from typing import Dict, Iterable, List, Tuple, Optional
+from typing import Dict, Iterable, List, Tuple, Optional, Any
 import numpy as np
 import pandas as pd
+from .datos import to_numeric_locale
 
 # from .mplutils import import_matplotlib  # <- eliminar este import
 from .config import SEGMENT_COL, SEGMENT_LABELS
 import plotly.graph_objects as go
-import ipywidgets as w
 
-# sin autodisplay
-import plotly.io as pio
+# Importar ipywidgets/IPython de forma segura para que el módulo cargue aunque no haya UI
+try:
+    import ipywidgets as w  # type: ignore
+    from IPython.display import display, clear_output  # type: ignore
+except Exception:  # pragma: no cover
+
+    class _WidgetStub:
+        def __getattr__(self, _name: str) -> Any:
+            raise RuntimeError(
+                "Este módulo requiere 'ipywidgets'/'IPython' para la UI."
+            )
+
+    w = _WidgetStub()  # type: ignore
+
+    def display(*_args, **_kwargs):  # type: ignore[override]
+        raise RuntimeError("Este módulo requiere 'ipywidgets'/'IPython' para la UI.")
+
+    def clear_output(*_args, **_kwargs):  # type: ignore[override]
+        pass
 
 
-def _to_html(fig, **kwargs):
-    """Wrapper de pio.to_html con firma flexible para evitar advertencias de tipos."""
-    return pio.to_html(fig, **kwargs)  # type: ignore[arg-type]
+from .mplutils import style_df_2dec, apply_tickformat_2dec, f2
+
+# Cache ligera para el resumen IQR
+_SUMMARY_CACHE: dict[tuple, pd.DataFrame] = {}
 
 
-from .mplutils import (
-    numeric_2dec_styler,
-    plotly_apply_2dec,
-    fmt2,
-    format_df_2dec,
-)
+def _summary_key(df: pd.DataFrame, factor: float, min_n: int) -> tuple:
+    return (
+        id(df),
+        round(float(factor), 4),
+        int(min_n),
+        tuple(df.columns),
+        len(df),
+    )
 
 
 # =============================================================================
@@ -69,7 +89,7 @@ def _to_numeric_series(s: pd.Series) -> pd.Series:
     """Convierte a numérico con errors='coerce' y devuelve una copia."""
     if not isinstance(s, pd.Series):
         s = pd.Series(s)
-    return pd.to_numeric(s.copy(), errors="coerce")
+    return to_numeric_locale(s.copy())
 
 
 def _valid_numeric(s: pd.Series) -> pd.Series:
@@ -322,7 +342,7 @@ def iqr_summary_table(
                 }
             )
             continue
-        s = pd.to_numeric(df_view[col], errors="coerce")
+        s = to_numeric_locale(df[col])
         info = compute_iqr_bounds(s, factor=factor, min_n=min_n)
         keep = iqr_mask(s, factor=factor, min_n=min_n, keep_na=keep_na)
         n_total = s.notna().sum()
@@ -341,7 +361,24 @@ def iqr_summary_table(
                 "%_outliers": (100.0 * n_out / n_total) if n_total else np.nan,
             }
         )
-    out = pd.DataFrame(rows).sort_values("%_outliers", ascending=False)
+    if not rows:
+        return pd.DataFrame(
+            columns=[
+                "columna",
+                "n_validos",
+                "Q1",
+                "Q3",
+                "IQR",
+                "low",
+                "high",
+                "usable",
+                "n_outliers",
+                "%_outliers",
+            ]
+        )
+    out = pd.DataFrame(rows)
+    if "%_outliers" in out.columns:
+        out = out.sort_values("%_outliers", ascending=False)
     return out
 
 
@@ -391,10 +428,7 @@ def annotate_and_list_outliers(
     for col in columns:
         flag_col = f"is_outlier_{col}"
         if flag_col in df_annot.columns:
-            mask = (
-                df_annot[flag_col]
-                & pd.to_numeric(df_view[col], errors="coerce").notna()
-            )
+            mask = df_annot[flag_col] & to_numeric_locale(df[col]).notna()
             out_dict[col] = df_annot.loc[mask, [col]].copy().sort_values(by=col)
     return {"annotated_flags": df_annot, "outliers_by_col": out_dict}
 
@@ -412,7 +446,7 @@ def plot_outliers_hist(
     """
     if column not in df_view.columns:
         raise KeyError(f"La columna '{column}' no existe en el DataFrame.")
-    s = pd.to_numeric(df_view[column], errors="coerce").dropna()
+    s = to_numeric_locale(df[column]).dropna()
     info = compute_iqr_bounds(s, factor=factor, min_n=min_n)
 
     fig = go.Figure()
@@ -450,7 +484,9 @@ def widget_outliers_plotly(
     segment_col: str = SEGMENT_COL,
     iqr_factor: float = 1.5,
     min_n: int = 5,
-) -> w.Accordion:
+) -> Any:
+    if w is None:
+        raise RuntimeError("ipywidgets no está disponible en este entorno.")
     """
     Explorador interactivo (Plotly + ipywidgets) de outliers por columna:
       - Dropdown de columna numérica
@@ -460,11 +496,7 @@ def widget_outliers_plotly(
     Devuelve un Accordion con la vista.
     """
     # Columnas numéricas con suficiente N
-    cols = [
-        c
-        for c in df_view.columns
-        if pd.to_numeric(df_view[c], errors="coerce").notna().sum() >= min_n
-    ]
+    cols = [c for c in df.columns if to_numeric_locale(df[c]).notna().sum() >= min_n]
     if not cols:
         return w.Accordion(
             children=[w.HTML("<b>No hay columnas numéricas suficientes.</b>")]
@@ -535,7 +567,7 @@ def widget_outliers_plotly(
                 df_sel = df_view
 
         col = dd_col.value
-        s = pd.to_numeric(df_sel[col], errors="coerce")
+        s = to_numeric_locale(df_sel[col])
         info = compute_iqr_bounds(s, factor=float(sl_factor.value), min_n=min_n)
 
         # Histograma -> HTML embebido
@@ -645,7 +677,7 @@ def outliers_quicklook(
     segment_col: str = SEGMENT_COL,
     iqr_factor: float = 1.5,
     min_n: int = 5,
-) -> w.Accordion:
+) -> Any:
     """Wrapper a la UI plotly para mantener compatibilidad con el notebook."""
     return widget_outliers_plotly(
         df_view, segment_col=segment_col, iqr_factor=iqr_factor, min_n=min_n
@@ -777,8 +809,8 @@ def vista_outliers_en_notebook(
     # Selección de columnas
     if columns is None and auto_detect_numeric:
         cols = []
-        for c in df_view.columns:
-            s = pd.to_numeric(df_view[c], errors="coerce")
+        for c in df.columns:
+            s = to_numeric_locale(df[c])
             if s.notna().sum() >= min_n:
                 cols.append(c)
         columns = cols
@@ -836,7 +868,7 @@ def widget_outliers_hist(
     if columns is None:
         cols = []
         for c in df.columns:
-            s = pd.to_numeric(df[c], errors="coerce")
+            s = to_numeric_locale(df[c])
             if s.notna().sum() >= min_n:
                 cols.append(c)
         columns = cols
@@ -861,7 +893,7 @@ def widget_outliers_hist(
     title = w.HTML(f"<h4 style='margin:0'>{titulo}</h4>")
 
     def _plot(col: str, factor_val: float, bins_val: int):
-        s = pd.to_numeric(df[col], errors="coerce")
+        s = to_numeric_locale(df[col])
         info = compute_iqr_bounds(s, factor=factor_val, min_n=min_n)
         fig = go.Figure()
         fig.add_histogram(
@@ -922,6 +954,7 @@ def widget_outliers_hist(
 def widget_outliers_panel(
     df: pd.DataFrame,
     *,
+    df_filtrado: Optional[pd.DataFrame] = None,
     factor: float = 1.5,
     min_n: int = 5,
     titulo: str = "Outliers (IQR)",
@@ -931,17 +964,48 @@ def widget_outliers_panel(
     Panel colapsable con un ÚNICO módulo expandible que contiene secciones tituladas:
       - "Resumen (IQR k=…)" con la tabla resumen y selector de columna
       - "Histogramas (IQR k=…)" con controles y gráfico/tabla por columna
-
-    Ruta HTML-only interna (sin display()/clear_output()).
     """
+    try:
+        import ipywidgets as w
+        from IPython.display import display, clear_output
+    except Exception as e:
+        raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
+
+    df_view = (
+        df_filtrado
+        if isinstance(df_filtrado, pd.DataFrame) and not df_filtrado.empty
+        else df
+    )
 
     # Columnas elegibles (>= min_n válidos)
     cols_sum = []
-    for c in df.columns:
-        s = pd.to_numeric(df[c], errors="coerce")
+    for c in df_view.columns:
+        s = to_numeric_locale(df_view[c])
         if s.notna().sum() >= min_n:
             cols_sum.append(c)
-    summary = iqr_summary_table(df, cols_sum, factor=factor, min_n=min_n, keep_na=True)
+    key = _summary_key(df_view, factor, min_n)
+    summary_cached = _SUMMARY_CACHE.get(key)
+    if summary_cached is None:
+        summary = iqr_summary_table(
+            df_view, cols_sum, factor=factor, min_n=min_n, keep_na=True
+        )
+        _SUMMARY_CACHE[key] = summary.copy()
+    else:
+        summary = summary_cached.copy()
+
+    # Si no hay columnas numéricas suficientes, devolver mensaje claro
+    if summary.empty:
+        body = w.VBox(
+            [
+                w.HTML(
+                    f"<i>Sin columnas numéricas suficientes (min_n={min_n}). Ajusta filtros o elige otro dataset.</i>"
+                )
+            ]
+        )
+        acc = w.Accordion(children=[body])
+        acc.set_title(0, f"{titulo}")
+        acc.selected_index = None if collapsed else 0
+        return acc
 
     # Selector de columna compartido por ambas secciones
     dd_col = w.Dropdown(
@@ -984,8 +1048,10 @@ def widget_outliers_panel(
     seg_widget = None
     seg_label_to_raw: dict[str, object] = {}
     seg_raw_to_label: dict[str, str] = {}
-    if SEGMENT_COL and SEGMENT_COL in df.columns:
-        seg_vals = pd.Series(df[SEGMENT_COL]).dropna().astype(str).unique().tolist()
+    if SEGMENT_COL and SEGMENT_COL in df_view.columns:
+        seg_vals = (
+            pd.Series(df_view[SEGMENT_COL]).dropna().astype(str).unique().tolist()
+        )
         seg_vals = [v for v in seg_vals if str(v).strip() != ""]
         if len(seg_vals) > 1:
             for raw in seg_vals:
@@ -1012,14 +1078,14 @@ def widget_outliers_panel(
 
     def _render_hist():
         # Filtrar por segmento si corresponde
-        df_sel = df
+        df_sel = df_view
         if seg_widget is not None and seg_widget.value and seg_widget.value != "Todos":
             try:
                 chosen_label = str(seg_widget.value)
                 raw_str = seg_label_to_raw.get(chosen_label, chosen_label)
-                df_sel = df[df[SEGMENT_COL].astype(str) == str(raw_str)]
+                df_sel = df_view[df_view[SEGMENT_COL].astype(str) == str(raw_str)]
             except Exception:
-                df_sel = df
+                df_sel = df_view
 
         col = (
             dd_col.value
@@ -1031,7 +1097,7 @@ def widget_outliers_panel(
             out_tbl.value = ""
             return
 
-        s = pd.to_numeric(df_sel[col], errors="coerce")
+        s = to_numeric_locale(df_sel[col])
         info = compute_iqr_bounds(s, factor=float(sl_factor.value), min_n=min_n)
 
         fig = go.Figure()
@@ -1157,7 +1223,150 @@ def widget_outliers_panel(
         ]
     )
 
-    acc = w.Accordion(children=[body])
-    acc.set_title(0, f"Outliers (IQR k={float(sl_factor.value):.2f})")
+    out_acc = w.Accordion(children=[body])
+    out_acc.set_title(0, f"Outliers (IQR k={float(sl_factor.value):.2f})")
+    out_acc.selected_index = None if collapsed else 0
+
+    if df_filtrado is not None and isinstance(df_filtrado, pd.DataFrame):
+        try:
+            n_orig = len(df)
+        except Exception:
+            n_orig = 0
+        try:
+            if df_filtrado.empty:
+                left_label = w.HTML(
+                    f"<b>DataFrame original</b> <small>(n={int(n_orig)})</small>"
+                )
+                right_label = w.HTML("<b>DataFrame filtrado</b> <small>(n=0)</small>")
+                try:
+                    left_label.tooltip = "Todo el dataset, sin restricciones."
+                    right_label.tooltip = (
+                        "No hay filas que cumplan las reglas de filtrado actuales."
+                    )
+                except Exception:
+                    pass
+                msg = w.HTML("<i>Sin datos filtrados con las reglas actuales.</i>")
+                return w.HBox(
+                    [w.VBox([left_label, out_acc]), w.VBox([right_label, msg])]
+                )
+
+            right_panel = widget_outliers_panel(
+                df_filtrado,
+                factor=factor,
+                min_n=min_n,
+                titulo="Outliers (IQR) – DataFrame filtrado",
+                collapsed=collapsed,
+            )
+            left_label = w.HTML(
+                f"<b>DataFrame original</b> <small>(n={int(n_orig)})</small>"
+            )
+            right_label = w.HTML(
+                f"<b>DataFrame filtrado</b> <small>(n={len(df_filtrado)})</small>"
+            )
+            try:
+                left_label.tooltip = "Todo el dataset, sin restricciones."
+                right_label.tooltip = "Subconjunto que cumple la selección (mín./máx./rango/fijo/objetivo)."
+            except Exception:
+                pass
+            return w.HBox(
+                [w.VBox([left_label, out_acc]), w.VBox([right_label, right_panel])]
+            )
+        except Exception:
+            pass
+    return out_acc
+
+
+def widget_outliers_panel_dual(
+    df: pd.DataFrame,
+    *,
+    df_filtrado: Optional[pd.DataFrame] = None,
+    factor: float = 1.5,
+    min_n: int = 5,
+    titulo: str = "Outliers (IQR) — Global vs Filtrado",
+    collapsed: bool = True,
+) -> w.Accordion:
+    """Panel doble que permite refrescar el subconjunto filtrado in-place."""
+
+    try:
+        import ipywidgets as w  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from exc
+
+    state: dict[str, Optional[pd.DataFrame]] = {"df_filtrado": None}
+
+    n_orig = len(df) if isinstance(df, pd.DataFrame) else 0
+    left_label = w.HTML(f"<b>DataFrame original</b> <small>(n={int(n_orig)})</small>")
+    try:
+        left_label.tooltip = "Todo el dataset, sin restricciones."
+    except Exception:
+        pass
+
+    left_panel = widget_outliers_panel(
+        df,
+        factor=factor,
+        min_n=min_n,
+        titulo="Outliers (IQR) – DataFrame original",
+        collapsed=False,
+    )
+
+    left_container = w.VBox(
+        [left_label, left_panel], layout=w.Layout(width="50%", min_width="0")
+    )
+
+    right_label = w.HTML("")
+    right_container = w.VBox(layout=w.Layout(width="50%", min_width="0"))
+
+    def _render_filtrado(new_df: Optional[pd.DataFrame]) -> None:
+        sanitized = (
+            new_df if isinstance(new_df, pd.DataFrame) and not new_df.empty else None
+        )
+        state["df_filtrado"] = sanitized
+        if sanitized is None:
+            right_label.value = "<b>DataFrame filtrado</b> <small>(n=0)</small>"
+            try:
+                right_label.tooltip = (
+                    "No hay filas que cumplan las reglas de filtrado actuales."
+                )
+            except Exception:
+                pass
+            msg = w.HTML(
+                "<i>Sin datos filtrados disponibles para el conjunto actual de restricciones.</i>"
+            )
+            right_container.children = [right_label, msg]
+            return
+
+        right_label.value = (
+            f"<b>DataFrame filtrado</b> <small>(n={len(sanitized)})</small>"
+        )
+        try:
+            right_label.tooltip = (
+                "Subconjunto que cumple la selección (mín./máx./rango/fijo/objetivo)."
+            )
+        except Exception:
+            pass
+
+        panel_filtrado = widget_outliers_panel(
+            sanitized,
+            factor=factor,
+            min_n=min_n,
+            titulo="Outliers (IQR) – DataFrame filtrado",
+            collapsed=False,
+        )
+        right_container.children = [right_label, panel_filtrado]
+
+    _render_filtrado(df_filtrado)
+
+    box = w.HBox(
+        [left_container, right_container],
+        layout=w.Layout(width="100%", gap="12px", justify_content="space-between"),
+    )
+
+    acc = w.Accordion(children=[box])
+    acc.set_title(0, titulo)
     acc.selected_index = None if collapsed else 0
+
+    def _set_df_filtrado(new_df: Optional[pd.DataFrame]) -> None:
+        _render_filtrado(new_df)
+
+    setattr(acc, "set_df_filtrado", _set_df_filtrado)
     return acc

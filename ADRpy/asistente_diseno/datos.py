@@ -77,6 +77,99 @@ def a_numerico_seguro(serie: pd.Series) -> pd.Series:
     return pd.to_numeric(serie.copy(), errors="coerce")
 
 
+# --------- Normalización numérica (coma decimal, miles, unidades, etc.) --------- #
+def to_numeric_locale(s: pd.Series) -> pd.Series:
+    """
+    Convierte una Serie a float soportando:
+    - coma decimal (0,32 -> 0.32)
+    - separadores de miles (1.234,56 -> 1234.56 ; 1,234.56 -> 1234.56)
+    - espacios/nbspace y unidades sueltas (p.ej. '0,32 m')
+    - signo y notación científica
+    Cualquier valor imposible -> NaN.
+    """
+    if pd.api.types.is_numeric_dtype(s):
+        return pd.to_numeric(s, errors="coerce")
+
+    s2 = s.astype(str).str.strip()
+    s2 = s2.str.replace("\u00a0", "", regex=False).str.replace(
+        r"[^0-9,\.\-\+\(\)eE]", "", regex=True
+    )
+    s2 = s2.str.replace(r"^\((.*)\)$", r"-\1", regex=True)
+
+    has_comma = s2.str.contains(",", na=False)
+    has_dot = s2.str.contains(r"\.", na=False)
+    both = has_comma & has_dot
+
+    last_comma = s2.str.rfind(",")
+    last_dot = s2.str.rfind(".")
+    comma_as_decimal = both & (last_comma > last_dot)
+
+    mask_comma_decimal = comma_as_decimal | (has_comma & ~has_dot)
+    if mask_comma_decimal.any():
+        s2.loc[mask_comma_decimal] = (
+            s2.loc[mask_comma_decimal]
+            .str.replace(".", "", regex=False)
+            .str.replace(",", ".", regex=False)
+        )
+
+    mask_dot_decimal = has_dot & (~has_comma | (has_comma & ~comma_as_decimal))
+    mask_dot_decimal_comma_thousands = mask_dot_decimal & has_comma
+    if mask_dot_decimal_comma_thousands.any():
+        s2.loc[mask_dot_decimal_comma_thousands] = s2.loc[
+            mask_dot_decimal_comma_thousands
+        ].str.replace(",", "", regex=False)
+
+    converted = pd.to_numeric(s2, errors="coerce")
+
+    mask_retry = converted.isna() & s2.str.contains(r"[0-9]", na=False)
+    if mask_retry.any():
+        idx_retry = mask_retry[mask_retry].index
+        retry_series = s2.loc[idx_retry]
+
+        # Fallback 1: conservar solo el último separador decimal y normalizar a punto
+        retry_last_sep = retry_series.str.replace(r"[.,](?=.*[.,])", "", regex=True)
+        retry_last_sep = retry_last_sep.str.replace(",", ".", regex=False)
+        fallback_last_sep = pd.to_numeric(retry_last_sep, errors="coerce")
+        converted.loc[idx_retry] = converted.loc[idx_retry].combine_first(
+            fallback_last_sep
+        )
+
+        mask_retry2 = converted.loc[idx_retry].isna()
+        if mask_retry2.any():
+            idx_retry2 = converted.loc[idx_retry][mask_retry2].index
+            retry_plain = retry_series.loc[idx_retry2].str.replace(",", "", regex=False)
+            retry_plain = retry_plain.str.replace(".", "", regex=False)
+            fallback_plain = pd.to_numeric(retry_plain, errors="coerce")
+            converted.loc[idx_retry2] = fallback_plain
+
+    return converted
+
+
+def normalize_numeric_df(
+    df: pd.DataFrame, columns: list[str] | None = None
+) -> pd.DataFrame:
+    """Aplica to_numeric_locale a todas las columnas indicadas o a las object que parezcan numéricas."""
+
+    if columns is None:
+        patt = r"^[\s\(\)\-\+]*[0-9]+([.,][0-9]+)?([eE][\-\+]?[0-9]+)?[\s\)]*$"
+        candidates = [
+            c
+            for c in df.columns
+            if df[c].dtype == object
+            and df[c].astype(str).str.strip().str.match(patt, na=False).mean() >= 0.7
+        ]
+    else:
+        candidates = [c for c in columns if c in df.columns]
+
+    for c in candidates:
+        try:
+            df[c] = to_numeric_locale(df[c])
+        except Exception:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    return df
+
+
 # --- NUEVO: detección de columnas numéricas "útiles" ---
 def columnas_numericas_utiles(
     df: pd.DataFrame, min_valid: int | None = None
@@ -104,219 +197,9 @@ def columnas_numericas_utiles(
     return out
 
 
-# ------------------------------------------------------------
-# Alcance de datos (Ámbito): helpers para filtrar según "state"
-# ------------------------------------------------------------
-from typing import Any, Dict, Tuple as _Tuple
+def cargar_dataset(path_xlsx: str) -> pd.DataFrame:
+    """Lee el Excel principal, luego normaliza columnas numéricas usando heurística local-aware."""
 
-
-def _fullmask(df: pd.DataFrame) -> pd.Series:
-    return pd.Series(True, index=df.index, dtype=bool)
-
-
-def _safe_numeric_series(df: pd.DataFrame, col: str) -> pd.Series:
-    if col not in df.columns:
-        return pd.Series([np.nan] * len(df), index=df.index)
-    return pd.to_numeric(df[col], errors="coerce")
-
-
-def _apply_param_mask(
-    df: pd.DataFrame, base_mask: pd.Series, p: Dict[str, Any], penalizar_nan: bool
-) -> pd.Series:
-    """Aplicar una restricción de parámetro sobre base_mask.
-
-    p admite claves flexibles:
-      - col (str), active (bool, opcional), mode (str)
-      - value (float, opcional), tol/tolerance (float, opcional)
-      - min (float, opcional), max (float, opcional)
-
-    Modos soportados: ignorar, fijo|objetivo, minimo, maximo, rango
-    """
-    try:
-        col = str(p.get("col"))
-        if not col or col not in df.columns:
-            return base_mask
-        mode = str(p.get("mode", "ignorar"))
-        # Sólo aplicar si está activo o el modo no es ignorar
-        if not bool(p.get("active", mode != "ignorar")):
-            return base_mask
-
-        s_num = _safe_numeric_series(df, col)
-        s_raw = df[col]
-
-        m = pd.Series(True, index=df.index, dtype=bool)
-        if mode in {"fijo", "objetivo"}:
-            v = p.get("value", None)
-            tol = p.get("tol", p.get("tolerance", None))
-            if v is None:
-                return base_mask
-            try:
-                vv = float(v)
-            except Exception:
-                # Si no es numérico, comparar por string exacto
-                m &= s_raw.astype(str) == str(v)
-            else:
-                if tol not in (None, ""):
-                    try:
-                        tt = float(tol)
-                    except Exception:
-                        tt = 0.0
-                    m &= (s_num - vv).abs() <= tt
-                else:
-                    # Igualdad exacta para numéricos (puede ser estricta)
-                    m &= s_num == vv
-        elif mode == "minimo":
-            v = p.get("value", None)
-            if v in (None, ""):
-                return base_mask
-            try:
-                vv = float(v)
-            except Exception:
-                return base_mask
-            m &= s_num >= vv
-        elif mode == "maximo":
-            v = p.get("value", None)
-            if v in (None, ""):
-                return base_mask
-            try:
-                vv = float(v)
-            except Exception:
-                return base_mask
-            m &= s_num <= vv
-        elif mode == "rango":
-            vmin = p.get("min", None)
-            vmax = p.get("max", None)
-            if vmin not in (None, ""):
-                try:
-                    m &= s_num >= float(vmin)
-                except Exception:
-                    pass
-            if vmax not in (None, ""):
-                try:
-                    m &= s_num <= float(vmax)
-                except Exception:
-                    pass
-        else:
-            # ignorar u otros: no afectan
-            return base_mask
-
-        if penalizar_nan:
-            m &= s_raw.notna()
-
-        return base_mask & m
-    except Exception:
-        return base_mask
-
-
-def _apply_segment_mask(
-    df: pd.DataFrame, base_mask: pd.Series, state: Dict[str, Any]
-) -> pd.Series:
-    col = state.get("segmentar_por")
-    modo = state.get("segmentar_modo", "off")
-    val = state.get("segmentar_valor")
-    if not col or col not in df.columns:
-        return base_mask
-    if val in (None, "(ninguno)"):
-        return base_mask
-    if str(modo) == "off":
-        return base_mask
-
-    seg_labels = state.get("segment_labels")
-    s_raw = df[col].astype(str)
-    target = str(val)
-
-    if isinstance(seg_labels, dict) and seg_labels:
-        # seg_labels: raw -> label; permitir match por label
-        s_map = s_raw.map(lambda x: str(seg_labels.get(x, x)))
-        m = (s_map == target) | (s_raw == target)
-    else:
-        m = s_raw == target
-
-    return base_mask & m
-
-
-def get_scope_view(
-    df_base: pd.DataFrame, state: Dict[str, Any]
-) -> _Tuple[pd.DataFrame, pd.Series, Dict[str, Any]]:
-    """
-    Construye una vista del DataFrame según el alcance (Ámbito) indicado en 'state'.
-
-    Devuelve (df_view, mask, info) donde:
-      - df_view = df_base[mask]
-      - mask = Serie booleana alineada al índice de df_base
-      - info = {"n": len(df_view), "scope": ambito | "topk-empty"}
-    """
-    try:
-        ambito = str(state.get("ambito", "global"))
-    except Exception:
-        ambito = "global"
-
-    if ambito == "global":
-        mask = _fullmask(df_base)
-        return df_base, mask, {"n": len(df_base), "scope": "global"}
-
-    if ambito == "topk":
-        topk_idx = state.get("topk_index")
-        if not topk_idx:
-            mask = _fullmask(df_base)
-            return df_base, mask, {"n": len(df_base), "scope": "topk-empty"}
-        try:
-            mask = df_base.index.isin(list(topk_idx))
-            mask = pd.Series(mask, index=df_base.index)
-        except Exception:
-            mask = _fullmask(df_base)
-            return df_base, mask, {"n": len(df_base), "scope": "topk-empty"}
-        df_view = df_base[mask]
-        return df_view, mask, {"n": len(df_view), "scope": "topk"}
-
-    # ambito == "filtrado" (o cualquier otro → tratar como filtrado)
-    mask = _fullmask(df_base)
-    penalizar_nan = bool(state.get("penalizar_nan", False))
-    # Parametrización proveniente del panel dinámico
-    param_config = state.get("param_config") or []
-    # Aceptar también 'restricciones' (formato dict) como respaldo
-    if not param_config:
-        restr_any = state.get("restricciones")
-        if isinstance(restr_any, dict):
-            restr_dict: Dict[str, Any] = restr_any
-            for col, d in restr_dict.items():
-                if not isinstance(d, dict):
-                    continue
-                mode = str(d.get("tipo", d.get("mode", "ignorar")))
-                item = {
-                    "col": col,
-                    "active": True,
-                    "mode": mode,
-                    "value": d.get("valor", d.get("value")),
-                    "min": d.get("min"),
-                    "max": d.get("max"),
-                    "tol": d.get("tol"),
-                }
-                param_config.append(item)
-
-    # Aplicar parámetros activos (modo != ignorar)
-    if isinstance(param_config, list):
-        for p in param_config:
-            try:
-                if str(p.get("mode", "ignorar")) == "ignorar":
-                    continue
-            except Exception:
-                continue
-            mask = _apply_param_mask(df_base, mask, p, penalizar_nan)
-
-    # Intersectar con segmentación/misión si existe
-    mask = _apply_segment_mask(df_base, mask, state)
-
-    df_view = df_base[mask]
-    return df_view, mask, {"n": len(df_view), "scope": "filtrado"}
-
-
-def scope_or_global(
-    df_base: pd.DataFrame, state: Dict[str, Any]
-) -> _Tuple[pd.DataFrame, pd.Series, Dict[str, Any]]:
-    """Devuelve (df_view, mask, info) según Ámbito, con fallback al global si queda vacío."""
-    df_view, mask, info = get_scope_view(df_base, state)
-    if len(df_view) == 0:
-        full = _fullmask(df_base)
-        return df_base, full, {"n": len(df_base), "scope": "fallback-global"}
-    return df_view, mask, info
+    df = pd.read_excel(path_xlsx, sheet_name=0)
+    df = normalize_numeric_df(df)
+    return df

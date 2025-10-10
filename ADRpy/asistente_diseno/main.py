@@ -13,6 +13,7 @@ Notas
 
 from __future__ import annotations
 import os, sys, shutil, importlib, warnings, threading
+from pathlib import Path
 from IPython.display import display, clear_output
 from typing import Optional, Any
 from dataclasses import dataclass
@@ -65,25 +66,25 @@ from asistente_diseno.similitud import (
     ParamSpec,
 )
 from asistente_diseno.sugerencias import sugerencias_topk, widget_sugerencias_panel
-from asistente_diseno.outliers import widget_outliers_panel
-from asistente_diseno.config import SEGMENT_LABELS, SEGMENT_COL
-from asistente_diseno.tendencias import widget_tendencias_plotly
-from asistente_diseno.guias import (
-    widget_info_param,
-    render_resumen_parametro,
-    render_rangos_iqr,
-    render_distribucion,
+from asistente_diseno.outliers import (
+    widget_outliers_panel,
+    widget_outliers_panel_dual,
 )
+from asistente_diseno.config import SEGMENT_LABELS, SEGMENT_COL
+
+try:
+    from asistente_diseno.config import TOL_REL_FIJO, TOL_ABS_FIJO
+except Exception:
+    TOL_REL_FIJO, TOL_ABS_FIJO = 0.01, None
+from asistente_diseno.tendencias import (
+    widget_tendencias_comparador,
+    widget_tendencias_plotly,
+)
+from asistente_diseno.guias import widget_info_param
 from asistente_diseno.narrativa import narrativa_informe, export_markdown, export_html
-from asistente_diseno.html_utils import convertir_a_html
 from asistente_diseno.guias import apply_tooltip, HELP
 from asistente_diseno.datos import columnas_numericas_utiles
-from asistente_diseno.config import (
-    DISPLAY_LABELS,
-    PARAM_DEFAULTS,
-    PREFERRED_ORDER,
-    SEGMENT_COL,
-)
+from asistente_diseno.config import DISPLAY_LABELS, PARAM_DEFAULTS, PREFERRED_ORDER
 import asistente_diseno.config as _cfg
 from asistente_diseno.mplutils import with_cleared
 
@@ -91,10 +92,19 @@ from asistente_diseno.mplutils import with_cleared
 try:
     import asistente_diseno.similitud as _sim
     import asistente_diseno.sugerencias as _sug
+    import asistente_diseno.tendencias as _tend
+    import asistente_diseno.outliers as _out
+    import asistente_diseno.guias as _guias
+
+    # import asistente_diseno.guias_tooltips as _gt  # (ya no se usa)
     import asistente_diseno.mplutils as _mpl
 
     _sim = importlib.reload(_sim)
     _sug = importlib.reload(_sug)
+    _tend = importlib.reload(_tend)
+    _out = importlib.reload(_out)
+    _guias = importlib.reload(_guias)
+    # _gt = importlib.reload(_gt)
     _mpl = importlib.reload(_mpl)
     # Reasignar símbolos usados a las versiones recién recargadas
     rank = _sim.rank
@@ -102,9 +112,32 @@ try:
     widget_filtrado_ranking = _sim.widget_filtrado_ranking
     sugerencias_topk = _sug.sugerencias_topk
     widget_sugerencias_panel = _sug.widget_sugerencias_panel
+    widget_tendencias_plotly = _tend.widget_tendencias_plotly
+    widget_tendencias_comparador = getattr(
+        _tend, "widget_tendencias_comparador", _tend.widget_tendencias_plotly
+    )
+    widget_outliers_panel = _out.widget_outliers_panel
+    widget_outliers_panel_dual = getattr(
+        _out, "widget_outliers_panel_dual", _out.widget_outliers_panel
+    )
+    widget_info_param = _guias.widget_info_param
+    apply_tooltip = _guias.apply_tooltip
+    HELP = _guias.HELP
 except Exception:
     # Si algo falla, seguimos con los ya importados arriba
     pass
+
+_ADR_UI_GUARD_FLAG = "_ADR_UI_RENDERED"
+if getattr(sys.modules.get(__name__), _ADR_UI_GUARD_FLAG, False):
+    try:
+        from IPython.display import HTML
+
+        display(
+            HTML("<i>UI ya inicializada en esta sesión. Omito duplicar el render.</i>")
+        )
+    except Exception:
+        print("UI ya inicializada en esta sesión. Omito duplicar el render.")
+    raise SystemExit(0)
 
 PARAM_GROUPS = getattr(_cfg, "PARAM_GROUPS", {})
 
@@ -174,6 +207,21 @@ PARAMS_DEFAULT = [
     "Velocidad a la que se realiza el crucero (m/s TAS)",
     "Autonomía de la aeronave (h)",
 ]
+
+
+# --- util: parseo robusto de números (acepta coma decimal) ---
+def _as_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        if isinstance(value, str):
+            cleaned = value.strip().replace(",", ".")
+            if cleaned == "":
+                return None
+            value = cleaned
+        return float(value)
+    except Exception:
+        return None
 
 
 @dataclass
@@ -248,23 +296,27 @@ class ParamPanel(w.VBox):
         self._update_range_defaults()
 
     def _prefill_range_from_stats(self, pr: "ParamRow"):
+        """En modo 'rango' NO seteamos valores por defecto (eso deja el filtro sin efecto).
+        Sólo sugerimos min/max como *placeholder* para que el usuario decida."""
         st = self.stats.get(pr.col, {})
         vmin = st.get("min")
         vmax = st.get("max")
         try:
             if pr.dd_mode.value == "rango":
-                if (
-                    pr.ft_min.value in (None, "")
-                    and vmin is not None
-                    and np.isfinite(vmin)
-                ):
-                    pr.ft_min.value = float(vmin)
-                if (
-                    pr.ft_max.value in (None, "")
-                    and vmax is not None
-                    and np.isfinite(vmax)
-                ):
-                    pr.ft_max.value = float(vmax)
+                placeholder_min = (
+                    "" if vmin is None or not np.isfinite(vmin) else str(float(vmin))
+                )
+                placeholder_max = (
+                    "" if vmax is None or not np.isfinite(vmax) else str(float(vmax))
+                )
+                try:
+                    setattr(pr.ft_min, "placeholder", placeholder_min)
+                except Exception:
+                    pass
+                try:
+                    setattr(pr.ft_max, "placeholder", placeholder_max)
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -760,6 +812,58 @@ class ParamPanel(w.VBox):
             restr[r.col] = d
         return restr
 
+    def collect_restricciones_filtrado(self) -> dict:
+        """Incluye todas las filas con reglas concretas (aunque no estén activas).
+
+        Esto permite que los paneles de filtrado reflejen la selección completa.
+        """
+        restr: dict[str, dict] = {}
+        for r in self.rows:
+            mode = str(r.dd_mode.value)
+            if mode == "ignorar":
+                continue
+            try:
+                peso = float(r.sl_weight.value)
+            except Exception:
+                peso = 0.0
+            d: dict[str, Any] = {"tipo": mode, "peso": peso}
+            if mode in {"minimo", "maximo", "fijo"}:
+                try:
+                    if r.ft_value.value in (None, ""):
+                        continue
+                    d["valor"] = float(r.ft_value.value)
+                except Exception:
+                    continue
+            elif mode == "objetivo":
+                try:
+                    if r.ft_value.value in (None, ""):
+                        continue
+                    d["valor"] = float(r.ft_value.value)
+                    d["tol"] = (
+                        float(r.ft_min.value)
+                        if r.ft_min.value not in (None, "")
+                        else float(0.0)
+                    )
+                except Exception:
+                    continue
+            elif mode == "rango":
+                try:
+                    lo = None if r.ft_min.value in (None, "") else float(r.ft_min.value)
+                except Exception:
+                    lo = None
+                try:
+                    hi = None if r.ft_max.value in (None, "") else float(r.ft_max.value)
+                except Exception:
+                    hi = None
+                if lo is None and hi is None:
+                    continue
+                if lo is not None:
+                    d["min"] = lo
+                if hi is not None:
+                    d["max"] = hi
+            restr[r.col] = d
+        return restr
+
 
 def _bloque_param(nombre_param: str, val: float = 0.0) -> dict:
     tipos = ["ignorar", "fijo", "objetivo", "maximo", "minimo", "rango"]
@@ -897,6 +1001,77 @@ def build_ui(
     )
     # inicialmente oculto
     out_help.layout.display = "none"
+
+    btn_open_excel = w.Button(
+        description="Abrir Excel original",
+        icon="external-link",
+        layout=w.Layout(width="220px"),
+    )
+    try:
+        btn_open_excel.tooltip = "Abrir la base de datos en Excel"
+    except Exception:
+        pass
+    btn_open_excel.style.button_color = "#0d6efd"
+    out_excel_status = w.Output(layout=w.Layout(margin="4px 0 0 0"))
+
+    def _abrir_excel(_: Any):
+        ruta_cfg = getattr(_cfg, "DATA_XLSX", None)
+        with out_excel_status:
+            clear_output(wait=True)
+            if not ruta_cfg:
+                display(w.HTML("<b>No se configuró 'DATA_XLSX' en config.py.</b>"))
+                return
+            path = Path(ruta_cfg)
+            if not path.exists():
+                display(
+                    w.HTML(f"<b>No se encontró el archivo:</b><br><code>{path}</code>")
+                )
+                return
+            last_error: Exception | None = None
+            try:
+                os.startfile(str(path))  # type: ignore[attr-defined]
+                display(w.HTML(f"<i>Abriendo en Excel:</i><br><code>{path}</code>"))
+                return
+            except AttributeError:
+                pass  # plataforma sin startfile
+            except FileNotFoundError:
+                display(
+                    w.HTML(f"<b>No se encontró el archivo:</b><br><code>{path}</code>")
+                )
+                return
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+
+            try:
+                import subprocess, platform
+
+                system = platform.system()
+                if system == "Darwin":
+                    subprocess.Popen(["open", str(path)])
+                elif system == "Linux":
+                    subprocess.Popen(["xdg-open", str(path)])
+                elif system == "Windows":
+                    if last_error is not None:
+                        raise last_error
+                    raise RuntimeError("No se pudo abrir el archivo con startfile.")
+                else:
+                    raise RuntimeError(f"Sistema operativo no soportado: {system}")
+                display(
+                    w.HTML(
+                        f"<i>Intentando abrir el archivo:</i><br><code>{path}</code>"
+                    )
+                )
+            except Exception as exc:  # noqa: BLE001
+                display(w.HTML(f"<b>No se pudo abrir el Excel:</b> {exc}"))
+
+    btn_open_excel.on_click(_abrir_excel)
+
+    with out_excel_status:
+        display(
+            w.HTML(
+                "<span style='font-size:12px;color:#555'>Usá este botón para auditar los vecinos directamente en el Excel original.</span>"
+            )
+        )
 
     # --- Controles globales
     sl_alpha = w.FloatSlider(
@@ -1067,12 +1242,17 @@ def build_ui(
         except Exception:
             return None
 
-    # Tendencias se renderiza dentro de un Output dedicado (out_xy)
-
-    # helpers para mostrar info del parámetro
     estado_sugerencias: dict[str, float | None] = {}
-    # estado del último ranking (para generar informe)
     df_rank_obj_state: dict[str, pd.DataFrame | None] = {"df": None}
+    df_filtrado_state: dict[str, pd.DataFrame | None] = {"df": df}
+
+    acc_tend = widget_tendencias_comparador(
+        df,
+        df_filtrado=df_filtrado_state.get("df"),
+        x_obj_col_name=x_obj_col_name,
+        x_obj_widget=None,
+        get_objetivo=_get_objetivo,
+    )
 
     def _get_sugerido(col: str) -> float | None:
         return estado_sugerencias.get(col)
@@ -1141,32 +1321,119 @@ def build_ui(
     qa_counts = {"rank": 0, "sug": 0, "xy": 0, "out": 0, "info": 0}
 
     def show_info(col: str):
-        _update_state_globals_for_scope()
-        df_view, _mask, _meta = get_scope_view(df, state)
-        if DEBUG_QA:
-            qa_counts["info"] += 1
-            qa_log(
-                f"Info panel for '{col}': ámbito={state.get('ambito')} · n={len(df_view)} · renders(info)={qa_counts['info']}"
+        df_filtrado_cached = df_filtrado_state.get("df")
+        if isinstance(df_filtrado_cached, pd.DataFrame):
+            df_filtrado_local = df_filtrado_cached.copy()
+        else:
+            df_filtrado_local = _build_df_filtrado_actual()
+
+        with out_info:
+            clear_output(wait=True)
+            acc_info = widget_info_param(
+                df,
+                col,
+                df_filtrado=df_filtrado_local,
+                get_objetivo=_get_objetivo,
+                get_sugerido=_get_sugerido,
+                factor_iqr=1.5,
+                on_open_outliers=lambda c: abrir_outliers(c),
+                on_open_xy=lambda c: abrir_xy(c),
+                on_open_sugerencias=lambda c: abrir_sugerencias(c),
             )
-        # Usar el panel 'v1' existente (Accordion) sin tocar cálculos
-        acc = widget_info_param(
-            df_view,
-            col,
-            get_objetivo=_get_objetivo,
-            get_sugerido=_get_sugerido,
-            factor_iqr=1.5,
-            on_open_outliers=abrir_outliers,
-            on_open_xy=abrir_xy,
-            on_open_sugerencias=abrir_sugerencias,
-        )
-        with with_cleared(out_info):
-            display(acc)
+            display(acc_info)
 
     # cablear botones info en panel dinámico
     for r in param_panel.rows:
         r.btn_info.on_click(lambda _btn, c=r.col: show_info(c))
 
     # --- Helpers internos
+    def _filter_df_by_restricciones(
+        df_base: pd.DataFrame, restr: dict[str, dict]
+    ) -> pd.DataFrame:
+        if not restr:
+            return df_base
+
+        mask = pd.Series(True, index=df_base.index)
+
+        def _default_tol(series: pd.Series, ref: Optional[float]) -> float:
+            tol_abs = _as_float(TOL_ABS_FIJO)
+            if tol_abs is not None and np.isfinite(tol_abs) and tol_abs > 0:
+                return max(1e-9, float(tol_abs))
+
+            tol_rel = _as_float(TOL_REL_FIJO)
+            if tol_rel is None or not np.isfinite(tol_rel) or tol_rel <= 0:
+                tol_rel = 0.01
+
+            try:
+                rng = float(np.nanmax(series) - np.nanmin(series))
+            except Exception:
+                rng = float("nan")
+            if not np.isfinite(rng) or rng <= 0:
+                base = abs(ref) if ref not in (None, 0) else 1.0
+                rng = float(base)
+
+            tol_val = tol_rel * rng
+            if not np.isfinite(tol_val) or tol_val <= 0:
+                tol_val = 1e-9
+            return max(1e-9, float(tol_val))
+
+        for col, spec in restr.items():
+            if col not in df_base.columns:
+                continue
+
+            try:
+                series = pd.to_numeric(df_base[col], errors="coerce")
+            except Exception:
+                continue
+
+            tipo = str(spec.get("tipo", "ignorar")).strip().lower()
+            if tipo == "ignorar":
+                continue
+
+            valor = _as_float(spec.get("valor"))
+            minimo = _as_float(spec.get("min"))
+            maximo = _as_float(spec.get("max"))
+            tol_in = _as_float(spec.get("tol"))
+
+            if tipo == "maximo" and valor is not None:
+                mask &= series <= valor
+            elif tipo == "minimo" and valor is not None:
+                mask &= series >= valor
+            elif tipo == "fijo" and valor is not None:
+                tol = _default_tol(series, valor)
+                mask &= np.abs(series - valor) <= tol
+            elif tipo == "objetivo" and valor is not None:
+                tol = tol_in if tol_in is not None else _default_tol(series, valor)
+                tol = max(0.0, float(tol))
+                mask &= np.abs(series - valor) <= tol
+            elif tipo == "rango":
+                if minimo is not None:
+                    mask &= series >= minimo
+                if maximo is not None:
+                    mask &= series <= maximo
+
+        try:
+            return df_base.loc[mask].copy()
+        except Exception:
+            return df_base
+
+    def _build_df_filtrado_actual() -> pd.DataFrame:
+        df_cached = df_filtrado_state.get("df")
+        if isinstance(df_cached, pd.DataFrame):
+            return df_cached.copy()
+
+        try:
+            restricciones_actuales = param_panel.collect_restricciones()
+        except Exception:
+            restricciones_actuales = {}
+
+        df_filtrado_local = _filter_df_by_restricciones(df, restricciones_actuales)
+        if df_filtrado_local is df:
+            df_filtrado_local = df.copy()
+
+        df_filtrado_state["df"] = df_filtrado_local
+        return df_filtrado_local.copy()
+
     def _populate_segment_values(*args):
         col = dd_segcol.value
         if col == "(ninguno)" or col not in df.columns:
@@ -1200,6 +1467,9 @@ def build_ui(
 
             params_dyn = param_panel.collect_params()
             restricciones = param_panel.collect_restricciones()
+            restricciones_filtrado = param_panel.collect_restricciones_filtrado()
+            df_filtrado_pre = _filter_df_by_restricciones(df, restricciones_filtrado)
+            df_filtrado_state["df"] = df_filtrado_pre
 
             with with_cleared(out_rank):
                 if not restricciones:
@@ -1222,7 +1492,7 @@ def build_ui(
                 df_rank = rank(
                     df,
                     restricciones=restricciones,
-                    params=params_dyn,
+                    params=None,
                     metodo_escala="IQR",
                     min_n=5,
                     penalizar_nan=bool(ch_nan.value),
@@ -1235,6 +1505,34 @@ def build_ui(
                     prefer_factor=float(sl_pref_fac.value),
                     top_n=None,
                 )
+                # Determinar subconjunto filtrado según columnas de violación (todas False)
+                df_filtrado_post: Optional[pd.DataFrame] = None
+                try:
+                    viol_cols = [c for c in df_rank.columns if c.startswith("viol_")]
+                    if viol_cols:
+                        mask_ok = np.ones(len(df_rank), dtype=bool)
+                        for vc in viol_cols:
+                            try:
+                                mask_ok &= ~df_rank[vc].astype(bool).to_numpy()
+                            except Exception:
+                                pass
+                        if mask_ok.any():
+                            idx_ok = df_rank.index[mask_ok]
+                            df_filtrado_post = df.loc[idx_ok.intersection(df.index)]
+                except Exception:
+                    df_filtrado_post = None
+
+                if df_filtrado_post is not None and not df_filtrado_post.empty:
+                    df_filtrado_state["df"] = df_filtrado_post
+                else:
+                    df_filtrado_state["df"] = df_filtrado_pre
+
+                filtered_actual = df_filtrado_state.get("df")
+                if hasattr(acc_tend, "set_df_filtrado"):
+                    try:
+                        acc_tend.set_df_filtrado(filtered_actual)  # type: ignore[attr-defined]
+                    except Exception:
+                        pass
                 # Asegurar que la tabla muestre etiquetas legibles aunque no segmentemos por SEGMENT_COL
                 if (SEGMENT_COL in df.columns) and SEGMENT_LABELS:
                     seg_map = {str(k): v for k, v in SEGMENT_LABELS.items()}
@@ -1409,69 +1707,35 @@ def build_ui(
                 # guardar referencia para callbacks
                 acc_sug_ref["acc"] = acc_sug
                 display(acc_sug)
-                # HTML opcional: resumen en tabla
-                try:
-                    summary_df = sug.get("summary") if isinstance(sug, dict) else None
-                    if isinstance(summary_df, pd.DataFrame) and not summary_df.empty:
-                        panel_sugerencias.value = convertir_a_html(
-                            summary_df.head(50),
-                            titulo="Resumen de sugerencias",
-                            mostrar=False,
-                            alto="260px",
-                        )
-                    else:
-                        panel_sugerencias.value = ""
-                except Exception:
-                    panel_sugerencias.value = ""
 
-            # Tendencias (X–Y) en su Output dedicado (aplica Ámbito)
-            with with_cleared(out_xy):
-                try:
-                    _update_state_globals_for_scope()
-                    df_view, _mask, _meta = get_scope_view(df, state)
-                    if DEBUG_QA:
-                        qa_counts["xy"] += 1
-                        qa_log(
-                            f"Tendencias X–Y: ámbito={state.get('ambito')} · n={len(df_view)} · renders(xy)={qa_counts['xy']}"
-                        )
-                    acc_tend = widget_tendencias_plotly(
-                        df_view,
-                        x_obj_col_name=x_obj_col_name,
-                        x_obj_widget=None,
-                        get_objetivo=_get_objetivo,
+            with out_outl:
+                clear_output(wait=True)
+                df_filtrado_local = _build_df_filtrado_actual()
+
+                existing_acc = acc_out_ref.get("acc")
+                refreshed = False
+                if existing_acc is not None and hasattr(
+                    existing_acc, "set_df_filtrado"
+                ):
+                    try:
+                        existing_acc.set_df_filtrado(df_filtrado_local)  # type: ignore[attr-defined]
+                        display(existing_acc)
+                        refreshed = True
+                    except Exception:
+                        refreshed = False
+
+                if not refreshed:
+                    acc_out = widget_outliers_panel_dual(
+                        df,
+                        df_filtrado=df_filtrado_local,
+                        factor=float(ft_iqrf.value),
+                        min_n=5,
+                        titulo="Outliers (IQR) — Global vs filtrado",
+                        collapsed=True,
                     )
                     # guardar referencia para callbacks
-                    acc_tend_ref["acc"] = acc_tend
-                    display(acc_tend)
-                except Exception as _e:
-                    display(w.HTML(f"<i>No se pudo renderizar Tendencias:</i> {_e}"))
-
-            with with_cleared(out_outl):
-                # Aplicar Ámbito (alcance) para Outliers
-                _update_state_globals_for_scope()
-                df_view, _mask, _meta = get_scope_view(df, state)
-                if DEBUG_QA:
-                    qa_counts["out"] += 1
-                    qa_log(
-                        f"Outliers: ámbito={state.get('ambito')} · n={len(df_view)} · renders(out)={qa_counts['out']}"
-                    )
-                acc_out = widget_outliers_panel(
-                    df_view,
-                    factor=float(ft_iqrf.value),
-                    min_n=5,
-                    titulo="Outliers en el dataset (IQR)",
-                    collapsed=True,
-                )
-                # guardar referencia para callbacks
-                acc_out_ref["acc"] = acc_out
-                display(acc_out)
-                # HTML opcional: si hubiera un resumen en DataFrame, volcarlo
-                try:
-                    # Intentar detectar un atributo/propiedad con resumen si existiera
-                    # (No disponible actualmente; este bloque queda como plantilla)
-                    panel_outliers.value = ""
-                except Exception:
-                    panel_outliers.value = ""
+                    acc_out_ref["acc"] = acc_out
+                    display(acc_out)
 
     # Mantener stats del panel sincronizadas con el subset del dataset según segmentación actual
     def _current_subset_df() -> pd.DataFrame:
@@ -2068,9 +2332,8 @@ def build_ui(
             sl_topk,
             ch_out,
             ft_iqrf,
-            dd_segm_modo,
-            dd_segm_val,
             sl_pref_fac,
+            ch_auto,
         ):
             try:
                 wdg.observe(on_any_change, names="value")
@@ -2104,9 +2367,20 @@ def build_ui(
     # Inicializar stats (globales) para prefill de rangos
     param_panel.set_stats_from_df(df)
     header = w.HTML("<h4>Parámetros (dinámico)</h4>")
-    # Columna izquierda (62%): filtros+tabla de parámetros (ParamPanel ya los contiene)
-    left_col = w.VBox(
+    excel_box = w.VBox(
+        [btn_open_excel, out_excel_status],
+        layout=w.Layout(
+            border="1px solid #e0e0e0",
+            padding="6px 8px",
+            background_color="#f8f9ff",
+            margin="0 0 8px 0",
+        ),
+    )
+    # Orden: sticky bar arriba (siempre visible), luego panel de parámetros
+    left_panel = w.VBox(
         [
+            excel_box,
+            sticky_bar,
             header,
             param_panel,
         ],
@@ -2177,6 +2451,7 @@ def run_demo():
     # Respetar el singleton: si ya existe UI, no crear otra
     ui = build_ui(df, params=PARAMS_DEFAULT, _reuse=True)
     display(ui)
+    setattr(sys.modules.get(__name__), _ADR_UI_GUARD_FLAG, True)
 
 
 if __name__ == "__main__":

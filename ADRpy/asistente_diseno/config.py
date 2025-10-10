@@ -32,6 +32,12 @@ SIGMA_5000_FT = 0.8620
 K_VECINOS_DEFAULT = 10
 N_MIN_RECTA = 5
 
+# ---------------- Filtros por selección (tolerancias) ----------------
+# Banda relativa para 'fijo' u 'objetivo' (porcentaje del rango observado)
+TOL_REL_FIJO = 0.01  # 1%
+# Banda absoluta opcional (si se define, prevalece sobre la relativa para ese parámetro)
+TOL_ABS_FIJO = None  # p.ej., 2.0 -> ±2 unidades; deja None para ignorar
+
 # ---- NOMBRES DE COLUMNAS (EDITA ESTOS STRINGS PARA QUE COINCIDAN CON TU EXCEL) ----
 
 COL_MTOW = "Peso máximo al despegue (MTOW)"
