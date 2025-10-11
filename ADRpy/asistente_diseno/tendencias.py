@@ -24,9 +24,9 @@ import pandas as pd
 # Reutilizamos límites IQR del módulo de atípicos
 from .outliers import compute_iqr_bounds
 
-# Para UI (sin autodisplay dentro del módulo)
+# Para UI
 import ipywidgets as w
-import plotly.io as pio
+from IPython.display import display, clear_output
 
 # Config (nombre de columna de misión + etiquetas legibles si existen)
 from .config import SEGMENT_COL, SEGMENT_LABELS
@@ -211,7 +211,7 @@ def fig_tendencias_plotly(
         yaxis_title=y_col,
     )
     try:
-        plotly_apply_2dec(fig)
+        apply_tickformat_2dec(fig)
     except Exception:
         pass
 
@@ -226,7 +226,7 @@ def fig_tendencias_plotly(
                     "n": r.n,
                     "modelo": r.modelo,
                     "ecuación": r.ecuacion,
-                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 2),
+                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
                     "MAPE_%": None if r.mape is None else round(r.mape, 2),
                     "calidad_n": r.calidad_n,
                     "IQR": "ON" if remove_outliers else "OFF",
@@ -242,7 +242,7 @@ def fig_tendencias_plotly(
                     "n": r.n,
                     "modelo": r.modelo,
                     "ecuación": r.ecuacion,
-                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 2),
+                    "R²_adj": None if r.r2_adj is None else round(r.r2_adj, 4),
                     "MAPE_%": None if r.mape is None else round(r.mape, 2),
                     "calidad_n": r.calidad_n,
                     "IQR": "ON" if remove_outliers else "OFF",

@@ -20,21 +20,6 @@ from dataclasses import dataclass
 import ipywidgets as w  # widgets used throughout
 import numpy as np
 
-# ---------------------------------
-# QA debug (temporary instrumentation)
-# ---------------------------------
-# Enable by setting environment variable ADRPY_DEBUG_QA=1 from the notebook, or set DEBUG_QA=True here temporarily.
-DEBUG_QA = os.getenv("ADRPY_DEBUG_QA", "0") == "1"
-
-
-def qa_log(*args):
-    if DEBUG_QA:
-        try:
-            print("[QA]", *args)
-        except Exception:
-            pass
-
-
 # ---------------------------------------------------------------------
 # Asegurar que el parent (ADRpy) esté en sys.path para imports absolutos
 # ---------------------------------------------------------------------
@@ -55,10 +40,9 @@ _purge_pycache(os.path.join(PROJECT_ROOT, "asistente_diseno"))
 importlib.invalidate_caches()
 
 # ---------------------------------------------------------------------
-# Imports de nuestros módulos (unificados; sin variantes duplicadas)
+# Imports de nuestros módulos (no se tocan tus scripts existentes)
 # ---------------------------------------------------------------------
 from asistente_diseno.datos import leer_excel
-from asistente_diseno.datos import get_scope_view
 from asistente_diseno.similitud import (
     rank,
     insertar_objetivo_en_ranking,
@@ -86,7 +70,6 @@ from asistente_diseno.guias import apply_tooltip, HELP
 from asistente_diseno.datos import columnas_numericas_utiles
 from asistente_diseno.config import DISPLAY_LABELS, PARAM_DEFAULTS, PREFERRED_ORDER
 import asistente_diseno.config as _cfg
-from asistente_diseno.mplutils import with_cleared
 
 # --- Forzar reload de módulos clave para evitar versiones "stale" al re-ejecutar desde notebook
 try:
@@ -140,60 +123,6 @@ if getattr(sys.modules.get(__name__), _ADR_UI_GUARD_FLAG, False):
     raise SystemExit(0)
 
 PARAM_GROUPS = getattr(_cfg, "PARAM_GROUPS", {})
-
-# -----------------------------------------------------------
-# Lock simple para evitar reentradas (doble render simultáneo)
-# -----------------------------------------------------------
-_rendering = False
-
-# -----------------------------------------------------------
-# Singleton de UI para evitar duplicados de contenedores
-# -----------------------------------------------------------
-_UI_INSTANCE = None  # type: ignore[var-annotated]
-
-
-def _safe_render(fn, *args, **kwargs):
-    global _rendering
-    if _rendering:
-        return
-    _rendering = True
-    try:
-        return fn(*args, **kwargs)
-    finally:
-        _rendering = False
-
-
-# -----------------------------------------------------------
-# Helper opcional: deduplicar observadores para modo "Auto"
-# -----------------------------------------------------------
-_auto_observers: list = []
-
-
-def bind_auto(control, callback):
-    """Desconecta observadores anteriores y conecta uno nuevo en 'value'.
-
-    Útil si querés forzar que exista un único observer activo sobre un control
-    cuando el modo Auto está habilitado (evita dobles renders por wiring repetido).
-    """
-    global _auto_observers
-    try:
-        for cb in list(_auto_observers):
-            try:
-                control.unobserve(cb, names="value")
-            except Exception:
-                pass
-            try:
-                _auto_observers.remove(cb)
-            except Exception:
-                pass
-    except Exception:
-        pass
-    try:
-        control.observe(callback, names="value")
-        _auto_observers.append(callback)
-    except Exception:
-        pass
-
 
 # ---------------------------------------------------------------------
 # UI (ipywidgets)
@@ -944,18 +873,11 @@ def _armar_restricciones(bloques: list[dict]) -> dict:
     return restr
 
 
-def build_ui(
-    df: pd.DataFrame, params: list[str] | None = None, *, _reuse: bool = True
-) -> w.VBox:
+def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
     """
     Construye la UI completa (panel izquierdo + ranking + paneles colapsables).
     Devuelve un contenedor para display().
     """
-    global _UI_INSTANCE
-    # Reusar la UI existente si ya fue creada y se solicita reuso
-    if _reuse and (_UI_INSTANCE is not None):
-        return _UI_INSTANCE  # type: ignore[return-value]
-
     params = params or PARAMS_DEFAULT
 
     # --- Panel dinámico de parámetros (reemplaza a los 4 fijos)
@@ -964,19 +886,6 @@ def build_ui(
     # Panel derecho: detalle del parámetro + botones (informe/export/guardar) + ayuda
     out_info = w.Output(layout=w.Layout(border="1px solid #ddd", padding="6px"))
     btn_informe = w.Button(description="Generar informe", icon="file")
-    # Ámbito (selector global): Global / Filtrado / Top-K
-    rb_ambito = w.ToggleButtons(
-        options=[("Global", "global"), ("Filtrado", "filtrado"), ("Top-K", "topk")],
-        value="global",
-        description="Ámbito:",
-        layout=w.Layout(width="auto"),
-    )
-    try:
-        rb_ambito.tooltip = (
-            "Conjunto de datos que alimenta Resumen/Outliers/X–Y/Sugerencias"
-        )
-    except Exception:
-        pass
     # Exportaciones/tablas + persistencia de sesión
     btn_export = w.Button(description="Exportar Excel/CSV", icon="download")
     btn_save = w.Button(description="Guardar sesión", icon="save")
@@ -1162,64 +1071,35 @@ def build_ui(
     btn_run.style.button_color = "#28a745"  # verde
     btn_clear.style.button_color = "#f0ad4e"  # naranja
 
-    # Layout v1 — Top controls (una sola fila, con wrap)
-    top_controls = w.HBox(
-        [
-            sl_alpha,
-            ch_nan,
-            ft_pen_nan,
-            sl_topk,
-            dd_segcol,
-            dd_segm_modo,
-            dd_segm_val,
-            sl_pref_fac,
-            ch_out,
-            ft_iqrf,
-            ch_auto,
-            btn_run,
-            btn_clear,
-            # Extras que no queremos perder (se incluyen al final de la fila)
-            btn_informe,
-            btn_export,
-            btn_save,
-            dd_load,
-            ch_autoload,
-            rb_ambito,
-            btn_ayuda,
-        ]
+    panel_global_1 = w.HBox([sl_alpha, ch_nan, ft_pen_nan, sl_topk, ch_out, ft_iqrf])
+    panel_global_1.layout = w.Layout(
+        flex_flow="row wrap", align_items="center", width="100%"
     )
-    top_controls.layout = w.Layout(
-        flex_flow="row wrap", align_items="center", width="100%", gap="6px"
+    panel_global_2 = w.HBox(
+        [dd_segcol, dd_segm_modo, dd_segm_val, sl_pref_fac, btn_run, btn_clear, ch_auto]
+    )
+    panel_global_2.layout = w.Layout(
+        flex_flow="row wrap", align_items="center", width="100%"
+    )
+    # Hacer la barra de controles "sticky" para mejorar visibilidad
+    sticky_bar = w.VBox([panel_global_1, panel_global_2])
+    sticky_bar.layout = w.Layout(
+        position="sticky",
+        top="0",
+        z_index="10",
+        border="1px solid #e0e0e0",
+        padding="6px 8px",
+        background_color="#fafafa",
+        width="100%",
     )
 
-    # --- Estado global simple para la UI
-    state: dict[str, Any] = {
-        "ambito": str(rb_ambito.value),
-        "topk_index": None,
-        # Snapshot mínimo de parámetros para el motor de alcance (filtrado)
-        "param_config": [],
-        # Segmentación (motor de alcance puede usarlo)
-        "segmentar_por": None,
-        "segmentar_modo": "off",
-        "segmentar_valor": None,
-        "segment_labels": SEGMENT_LABELS,
-        "penalizar_nan": True,
-    }
-
-    # --- Salidas (un único Output por sección)
+    # --- Salidas
     out_rank = w.Output()
     out_sug = w.Output()
-    out_xy = w.Output()
     out_outl = w.Output()
-    # Placeholders HTML (evitar autodisplay). Se usan en paneles que deseen HTML plano.
-    panel_ranking = w.HTML("")
-    panel_sugerencias = w.HTML("")
-    panel_outliers = w.HTML("")
-
     # referencias a acordeones para callbacks
     acc_out_ref: dict[str, Optional[w.Accordion]] = {"acc": None}
     acc_sug_ref: dict[str, Optional[w.Accordion]] = {"acc": None}
-    acc_tend_ref: dict[str, Optional[w.Accordion]] = {"acc": None}
     # Tendencias se arma una vez (no depende del ranking); lo colocamos antes de Outliers
     try:
         x_obj_col_name = params[0] if (params and params[0] in df.columns) else None
@@ -1267,9 +1147,7 @@ def build_ui(
 
     def abrir_xy(col: str):
         try:
-            acc = acc_tend_ref["acc"]
-            if acc is not None:
-                acc.selected_index = 0
+            acc_tend.selected_index = 0
         except Exception:
             pass
 
@@ -1280,45 +1158,6 @@ def build_ui(
                 acc.selected_index = 0
         except Exception:
             pass
-
-    def _collect_param_config_for_state() -> list[dict]:
-        cfg_list: list[dict] = []
-        for r in param_panel.rows:
-            md = str(r.dd_mode.value)
-            cfg_list.append(
-                {
-                    "col": r.col,
-                    "active": bool(r.ch_active.value),
-                    "mode": md,
-                    "value": (
-                        None
-                        if r.ft_value.value in (None, "")
-                        else float(r.ft_value.value)
-                    ),
-                    "min": (
-                        None if r.ft_min.value in (None, "") else float(r.ft_min.value)
-                    ),
-                    "max": (
-                        None if r.ft_max.value in (None, "") else float(r.ft_max.value)
-                    ),
-                }
-            )
-        return cfg_list
-
-    def _update_state_globals_for_scope():
-        # Globales relevantes al alcance
-        state["param_config"] = _collect_param_config_for_state()
-        state["penalizar_nan"] = bool(ch_nan.value)
-        state["segmentar_por"] = (
-            None if dd_segcol.value == "(ninguno)" else dd_segcol.value
-        )
-        state["segmentar_modo"] = dd_segm_modo.value
-        state["segmentar_valor"] = (
-            None if dd_segm_val.value in (None, "(ninguno)") else dd_segm_val.value
-        )
-
-    # QA counters (render counts per section)
-    qa_counts = {"rank": 0, "sug": 0, "xy": 0, "out": 0, "info": 0}
 
     def show_info(col: str):
         df_filtrado_cached = df_filtrado_state.get("df")
@@ -1471,7 +1310,8 @@ def build_ui(
             df_filtrado_pre = _filter_df_by_restricciones(df, restricciones_filtrado)
             df_filtrado_state["df"] = df_filtrado_pre
 
-            with with_cleared(out_rank):
+            with out_rank:
+                clear_output(wait=True)
                 if not restricciones:
                     display(
                         w.HTML(
@@ -1547,15 +1387,6 @@ def build_ui(
                 # guardar para el informe
                 df_rank_obj_state["df"] = df_rank_obj.copy()
 
-                # Actualizar índice Top-K efectivo (para 'Ámbito: Top-K')
-                try:
-                    k = int(sl_topk.value)
-                    # Mantener solo índices que existan en el df original (descarta la fila del objetivo)
-                    v_idx = [i for i in df_rank_obj.index if i in df.index]
-                    state["topk_index"] = v_idx[:k]
-                except Exception:
-                    state["topk_index"] = None
-
                 # Calcular un resumen de sugerencias rápido para construir 'alerta' del objetivo
                 try:
                     params_sug = [
@@ -1629,33 +1460,11 @@ def build_ui(
                     sort_default="similitud",
                     top_n_default=15,
                 )
-                if DEBUG_QA:
-                    # Log n under current scope to compare with other panels
-                    try:
-                        _update_state_globals_for_scope()
-                        _dfv, _m, _mt = get_scope_view(df, state)
-                        qa_counts["rank"] += 1
-                        qa_log(
-                            f"Ranking: ámbito={state.get('ambito')} · n={len(_dfv)} · renders(rank)={qa_counts['rank']}"
-                        )
-                    except Exception:
-                        pass
-                # Montar bloque: encabezado + widget filtrado
                 display(w.HTML("<h4>Ranking por similitud</h4>"))
                 display(ui_rank)
-                # Si queremos una tabla HTML adicional (resumen), usar helper sin autodisplay
-                try:
-                    html_rank = convertir_a_html(
-                        df_rank_obj.head(50),
-                        titulo="Vista rápida (Top 50)",
-                        mostrar=False,
-                        alto="260px",
-                    )
-                    panel_ranking.value = html_rank
-                except Exception:
-                    panel_ranking.value = ""
 
-            with with_cleared(out_sug):
+            with out_sug:
+                clear_output(wait=True)
                 params_sug = [
                     p.col
                     for p in params_dyn
@@ -1674,14 +1483,6 @@ def build_ui(
                     beta_conf=1.0,
                     name_objetivo="Objetivo (usuario)",
                 )
-                # Calcular df_view para el alcance actual
-                _update_state_globals_for_scope()
-                df_view, _mask, _meta = get_scope_view(df, state)
-                if DEBUG_QA:
-                    qa_counts["sug"] += 1
-                    qa_log(
-                        f"Sugerencias: ámbito={state.get('ambito')} · n={len(df_view)} · renders(sug)={qa_counts['sug']}"
-                    )
 
                 acc_sug = widget_sugerencias_panel(
                     sug,
@@ -1689,20 +1490,6 @@ def build_ui(
                     collapsed=True,
                     bins=20,
                     get_objetivo=_get_objetivo,
-                    df_scope=df_view,
-                    ambito=str(state.get("ambito", "global")),
-                    topk_index=state.get("topk_index"),
-                    # Pasar alcance para que el detalle use Global/Filtrado/Top‑K
-                    params=None,
-                    top_k=int(sl_topk.value),
-                    remove_outliers=bool(ch_out.value),
-                    iqr_factor=float(ft_iqrf.value),
-                    use_distance_weights=True,
-                    use_confidence_weights=False,
-                    confidence_cols=None,
-                    beta_dist=1.0,
-                    beta_conf=1.0,
-                    name_objetivo="Objetivo (usuario)",
                 )
                 # guardar referencia para callbacks
                 acc_sug_ref["acc"] = acc_sug
@@ -2260,7 +2047,7 @@ def build_ui(
 
         def _do():
             try:
-                _safe_render(_render)
+                _render()
             except Exception:
                 pass
 
@@ -2276,54 +2063,14 @@ def build_ui(
         if ch_auto.value:
             _debounced_render(0.35)
 
-    # Actualiza la UI en función del modo Auto (evita acciones duplicadas)
-    def _on_auto_change(change):
-        try:
-            btn_run.disabled = bool(change.get("new"))
-        except Exception:
-            try:
-                btn_run.disabled = bool(ch_auto.value)
-            except Exception:
-                pass
-
-    # Estado anti-duplicado de handlers
-    state.setdefault("_handlers_wired", False)
-    state.setdefault("_handlers", {})
-
     def wire_observers():
-        # Evitar cablear dos veces en la misma instancia
-        if state.get("_handlers_wired"):
-            return
-
         # Botones de acción
-        def _on_run_click(_):
-            # Si Auto está activo, el botón queda deshabilitado/no-op
-            if ch_auto.value:
-                return
-            _safe_render(_render)
-
-        def _on_clear_click(_):
-            _clear(_)
-
-        btn_run.on_click(_on_run_click)
-        btn_clear.on_click(_on_clear_click)
-        state["_handlers"].update(
-            {
-                "run_click": _on_run_click,
-                "clear_click": _on_clear_click,
-            }
-        )
+        btn_run.on_click(lambda _: _render())
+        btn_clear.on_click(_clear)
         # Poblado/estadísticas de segmentación (estos no disparan render, sólo stats)
         dd_segcol.observe(_populate_segment_values, names="value")
         dd_segm_val.observe(_update_param_stats_for_current_segment, names="value")
         dd_segm_modo.observe(_update_param_stats_for_current_segment, names="value")
-        state["_handlers"].update(
-            {
-                "segcol_change": _populate_segment_values,
-                "segval_change": _update_param_stats_for_current_segment,
-                "segmodo_change": _update_param_stats_for_current_segment,
-            }
-        )
         # Observers unificados (globales)
         for wdg in (
             sl_alpha,
@@ -2339,13 +2086,6 @@ def build_ui(
                 wdg.observe(on_any_change, names="value")
             except Exception:
                 pass
-        state["_handlers"]["on_any_change"] = on_any_change
-        # Auto: deshabilitar/habilitar botón Recalcular
-        try:
-            ch_auto.observe(_on_auto_change, names="value")
-        except Exception:
-            pass
-        state["_handlers"]["auto_change"] = _on_auto_change
         # Observers unificados (panel dinámico de parámetros)
         for r in getattr(param_panel, "rows", []):
             for wdg in (
@@ -2360,7 +2100,6 @@ def build_ui(
                     wdg.observe(on_any_change, names="value")
                 except Exception:
                     pass
-        state["_handlers_wired"] = True
 
     # Render inicial
     _populate_segment_values()
@@ -2384,72 +2123,42 @@ def build_ui(
             header,
             param_panel,
         ],
-        layout=w.Layout(width="62%"),
+        layout=w.Layout(width="100%"),
     )
-
-    # Mantener sincronizado el estado del selector de ámbito
-    def _on_ambito_change(change):
-        try:
-            state["ambito"] = str(change.get("new"))
-        except Exception:
-            state["ambito"] = str(rb_ambito.value)
-
-    rb_ambito.observe(_on_ambito_change, names="value")
-    # Guardar handler para potencial desuscripción futura
-    state["_handlers"]["ambito_change"] = _on_ambito_change
-
-    # Columna derecha (38%): panel de detalle (Accordion) + ayuda
-    right_col = w.VBox(
+    right_panel = w.VBox(
         [
+            w.HBox(
+                [btn_informe, btn_export, btn_save, dd_load, ch_autoload, btn_ayuda]
+            ),
             w.HTML("<b>Detalle del parámetro</b>"),
             out_info,
             out_help,
-        ],
-        layout=w.Layout(width="38%"),
-    )
-
-    # Cuerpo: dos columnas
-    body = w.HBox(
-        [left_col, right_col],
-        layout=w.Layout(align_items="stretch", width="100%", gap="12px"),
-    )
-
-    # Pie: paneles/outputs (Ranking, Sugerencias, Tendencias X‑Y, Outliers)
-    foot = w.VBox(
-        [
-            w.HTML("<hr>"),
-            out_rank,
-            panel_ranking,
-            w.HTML("<hr>"),
-            out_sug,
-            panel_sugerencias,
-            w.HTML("<hr>"),
-            out_xy,
-            w.HTML("<hr>"),
-            out_outl,
-            panel_outliers,
         ]
     )
-
-    # Render final: root = VBox([top_controls, body, foot])
-    root = w.VBox([top_controls, body, foot])
+    top_row = w.HBox([left_panel, w.VBox([right_panel], layout=w.Layout(width="40%"))])
+    container = w.VBox(
+        [
+            top_row,
+            w.HTML("<hr>"),
+            out_rank,
+            w.HTML("<hr>"),
+            out_sug,
+            w.HTML("<hr>"),
+            acc_tend,
+            w.HTML("<hr>"),
+            out_outl,
+        ]
+    )
     # Conectar observers centralizados y render inicial
     wire_observers()
-    # Ajuste inicial del estado del botón según Auto
-    try:
-        btn_run.disabled = bool(ch_auto.value)
-    except Exception:
-        pass
-    _safe_render(_render)
-    _UI_INSTANCE = root
-    return root
+    _render()
+    return container
 
 
 def run_demo():
     """Carga datos y muestra la UI integrada."""
     df = leer_excel()
-    # Respetar el singleton: si ya existe UI, no crear otra
-    ui = build_ui(df, params=PARAMS_DEFAULT, _reuse=True)
+    ui = build_ui(df, params=PARAMS_DEFAULT)
     display(ui)
     setattr(sys.modules.get(__name__), _ADR_UI_GUARD_FLAG, True)
 

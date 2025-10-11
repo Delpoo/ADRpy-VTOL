@@ -50,13 +50,11 @@ import pandas as pd
 # matplotlib se importa via helper centralizado
 import plotly.graph_objects as go
 import ipywidgets as w
-
-# sin autodisplay: usar pio.to_html y widgets.HTML
-import plotly.io as pio
+from IPython.display import display, clear_output
 
 from asistente_diseno.outliers import compute_iqr_bounds
 from pandas.api.types import is_bool_dtype
-from asistente_diseno.mplutils import numeric_2dec_styler, plotly_apply_2dec, fmt2
+from asistente_diseno.mplutils import style_df_2dec, apply_tickformat_2dec, f2
 
 # =============================================================================
 # NUEVO: utilidades y tipos para Top-K enriquecido (panel independiente)
@@ -312,7 +310,7 @@ def _fig_topk_hist(
         showlegend=False,
     )
     try:
-        plotly_apply_2dec(fig)
+        apply_tickformat_2dec(fig)
     except Exception:
         pass
     return fig, stats, {"low": low, "high": high, "usable": usable}
@@ -332,11 +330,11 @@ def _guia_imputacion_html(
 
     msg = []
     msg.append(f"<b>Parámetro:</b> {param_label}")
-    msg.append(f"<b>Sugerido (mediana Top-K):</b> <code>{fmt2(sug)}</code>")
+    msg.append(f"<b>Sugerido (mediana Top-K):</b> <code>{f2(sug)}</code>")
 
     if usable and np.isfinite(low) and np.isfinite(high):
         msg.append(
-            f"<b>Rango confiable (IQR):</b> <code>[{fmt2(low)}, {fmt2(high)}]</code>"
+            f"<b>Rango confiable (IQR):</b> <code>[{f2(low)}, {f2(high)}]</code>"
         )
     else:
         msg.append(
@@ -354,21 +352,21 @@ def _guia_imputacion_html(
         if obj < low:
             prox = low
             msg.append(
-                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{fmt2(obj)}</code>) <b>está por debajo</b> del IQR. "
-                f"Considera aproximarlo a <code>{fmt2(prox)}</code> para alinear con la evidencia Top-K."
+                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{f2(obj)}</code>) <b>está por debajo</b> del IQR. "
+                f"Considera aproximarlo a <code>{f2(prox)}</code> para alinear con la evidencia Top-K."
             )
         elif obj > high:
             prox = high
             msg.append(
-                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{fmt2(obj)}</code>) <b>está por encima</b> del IQR. "
-                f"Considera aproximarlo a <code>{fmt2(prox)}</code> para alinear con la evidencia Top-K."
+                f"{ALERT} <b>Aviso:</b> el objetivo (<code>{f2(obj)}</code>) <b>está por encima</b> del IQR. "
+                f"Considera aproximarlo a <code>{f2(prox)}</code> para alinear con la evidencia Top-K."
             )
         else:
             msg.append("✅ El objetivo está dentro del IQR (coherente con Top-K).")
 
     msg.append(
-        f"<small>n={stats.n} · media={fmt2(stats.mean)} · σ={fmt2(stats.std)} · CV={fmt2(stats.cv)} · "
-        f"p10={fmt2(stats.p10)} · p90={fmt2(stats.p90)}</small>"
+        f"<small>n={stats.n} · media={f2(stats.mean)} · σ={f2(stats.std)} · CV={f2(stats.cv)} · "
+        f"p10={f2(stats.p10)} · p90={f2(stats.p90)}</small>"
     )
     html = "<br>".join(msg)
     return w.HTML(html)
@@ -394,12 +392,12 @@ def widget_topk_param(
         description="Parámetro:",
         layout=w.Layout(width="60%"),
     )
-    html_fig = w.HTML()
-    html_tbl = w.HTML()
-    html_info = w.HTML()
+    out_fig = w.Output()
+    out_tbl = w.Output()
+    out_info = w.Output()
     hdr = w.HTML(f"<b>{title}</b>")
 
-    box = w.VBox([hdr, dd, html_fig, html_tbl, html_info])
+    box = w.VBox([hdr, dd, out_fig, out_tbl, out_info])
 
     def _render(*_):
         col = dd.value
@@ -426,38 +424,24 @@ def widget_topk_param(
             ]
         )
 
-        try:
-            plotly_apply_2dec(fig)
-        except Exception:
-            pass
-        # Embebido Plotly -> HTML
-        try:
-            html_fig.value = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")  # type: ignore[arg-type]
-        except Exception:
-            # Fallback: mensaje simple
-            html_fig.value = "<i>No se pudo renderizar la figura.</i>"
-
-        try:
-            html_tbl.value = numeric_2dec_styler(dfm).to_html()
-        except Exception:
+        with out_fig:
+            out_fig.clear_output(wait=True)
             try:
-                df_f = pd.DataFrame(dfm).copy()
-                for _c in df_f.columns:
-                    try:
-                        if pd.api.types.is_numeric_dtype(df_f[_c]):
-                            df_f[_c] = df_f[_c].apply(lambda x: fmt2(x))
-                    except Exception:
-                        continue
-                html_tbl.value = df_f.to_html(index=False)
+                apply_tickformat_2dec(fig)
             except Exception:
-                html_tbl.value = dfm.to_html(index=False)
+                pass
+            fig.show()
 
-        try:
-            guia = _guia_imputacion_html(label, stats, iqri, objetivo)
-            # _guia_imputacion_html retorna un w.HTML; usamos su .value
-            html_info.value = getattr(guia, "value", str(guia))
-        except Exception:
-            html_info.value = ""
+        with out_tbl:
+            out_tbl.clear_output(wait=True)
+            try:
+                display(style_df_2dec(dfm))
+            except Exception:
+                display(dfm)
+
+        with out_info:
+            out_info.clear_output(wait=True)
+            display(_guia_imputacion_html(label, stats, iqri, objetivo))
 
     dd.observe(_render, "value")
     _render()
@@ -517,17 +501,15 @@ def _weighted_quantile(x: np.ndarray, w: np.ndarray, q: float) -> float:
     """Cuantil ponderado simple (0..1)."""
     if x.size == 0:
         return np.nan
-    # Ordenar por x y acumular pesos
     order = np.argsort(x)
     x_sorted = x[order]
     w_sorted = w[order]
     cw = np.cumsum(w_sorted)
-    if cw.size == 0 or cw[-1] <= 0:
-        # Fallback: mediana simple si no hay pesos válidos
+    if cw[-1] <= 0:
         return float(np.nanmedian(x))
-    target = float(q) * float(cw[-1])
-    idx = int(np.searchsorted(cw, target, side="left"))
-    idx = int(np.clip(idx, 0, len(x_sorted) - 1))
+    target = q * cw[-1]
+    idx = np.searchsorted(cw, target, side="left")
+    idx = np.clip(idx, 0, len(x_sorted) - 1)
     return float(x_sorted[idx])
 
 
@@ -994,9 +976,7 @@ def vista_sugerencias_resumen(summary: pd.DataFrame) -> "pd.io.formats.style.Sty
     cols_blues = [c for c in ["w_media", "w_mediana"] if c in dfv.columns]
     if cols_blues:
         sty = sty.background_gradient(subset=cols_blues, cmap="Blues")
-    return numeric_2dec_styler(dfv).background_gradient(
-        subset=["n_usados"], cmap="Greens"
-    )
+    return style_df_2dec(dfv).background_gradient(subset=["n_usados"], cmap="Greens")
 
 
 def widget_sugerencias_param(
@@ -1005,13 +985,11 @@ def widget_sugerencias_param(
     bins: int = 20,
     titulo: str = "Sugerencias por parámetro (Top-K)",
     get_objetivo: Optional[Callable[[str], Optional[float]]] = None,
-    df_scope: Optional[pd.DataFrame] = None,
-    ambito: str = "global",
-    topk_index: Optional[list] = None,
 ):
 
     try:
         import ipywidgets as w  # local import to keep compatibility if used elsewhere
+        from IPython.display import display, clear_output
     except Exception as e:
         raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
 
@@ -1022,7 +1000,7 @@ def widget_sugerencias_param(
     dd = w.Dropdown(
         options=params, description="Parámetro:", layout=w.Layout(width="45%")
     )
-    html_out = w.HTML("")
+    out = w.Output()
     # Badge N_efectivo / n_usados
     badge = w.HTML("")
     head = w.HBox(
@@ -1030,10 +1008,12 @@ def widget_sugerencias_param(
     )
 
     def _render(*args):
-        par = dd.value
-        pack = sug["details"][par]
-        usados = pack["usados"]
-        excl = pack["excluidos"]
+        with out:
+            clear_output(wait=True)
+            par = dd.value
+            pack = sug["details"][par]
+            usados = pack["usados"]
+            excl = pack["excluidos"]
 
             # Tabla de vecinos usados ahora vive únicamente en la sección dedicada
             # del panel principal para evitar duplicados. Dejamos una referencia clara.
@@ -1091,38 +1071,33 @@ def widget_sugerencias_param(
             apply_tickformat_2dec(fig)
             display(fig)
 
-        # Badge update (N_efectivo / n_usados)
-        try:
-            n_eff = (
-                resumen.loc[par, "n_efectivo"]
-                if resumen is not None and "n_efectivo" in resumen.columns
-                else None
-            )
-            n_used = (
-                resumen.loc[par, "n_usados"]
-                if resumen is not None and "n_usados" in resumen.columns
-                else None
-            )
-            if n_eff is not None and n_used is not None:
-                badge.value = f"<span style='background:#eef7ff;border:1px solid #cde3ff;border-radius:10px;padding:2px 8px;font-size:12px;'>N_efectivo={float(n_eff):.2f} / n_usados={int(n_used)}</span>"
-            else:
-                badge.value = ""
-        except Exception:
-            badge.value = ""
-
-        # Mostrar posibles outliers excluidos
-        if excl is not None and not isinstance(excl, dict) and not excl.empty:
-            html_parts.append("Valores excluidos como outliers:")
+            # Badge update (N_efectivo / n_usados)
             try:
-                html_parts.append(numeric_2dec_styler(excl.head(20)).to_html())
+                n_eff = (
+                    resumen.loc[par, "n_efectivo"]
+                    if resumen is not None and "n_efectivo" in resumen.columns
+                    else None
+                )
+                n_used = (
+                    resumen.loc[par, "n_usados"]
+                    if resumen is not None and "n_usados" in resumen.columns
+                    else None
+                )
+                if n_eff is not None and n_used is not None:
+                    badge.value = f"<span style='background:#eef7ff;border:1px solid #cde3ff;border-radius:10px;padding:2px 8px;font-size:12px;'>N_efectivo={float(n_eff):.2f} / n_usados={int(n_used)}</span>"
+                else:
+                    badge.value = ""
             except Exception:
-                html_parts.append(excl.head(20).to_html())
+                badge.value = ""
 
-        html_out.value = "<br>".join(html_parts)
+            # Mostrar posibles outliers excluidos
+            if excl is not None and not isinstance(excl, dict) and not excl.empty:
+                print("Valores excluidos como outliers:")
+                display(style_df_2dec(excl.head(20)))
 
     _render()
     dd.observe(_render, names="value")
-    box = w.VBox([head, dd, html_out])
+    box = w.VBox([head, dd, out])
     return box
 
 
@@ -1392,10 +1367,6 @@ def _fig_parametro_hist_box(
         yaxis_title="frecuencia",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
     )
-    try:
-        plotly_apply_2dec(fig)
-    except Exception:
-        pass
     return fig
 
 
@@ -1412,9 +1383,6 @@ def widget_sugerencias_panel_plotly(
     beta_dist: float = 1.0,
     beta_conf: float = 1.0,
     name_objetivo: str = "Objetivo (usuario)",
-    df_scope: Optional[pd.DataFrame] = None,
-    ambito: str = "global",
-    topk_index: Optional[list] = None,
 ) -> w.Accordion:
     """Panel interactivo con resumen y distribuciones por parámetro."""
     dd_k = w.BoundedIntText(
@@ -1468,42 +1436,24 @@ def widget_sugerencias_panel_plotly(
         sug = _run_calc()
 
         # 1) Resumen
-        df_summary = sug.get("summary")
-        if isinstance(df_summary, pd.DataFrame):
+        with out_resumen:
+            clear_output(wait=True)
+            df_summary = sug["summary"].copy()
             try:
-                out_resumen.value = numeric_2dec_styler(df_summary).to_html()
+                display(style_df_2dec(df_summary))
             except Exception:
-                try:
-                    df_f = df_summary.copy()
-                    for _c in df_f.columns:
-                        try:
-                            if pd.api.types.is_numeric_dtype(df_f[_c]):
-                                df_f[_c] = df_f[_c].map(
-                                    lambda v: fmt2(v) if pd.notna(v) else v
-                                )
-                        except Exception:
-                            continue
-                    out_resumen.value = df_f.to_html(index=False)
-                except Exception:
-                    out_resumen.value = df_summary.to_html(index=False)
-        else:
-            out_resumen.value = "<i>Sin datos de resumen.</i>"
+                display(df_summary)
 
         # 2) Detalle por parámetro
-        par = dd_param.value
-        if par not in sug.get("details", {}):
-            out_detalle.value = "<i>Sin datos para el parámetro elegido.</i>"
-        else:
-            # serie top-k y referencias
-            det_pack = sug["details"][par]
-            usados = det_pack.get("usados", pd.DataFrame())
-            # s_vals según alcance: Global/Filtrado usan df_scope; Top‑K usa vecinos
-            if df_scope is not None and ambito in {"global", "filtrado"}:
-                if par in df_scope.columns:
-                    s_vals = pd.to_numeric(df_scope[par], errors="coerce").dropna()
-                else:
-                    s_vals = pd.Series(dtype=float)
+        with out_detalle:
+            clear_output(wait=True)
+            par = dd_param.value
+            if par not in sug["details"]:
+                display(w.HTML("<i>Sin datos para el parámetro elegido.</i>"))
             else:
+                # serie top-k y referencias
+                det_pack = sug["details"][par]
+                usados = det_pack.get("usados", pd.DataFrame())
                 s_vals = usados.get("valor", pd.Series(dtype=float))
 
                 # Intentar recuperar objetivo/sugerido/low/high si existen en summary
@@ -1549,19 +1499,19 @@ def widget_sugerencias_panel_plotly(
                     else None
                 )
 
-            fig = _fig_parametro_hist_box(
-                s_vals,
-                titulo=f"Distribución Top-K: {par}",
-                objetivo_val=objetivo_val,
-                sugerido_val=sugerido_val,
-                low=low,
-                high=high,
-            )
-            try:
-                plotly_apply_2dec(fig)
-            except Exception:
-                pass
-            out_detalle.value = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")  # type: ignore[arg-type]
+                fig = _fig_parametro_hist_box(
+                    s_vals,
+                    titulo=f"Distribución Top-K: {par}",
+                    objetivo_val=objetivo_val,
+                    sugerido_val=sugerido_val,
+                    low=low,
+                    high=high,
+                )
+                try:
+                    apply_tickformat_2dec(fig)
+                except Exception:
+                    pass
+                display(fig)
 
                 # Números clave
                 rows = [
@@ -1638,45 +1588,24 @@ def widget_sugerencias_panel(
     beta_dist: float = 1.0,
     beta_conf: float = 1.0,
     name_objetivo: str = "Objetivo (usuario)",
-    # Alcance actual
-    df_scope: Optional[pd.DataFrame] = None,
-    ambito: str = "global",
-    topk_index: Optional[list] = None,
 ) -> w.Accordion:
     """Compatibilidad: acepta un dict ya calculado o un DataFrame y delega al panel interactivo."""
     if isinstance(data, dict) and {"summary", "details"}.issubset(data.keys()):
         try:
             import ipywidgets as w  # local import
+            from IPython.display import display, clear_output  # noqa: F401
         except Exception as e:
             raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
 
-        out_resumen = w.HTML()
-        if isinstance(data.get("summary"), pd.DataFrame):
-            try:
-                out_resumen.value = numeric_2dec_styler(data["summary"]).to_html()
-            except Exception:
-                try:
-                    df_f = data["summary"].copy()
-                    for _c in df_f.columns:
-                        try:
-                            if pd.api.types.is_numeric_dtype(df_f[_c]):
-                                df_f[_c] = df_f[_c].apply(lambda x: fmt2(x))
-                        except Exception:
-                            continue
-                    out_resumen.value = df_f.to_html(index=False)
-                except Exception:
-                    out_resumen.value = data["summary"].to_html(index=False)
-        else:
-            out_resumen.value = "<i>Sin resumen disponible.</i>"
+        out_resumen = w.Output()
+        with out_resumen:
+            if isinstance(data.get("summary"), pd.DataFrame):
+                display(vista_sugerencias_resumen(data["summary"]))
+            else:
+                display(w.HTML("<i>Sin resumen disponible.</i>"))
 
         box_detalle = widget_sugerencias_param(
-            data,
-            bins=bins,
-            titulo=titulo,
-            get_objetivo=get_objetivo,
-            df_scope=df_scope,
-            ambito=ambito,
-            topk_index=topk_index,
+            data, bins=bins, titulo=titulo, get_objetivo=get_objetivo
         )
 
         nota_excel = w.HTML(
@@ -1715,9 +1644,6 @@ def widget_sugerencias_panel(
             beta_dist=beta_dist,
             beta_conf=beta_conf,
             name_objetivo=name_objetivo,
-            df_scope=df_scope,
-            ambito=ambito,
-            topk_index=topk_index,
         )
 
     raise TypeError(

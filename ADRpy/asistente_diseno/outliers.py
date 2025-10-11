@@ -313,7 +313,7 @@ def annotate_outliers(
 
 
 def iqr_summary_table(
-    df_view: pd.DataFrame,
+    df: pd.DataFrame,
     columns: Iterable[str],
     *,
     factor: float = 1.5,
@@ -326,7 +326,7 @@ def iqr_summary_table(
     """
     rows = []
     for col in columns:
-        if col not in df_view.columns:
+        if col not in df.columns:
             rows.append(
                 {
                     "columna": col,
@@ -389,10 +389,10 @@ def style_iqr_summary(summary_df: pd.DataFrame):
     """
     try:
         # Formato base a 2 decimales para columnas numéricas
-        sty = numeric_2dec_styler(summary_df)
+        sty = style_df_2dec(summary_df)
         # Asegurar específicamente .2f para el porcentaje si existe
         if "%_outliers" in summary_df.columns:
-            sty = sty.format(lambda v: fmt2(v), subset=["%_outliers"])
+            sty = sty.format(lambda v: f2(v, False), subset=["%_outliers"])
         return sty
     except Exception:
         # Si hay problemas con el styling, devolver DataFrame sin formato
@@ -400,7 +400,7 @@ def style_iqr_summary(summary_df: pd.DataFrame):
 
 
 def annotate_and_list_outliers(
-    df_view: pd.DataFrame,
+    df: pd.DataFrame,
     columns: Iterable[str],
     *,
     metodo: str = "IQR",
@@ -415,7 +415,7 @@ def annotate_and_list_outliers(
       - outliers_by_col: dict[col -> DataFrame con filas que son outlier en esa col]
     """
     df_annot = annotate_outliers(
-        df_view,
+        df,
         columnas=columns,
         metodo=metodo,
         keep_na=keep_na,
@@ -434,7 +434,7 @@ def annotate_and_list_outliers(
 
 
 def plot_outliers_hist(
-    df_view: pd.DataFrame,
+    df: pd.DataFrame,
     column: str,
     *,
     factor: float = 1.5,
@@ -444,7 +444,7 @@ def plot_outliers_hist(
     """
     Histograma simple de una columna con líneas verticales en los límites IQR (Plotly).
     """
-    if column not in df_view.columns:
+    if column not in df.columns:
         raise KeyError(f"La columna '{column}' no existe en el DataFrame.")
     s = to_numeric_locale(df[column]).dropna()
     info = compute_iqr_bounds(s, factor=factor, min_n=min_n)
@@ -464,7 +464,7 @@ def plot_outliers_hist(
                 line_width=2,
                 line_dash="dash",
                 line_color="red",
-                annotation_text=f"{label} {fmt2(xline)}",
+                annotation_text=f"{label} {f2(xline)}",
                 annotation_position="top",
             )
     fig.update_layout(
@@ -474,12 +474,12 @@ def plot_outliers_hist(
         yaxis_title="frecuencia",
         showlegend=False,
     )
-    plotly_apply_2dec(fig)
+    apply_tickformat_2dec(fig)
     return fig
 
 
 def widget_outliers_plotly(
-    df_view: pd.DataFrame,
+    df: pd.DataFrame,
     *,
     segment_col: str = SEGMENT_COL,
     iqr_factor: float = 1.5,
@@ -503,7 +503,7 @@ def widget_outliers_plotly(
         )
 
     # Detección de nombre para la tabla de outliers
-    name_col = _detectar_columna_nombre(df_view)
+    name_col = _detectar_columna_nombre(df)
 
     # Widgets
     dd_col = w.Dropdown(
@@ -523,10 +523,8 @@ def widget_outliers_plotly(
     seg_widget = None
     seg_label_to_raw: dict[str, object] = {}
     seg_raw_to_label: dict[str, str] = {}
-    if segment_col and segment_col in df_view.columns:
-        seg_vals = (
-            pd.Series(df_view[segment_col]).dropna().astype(str).unique().tolist()
-        )
+    if segment_col and segment_col in df.columns:
+        seg_vals = pd.Series(df[segment_col]).dropna().astype(str).unique().tolist()
         seg_vals = [v for v in seg_vals if str(v).strip() != ""]
         if len(seg_vals) > 1:
             # Build label maps using SEGMENT_LABELS when available, else use raw string as label
@@ -538,8 +536,8 @@ def widget_outliers_plotly(
             seg_widget = w.Dropdown(options=seg_options, description="Segmento:")
 
     # Outputs
-    out_plot = w.HTML()
-    out_tbl = w.HTML()
+    out_plot = w.Output()
+    out_tbl = w.Output()
 
     # Layout superior
     controls_left = [dd_col, sl_factor, sl_bins]
@@ -556,104 +554,109 @@ def widget_outliers_plotly(
 
     def _render():
         # Filtrar por segmento si corresponde
-        df_sel = df_view
+        df_sel = df
         if seg_widget is not None and seg_widget.value and seg_widget.value != "Todos":
             try:
                 # Map displayed label back to raw segment value (string comparison)
                 chosen_label = str(seg_widget.value)
                 raw_str = seg_label_to_raw.get(chosen_label, chosen_label)
-                df_sel = df_view[df_view[segment_col].astype(str) == str(raw_str)]
+                df_sel = df[df[segment_col].astype(str) == str(raw_str)]
             except Exception:
-                df_sel = df_view
+                df_sel = df
 
         col = dd_col.value
         s = to_numeric_locale(df_sel[col])
         info = compute_iqr_bounds(s, factor=float(sl_factor.value), min_n=min_n)
 
-        # Histograma -> HTML embebido
-        fig = go.Figure()
-        fig.add_histogram(
-            x=s.dropna(),
-            nbinsx=int(sl_bins.value),
-            name=str(col),
-            opacity=0.85,
-            hovertemplate="valor=%{x:.2f}<br>freq=%{y:.2f}<extra></extra>",
-        )
-        if info["usable"]:
-            for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
-                if pd.notna(xline):
-                    fig.add_vline(
-                        x=float(xline),
-                        line_width=2,
-                        line_dash="dash",
-                        line_color="red",
-                        annotation_text=f"{label} {fmt2(xline)}",
-                        annotation_position="top",
-                    )
-        title_suffix = ""
-        if seg_widget is not None and seg_widget.value and seg_widget.value != "Todos":
-            # Always show the human-readable label in title
-            chosen_label = str(seg_widget.value)
-            title_suffix = f" — seg: {chosen_label}"
-        fig.update_layout(
-            template="plotly_white",
-            margin=dict(l=40, r=10, t=35, b=40),
-            xaxis_title=str(col),
-            yaxis_title="frecuencia",
-            showlegend=False,
-            title=f"Histograma: {col}{title_suffix}",
-        )
-        # Formateo homogéneo de ejes a .2f
-        try:
-            plotly_apply_2dec(fig)
-        except Exception:
-            pass
-        out_plot.value = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")  # type: ignore[arg-type]
-
-        # Tabla resumen + listado de outliers (en HTML)
-        rows = [
-            {
-                "columna": col,
-                "n_valido": info["n_valido"],
-                "Q1": info["Q1"],
-                "Q3": info["Q3"],
-                "IQR": info["IQR"],
-                "LOW": info["low"],
-                "HIGH": info["high"],
-                "usable": info["usable"],
-            }
-        ]
-        df_info = pd.DataFrame(rows)
-        try:
-            out_html = numeric_2dec_styler(format_df_2dec(df_info)).to_html()
-        except Exception:
+        with out_plot:
+            clear_output(wait=True)
+            fig = go.Figure()
+            fig.add_histogram(
+                x=s.dropna(),
+                nbinsx=int(sl_bins.value),
+                name=str(col),
+                opacity=0.85,
+                hovertemplate="valor=%{x:.2f}<br>freq=%{y:.2f}<extra></extra>",
+            )
+            if info["usable"]:
+                for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
+                    if pd.notna(xline):
+                        fig.add_vline(
+                            x=float(xline),
+                            line_width=2,
+                            line_dash="dash",
+                            line_color="red",
+                            annotation_text=f"{label} {f2(xline)}",
+                            annotation_position="top",
+                        )
+            title_suffix = ""
+            if (
+                seg_widget is not None
+                and seg_widget.value
+                and seg_widget.value != "Todos"
+            ):
+                # Always show the human-readable label in title
+                chosen_label = str(seg_widget.value)
+                title_suffix = f" — seg: {chosen_label}"
+            fig.update_layout(
+                template="plotly_white",
+                margin=dict(l=40, r=10, t=35, b=40),
+                xaxis_title=str(col),
+                yaxis_title="frecuencia",
+                showlegend=False,
+                title=f"Histograma: {col}{title_suffix}",
+            )
+            # Formateo homogéneo de ejes a .2f
             try:
-                out_html = format_df_2dec(df_info).to_html()
+                apply_tickformat_2dec(fig)
             except Exception:
-                out_html = df_info.to_html()
+                pass
+            display(fig)
 
-        if ch_out.value and info["usable"]:
-            mask_low = s < info["low"]
-            mask_high = s > info["high"]
-            cols_out = [col]
-            if name_col and name_col in df_sel.columns:
-                cols_out.append(name_col)
-            outs = df_sel.loc[(mask_low | mask_high) & s.notna(), cols_out].copy()
-            if not outs.empty:
-                if name_col and name_col in outs.columns:
-                    outs.rename(columns={name_col: "aeronave"}, inplace=True)
-                outs["tipo_outlier"] = np.where(outs[col] < info["low"], "LOW", "HIGH")
-                out_html += f"<br><b>Outliers ({len(outs)} filas):</b>"
+        with out_tbl:
+            clear_output(wait=True)
+            rows = [
+                {
+                    "columna": col,
+                    "n_valido": info["n_valido"],
+                    "Q1": f2(info["Q1"]),
+                    "Q3": f2(info["Q3"]),
+                    "IQR": f2(info["IQR"]),
+                    "LOW": f2(info["low"]),
+                    "HIGH": f2(info["high"]),
+                    "usable": info["usable"],
+                }
+            ]
+            df_info = pd.DataFrame(rows)
+            try:
+                display(style_df_2dec(df_info))
+            except Exception:
                 try:
-                    out_html += numeric_2dec_styler(
-                        format_df_2dec(outs.sort_values(col))
-                    ).to_html()
+                    display(df_info.round(2))
                 except Exception:
+                    display(df_info)
+
+            if ch_out.value and info["usable"]:
+                mask_low = s < info["low"]
+                mask_high = s > info["high"]
+                cols_out = [col]
+                if name_col and name_col in df_sel.columns:
+                    cols_out.append(name_col)
+                outs = df_sel.loc[(mask_low | mask_high) & s.notna(), cols_out].copy()
+                if not outs.empty:
+                    if name_col and name_col in outs.columns:
+                        outs.rename(columns={name_col: "aeronave"}, inplace=True)
+                    outs["tipo_outlier"] = np.where(
+                        outs[col] < info["low"], "LOW", "HIGH"
+                    )
+                    display(w.HTML(f"<b>Outliers ({len(outs)} filas):</b>"))
                     try:
-                        out_html += format_df_2dec(outs.sort_values(col)).to_html()
+                        display(style_df_2dec(outs.sort_values(col)))
                     except Exception:
-                        out_html += outs.sort_values(col).to_html()
-        out_tbl.value = out_html
+                        try:
+                            display(outs.sort_values(col).round(2))
+                        except Exception:
+                            display(outs.sort_values(col))
 
     # Render inicial y eventos
     _render()
@@ -672,7 +675,7 @@ def widget_outliers_plotly(
 
 
 def outliers_quicklook(
-    df_view: pd.DataFrame,
+    df: pd.DataFrame,
     *,
     segment_col: str = SEGMENT_COL,
     iqr_factor: float = 1.5,
@@ -680,7 +683,7 @@ def outliers_quicklook(
 ) -> Any:
     """Wrapper a la UI plotly para mantener compatibilidad con el notebook."""
     return widget_outliers_plotly(
-        df_view, segment_col=segment_col, iqr_factor=iqr_factor, min_n=min_n
+        df, segment_col=segment_col, iqr_factor=iqr_factor, min_n=min_n
     )
 
 
@@ -718,7 +721,7 @@ def _detectar_columna_nombre(
 
 
 def outliers_tabla_global_con_nombre(
-    df_view: pd.DataFrame, report: dict, *, name_col: str | None = None
+    df: pd.DataFrame, report: dict, *, name_col: str | None = None
 ) -> pd.DataFrame:
     """
     Igual que outliers_tabla_global(), pero reemplaza el número de fila por el nombre de la aeronave.
@@ -736,9 +739,9 @@ def outliers_tabla_global_con_nombre(
     """
     # Determinar columna de nombre
     if name_col is None:
-        name_col = _detectar_columna_nombre(df_view)
+        name_col = _detectar_columna_nombre(df)
     usar_indice = False
-    if not name_col or name_col not in df_view.columns:
+    if not name_col or name_col not in df.columns:
         usar_indice = True  # fallback: usar índice numérico
 
     flat = []
@@ -752,7 +755,7 @@ def outliers_tabla_global_con_nombre(
         # Mapear fila -> nombre si es posible
         if not usar_indice:
             # ojo: 'fila' es índice original del DF
-            tmp["aeronave"] = tmp["fila"].map(lambda i: df_view.loc[i, name_col])
+            tmp["aeronave"] = tmp["fila"].map(lambda i: df.loc[i, name_col])
         else:
             tmp["aeronave"] = tmp["fila"]
         tmp = tmp[["columna", "aeronave", "valor"]]
@@ -789,7 +792,7 @@ def outliers_tabla_global(report: dict) -> pd.DataFrame:
 
 
 def vista_outliers_en_notebook(
-    df_view: pd.DataFrame,
+    df: pd.DataFrame,
     *,
     metodo: str = "IQR",
     columns: list[str] | None = None,
@@ -815,21 +818,15 @@ def vista_outliers_en_notebook(
                 cols.append(c)
         columns = cols
     elif columns is None:
-        columns = list(df_view.columns)
-    columns = [c for c in columns if c in df_view.columns]
+        columns = list(df.columns)
+    columns = [c for c in columns if c in df.columns]
 
     summary = iqr_summary_table(
-        df_view, columns, factor=factor, min_n=min_n, keep_na=keep_na
+        df, columns, factor=factor, min_n=min_n, keep_na=keep_na
     )
     summary_styler = style_iqr_summary(summary)
     annot = annotate_and_list_outliers(
-        df_view,
-        columns,
-        metodo=metodo,
-        factor=factor,
-        k=k,
-        min_n=min_n,
-        keep_na=keep_na,
+        df, columns, metodo=metodo, factor=factor, k=k, min_n=min_n, keep_na=keep_na
     )
     tabla = outliers_tabla_global(
         {
@@ -859,10 +856,22 @@ def widget_outliers_hist(
 ):
     """
     Devuelve un widget interactivo (ipywidgets) con un dropdown para elegir la columna
-    y dibuja el histograma con límites IQR.
+    y dibuja el histograma con límites IQR. Ideal para no llenar el notebook de gráficos.
 
-    Ruta HTML-only: sin usar display()/clear_output(); renderizamos con pio.to_html.
+    Uso en notebook:
+    >>> ui = widget_outliers_hist(df, columns=None)   # autodetecta numéricas útiles
+    >>> ui                                           # mostrar el widget
+
+    Requisitos: ipywidgets instalado y habilitado en Jupyter (conda/pip).
     """
+    try:
+        import ipywidgets as w
+        from IPython.display import display, clear_output
+    except Exception as e:
+        raise RuntimeError(
+            "Este widget requiere 'ipywidgets' instalado y habilitado en Jupyter."
+            " Instalación típica: 'conda install ipywidgets' o 'pip install ipywidgets'."
+        ) from e
 
     # Autodetectar columnas numéricas con >= min_n valores válidos
     if columns is None:
@@ -888,7 +897,7 @@ def widget_outliers_hist(
         readout_format=".2f",
     )
     sl_bins = w.IntSlider(value=bins, min=10, max=60, step=1, description="bins:")
-    out_fig = w.HTML()
+    out = w.Output()
 
     title = w.HTML(f"<h4 style='margin:0'>{titulo}</h4>")
 
@@ -927,17 +936,16 @@ def widget_outliers_hist(
         )
         # Aplicar formato de ejes a .2f en todos los histogramas
         try:
-            plotly_apply_2dec(fig)
+            apply_tickformat_2dec(fig)
         except Exception:
             pass
         return fig
 
     def _on_change(*args):
-        fig = _plot(dd.value, sl_factor.value, sl_bins.value)
-        try:
-            out_fig.value = _to_html(fig, full_html=False, include_plotlyjs="cdn")
-        except Exception:
-            out_fig.value = "<i>No se pudo renderizar el histograma.</i>"
+        with out:
+            clear_output(wait=True)
+            fig = _plot(dd.value, sl_factor.value, sl_bins.value)
+            display(fig)
 
     # primera render
     _on_change()
@@ -947,7 +955,7 @@ def widget_outliers_hist(
     sl_bins.observe(_on_change, names="value")
 
     controls = w.HBox([dd, sl_factor, sl_bins])
-    box = w.VBox([title, controls, out_fig])
+    box = w.VBox([title, controls, out])
     return box
 
 
@@ -1020,18 +1028,9 @@ def widget_outliers_panel(
     title_hist = w.HTML(f"<b>Histogramas (IQR k={factor:.2f})</b>")
 
     # Salida del resumen
-    out_resumen = w.HTML()
-    try:
-        sty_or_df = style_iqr_summary(summary)
-        if hasattr(sty_or_df, "to_html"):
-            out_resumen.value = sty_or_df.to_html()  # type: ignore[union-attr]
-        else:
-            out_resumen.value = format_df_2dec(summary).to_html()
-    except Exception:
-        try:
-            out_resumen.value = format_df_2dec(summary).to_html()
-        except Exception:
-            out_resumen.value = summary.to_html()
+    out_resumen = w.Output()
+    with out_resumen:
+        display(style_iqr_summary(summary))
 
     # Controles del histograma (reutilizamos lógica de widget_outliers_plotly)
     sl_factor = w.FloatSlider(
@@ -1061,8 +1060,8 @@ def widget_outliers_panel(
             seg_options = ["Todos"] + sorted(list(seg_label_to_raw.keys()))
             seg_widget = w.Dropdown(options=seg_options, description="Segmento:")
 
-    out_plot = w.HTML()
-    out_tbl = w.HTML()
+    out_plot = w.Output()
+    out_tbl = w.Output()
 
     controls_left = [dd_col, sl_factor, sl_bins]
     controls_right = [seg_widget] if seg_widget is not None else []
@@ -1093,97 +1092,104 @@ def widget_outliers_panel(
             else (sorted(summary["columna"].tolist())[0] if not summary.empty else None)
         )
         if col is None:
-            out_plot.value = "<i>Sin columnas numéricas suficientes.</i>"
-            out_tbl.value = ""
+            with out_plot:
+                clear_output(wait=True)
+                display(w.HTML("<i>Sin columnas numéricas suficientes.</i>"))
+            with out_tbl:
+                clear_output(wait=True)
             return
 
         s = to_numeric_locale(df_sel[col])
         info = compute_iqr_bounds(s, factor=float(sl_factor.value), min_n=min_n)
 
-        fig = go.Figure()
-        fig.add_histogram(
-            x=s.dropna(),
-            nbinsx=int(sl_bins.value),
-            name=str(col),
-            opacity=0.85,
-            hovertemplate="valor=%{x:.2f}<br>freq=%{y:.2f}<extra></extra>",
-        )
-        if info["usable"]:
-            for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
-                if pd.notna(xline):
-                    fig.add_vline(
-                        x=float(xline),
-                        line_width=2,
-                        line_dash="dash",
-                        line_color="red",
-                        annotation_text=f"{label} {fmt2(xline)}",
-                        annotation_position="top",
-                    )
-        title_suffix = ""
-        if seg_widget is not None and seg_widget.value and seg_widget.value != "Todos":
-            chosen_label = str(seg_widget.value)
-            title_suffix = f" — seg: {chosen_label}"
-        fig.update_layout(
-            template="plotly_white",
-            margin=dict(l=40, r=10, t=35, b=40),
-            xaxis_title=str(col),
-            yaxis_title="frecuencia",
-            showlegend=False,
-            title=f"Histograma: {col}{title_suffix}",
-        )
-        try:
-            plotly_apply_2dec(fig)
-        except Exception:
-            pass
-        try:
-            out_plot.value = _to_html(fig, full_html=False, include_plotlyjs="cdn")
-        except Exception:
-            out_plot.value = "<i>No se pudo renderizar el histograma.</i>"
-
-        rows = [
-            {
-                "columna": col,
-                "n_valido": info["n_valido"],
-                "Q1": info["Q1"],
-                "Q3": info["Q3"],
-                "IQR": info["IQR"],
-                "LOW": info["low"],
-                "HIGH": info["high"],
-                "usable": info["usable"],
-            }
-        ]
-        df_info = pd.DataFrame(rows)
-        try:
-            out_html = numeric_2dec_styler(format_df_2dec(df_info)).to_html()
-        except Exception:
+        with out_plot:
+            clear_output(wait=True)
+            fig = go.Figure()
+            fig.add_histogram(
+                x=s.dropna(),
+                nbinsx=int(sl_bins.value),
+                name=str(col),
+                opacity=0.85,
+                hovertemplate="valor=%{x:.2f}<br>freq=%{y:.2f}<extra></extra>",
+            )
+            if info["usable"]:
+                for xline, label in [(info["low"], "LOW"), (info["high"], "HIGH")]:
+                    if pd.notna(xline):
+                        fig.add_vline(
+                            x=float(xline),
+                            line_width=2,
+                            line_dash="dash",
+                            line_color="red",
+                            annotation_text=f"{label} {f2(xline)}",
+                            annotation_position="top",
+                        )
+            title_suffix = ""
+            if (
+                seg_widget is not None
+                and seg_widget.value
+                and seg_widget.value != "Todos"
+            ):
+                chosen_label = str(seg_widget.value)
+                title_suffix = f" — seg: {chosen_label}"
+            fig.update_layout(
+                template="plotly_white",
+                margin=dict(l=40, r=10, t=35, b=40),
+                xaxis_title=str(col),
+                yaxis_title="frecuencia",
+                showlegend=False,
+                title=f"Histograma: {col}{title_suffix}",
+            )
             try:
-                out_html = format_df_2dec(df_info).to_html()
+                apply_tickformat_2dec(fig)
             except Exception:
-                out_html = df_info.to_html()
+                pass
+            display(fig)
 
-        if ch_out.value and info["usable"]:
-            mask_low = s < info["low"]
-            mask_high = s > info["high"]
-            cols_out = [col]
-            name_col = _detectar_columna_nombre(df_sel)
-            if name_col and name_col in df_sel.columns:
-                cols_out.append(name_col)
-            outs = df_sel.loc[(mask_low | mask_high) & s.notna(), cols_out].copy()
-            if not outs.empty:
-                if name_col and name_col in outs.columns:
-                    outs.rename(columns={name_col: "aeronave"}, inplace=True)
-                outs["tipo_outlier"] = np.where(outs[col] < info["low"], "LOW", "HIGH")
+        with out_tbl:
+            clear_output(wait=True)
+            rows = [
+                {
+                    "columna": col,
+                    "n_valido": info["n_valido"],
+                    "Q1": f2(info["Q1"]),
+                    "Q3": f2(info["Q3"]),
+                    "IQR": f2(info["IQR"]),
+                    "LOW": f2(info["low"]),
+                    "HIGH": f2(info["high"]),
+                    "usable": info["usable"],
+                }
+            ]
+            df_info = pd.DataFrame(rows)
+            try:
+                display(style_df_2dec(df_info))
+            except Exception:
                 try:
-                    outs_html = numeric_2dec_styler(
-                        format_df_2dec(outs.sort_values(col))
-                    ).to_html()
+                    display(df_info.round(2))
                 except Exception:
+                    display(df_info)
+
+            if ch_out.value and info["usable"]:
+                mask_low = s < info["low"]
+                mask_high = s > info["high"]
+                cols_out = [col]
+                name_col = _detectar_columna_nombre(df_sel)
+                if name_col and name_col in df_sel.columns:
+                    cols_out.append(name_col)
+                outs = df_sel.loc[(mask_low | mask_high) & s.notna(), cols_out].copy()
+                if not outs.empty:
+                    if name_col and name_col in outs.columns:
+                        outs.rename(columns={name_col: "aeronave"}, inplace=True)
+                    outs["tipo_outlier"] = np.where(
+                        outs[col] < info["low"], "LOW", "HIGH"
+                    )
+                    display(w.HTML(f"<b>Outliers ({len(outs)} filas):</b>"))
                     try:
-                        outs_html = format_df_2dec(outs.sort_values(col)).to_html()
+                        display(style_df_2dec(outs.sort_values(col)))
                     except Exception:
-                        outs_html = outs.sort_values(col).to_html()
-                out_html += f"<br><b>Outliers ({len(outs)} filas):</b><br>" + outs_html
-        out_tbl.value = out_html
+                        try:
+                            display(outs.sort_values(col).round(2))
+                        except Exception:
+                            display(outs.sort_values(col))
 
     # Eventos: cualquier cambio re-renderiza histograma y actualiza títulos
     def _on_any_change(*_):
