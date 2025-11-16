@@ -462,30 +462,71 @@ def run_pipeline(cfg: dict | None = None) -> str:
     cfg = get_config(cfg)
     save_overrides(cfg)
     snapshot_config(cfg)
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+    mostrar = bool(cfg.get("orquestacion", {}).get("mostrar_consola", True))
+    inicio = datetime.now()
+    modo, entry = _import_pipeline()
+    ruta_legible = "motor moderno" if modo == "loop" else "modo clásico"
+    if mostrar:
+        print("[INFO] Comienza la ejecución del motor predictor.")
+        print(f"[INFO] Salida en vivo habilitada. Camino elegido: {ruta_legible}.")
+        print("ℹ️ Aviso: no se pedirán confirmaciones por teclado.")
+        print(
+            "   Se tomarán los valores del panel; cuando algo falte, se usarán valores predeterminados."
+        )
         try:
-            # Re-importar en cada ejecución para evitar referencias obsoletas
-            _mode, _entry = _import_pipeline()
-            # Preferimos SIEMPRE el loop del proyecto
-            if _entry is not None:
+            if entry is not None:
                 try:
-                    _entry(cfg)  # pasar cfg para asegurar uso de overrides
+                    entry(cfg)
                 except TypeError:
-                    # Compatibilidad con firma sin cfg
-                    _entry()
+                    entry()
             else:
-                # Fallback extremo (no recomendado)
-                print("[WARN] ejecutar_pipeline no disponible; intentando main.py")
-                # Sanitizar argv en entornos Jupyter para evitar argumentos desconocidos
+                print(
+                    "[WARN] No se encontró el punto de entrada del motor. Se intentará la ruta clásica."
+                )
                 _argv_backup = sys.argv[:]
                 try:
-                    sys.argv = [str(PROJECT_ROOT / "main.py")]  # limpiar args
+                    sys.argv = [str(PROJECT_ROOT / "main.py")]
+                    print(
+                        "[INFO] Iniciando el flujo clásico. Es posible que se requiera entrada por teclado."
+                    )
                     runpy.run_path(str(PROJECT_ROOT / "main.py"), run_name="__main__")
                 finally:
                     sys.argv = _argv_backup
         except SystemExit:
             pass
         except Exception as e:
-            print(f"[ERROR] {e}")
+            print(f"[ERROR] Ocurrió un error durante la ejecución: {e}")
+        finally:
+            dur = (datetime.now() - inicio).total_seconds()
+            print(f"[INFO] Proceso terminado. Duración aproximada: {dur:.1f} s.")
+        return ""
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+        try:
+            print("ℹ️ Aviso: no se pedirán confirmaciones por teclado.")
+            print(
+                "   Se tomarán los valores del panel; cuando algo falte, se usarán valores predeterminados."
+            )
+            if entry is not None:
+                try:
+                    entry(cfg)
+                except TypeError:
+                    entry()
+            else:
+                print(
+                    "[WARN] No se encontró el punto de entrada del motor. Se intentará la ruta clásica."
+                )
+                _argv_backup = sys.argv[:]
+                try:
+                    sys.argv = [str(PROJECT_ROOT / "main.py")]
+                    runpy.run_path(str(PROJECT_ROOT / "main.py"), run_name="__main__")
+                finally:
+                    sys.argv = _argv_backup
+        except SystemExit:
+            pass
+        except Exception as e:
+            print(f"[ERROR] Ocurrió un error durante la ejecución: {e}")
+        finally:
+            dur = (datetime.now() - inicio).total_seconds()
+            print(f"[INFO] Proceso terminado. Duración aproximada: {dur:.1f} s.")
     return buf.getvalue()

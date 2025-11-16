@@ -11,6 +11,13 @@ def seleccionar_parametros_por_indices(
     )
 
     if entrada_indices is None:
+        print("⚠️ Aviso: el sistema está pidiendo que escribas algo por teclado.")
+        print(
+            "   Si iniciaste la ejecución desde el botón del panel, esta pantalla puede no aparecer y todo puede parecer detenido."
+        )
+        print(
+            "   Volvé al panel, ajustá los controles y ejecutá desde allí para evitar preguntas manuales."
+        )
         indices = input(
             "Ingresa los números separados por coma (o presiona Enter para usar los preseleccionados): "
         )
@@ -48,6 +55,10 @@ def solicitar_umbral(valor_por_defecto=0.7, umbral_manual=None):
         return umbral_manual
 
     try:
+        print("⚠️ El sistema está solicitando un valor manual.")
+        print(
+            "   Si se lanzó desde el botón, es preferible configurar este valor en el panel para evitar bloqueos."
+        )
         umbral = float(
             input(
                 f"Ingrese el umbral mínimo de correlación significativa (por defecto {valor_por_defecto}): "
@@ -67,6 +78,10 @@ def solicitar_umbral(valor_por_defecto=0.7, umbral_manual=None):
 def solicitar_rango_min(valor_por_defecto=0.85, valor=None):
     try:
         if valor is None:
+            print("⚠️ El sistema está solicitando un valor manual.")
+            print(
+                "   Si se lanzó desde el botón, es preferible configurar este valor en el panel para evitar bloqueos."
+            )
             valor = input(
                 f"Ingrese el rango mínimo de MTOW (0-2, predeterminado {valor_por_defecto * 100:.0f}): "
             )
@@ -82,6 +97,10 @@ def solicitar_rango_min(valor_por_defecto=0.85, valor=None):
 def solicitar_rango_max(valor_por_defecto=1.15, valor=None):
     try:
         if valor is None:
+            print("⚠️ El sistema está solicitando un valor manual.")
+            print(
+                "   Si se lanzó desde el botón, es preferible configurar este valor en el panel para evitar bloqueos."
+            )
             valor = input(
                 f"Ingrese el rango máximo de MTOW (0-2, predeterminado {valor_por_defecto * 100:.0f}): "
             )
@@ -97,6 +116,10 @@ def solicitar_rango_max(valor_por_defecto=1.15, valor=None):
 def solicitar_confianza_min_similitud(valor_por_defecto=0.5, valor=None):
     try:
         if valor is None:
+            print("⚠️ El sistema está solicitando un valor manual.")
+            print(
+                "   Si se lanzó desde el botón, es preferible configurar este valor en el panel para evitar bloqueos."
+            )
             valor = input(
                 f"Ingrese el nivel mínimo de confianza (0-1, predeterminado {valor_por_defecto}): "
             )
@@ -115,6 +138,10 @@ def solicitar_umbral_correlacion(valor_por_defecto=0.7):
     Si no se proporciona, se utiliza un valor predeterminado.
     """
     try:
+        print("⚠️ El sistema está solicitando un valor manual.")
+        print(
+            "   Si se lanzó desde el botón, es preferible configurar este valor en el panel para evitar bloqueos."
+        )
         valor = input(
             f"Ingrese el umbral mínimo de correlación (0-1, predeterminado {valor_por_defecto}): "
         )
@@ -133,6 +160,10 @@ def solicitar_confianza_min_correlacion(valor_por_defecto=0.5):
     Si no se proporciona, se utiliza un valor predeterminado.
     """
     try:
+        print("⚠️ El sistema está solicitando un valor manual.")
+        print(
+            "   Si se lanzó desde el botón, es preferible configurar este valor en el panel para evitar bloqueos."
+        )
         valor = input(
             f"Ingrese el nivel mínimo de confianza para correlación (0-1, predeterminado {valor_por_defecto}): "
         )

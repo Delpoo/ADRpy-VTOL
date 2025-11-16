@@ -141,7 +141,9 @@ def _build_sim_advanced(cfg: dict):
             W.HTML("<b>Básicos</b>"),
             W.HBox(
                 [
-                    W.Label("Umbral % diferencia (0–1)", layout=W.Layout(width="240px")),
+                    W.Label(
+                        "Umbral % diferencia (0–1)", layout=W.Layout(width="240px")
+                    ),
                     w_umbral,
                 ]
             ),
@@ -159,7 +161,9 @@ def _build_sim_advanced(cfg: dict):
             ),
             W.HBox(
                 [
-                    W.Label("Excepción: min parámetros", layout=W.Layout(width="240px")),
+                    W.Label(
+                        "Excepción: min parámetros", layout=W.Layout(width="240px")
+                    ),
                     w_exc_par,
                 ]
             ),
@@ -463,7 +467,9 @@ def _build_sim_advanced(cfg: dict):
     )
 
     # --- empaquetado en acordeón ---
-    acc = W.Accordion(children=[ui_basicos, ui_familias, ui_fun, ui_vec, ui_conf, ui_um, ui_out])
+    acc = W.Accordion(
+        children=[ui_basicos, ui_familias, ui_fun, ui_vec, ui_conf, ui_um, ui_out]
+    )
     acc.set_title(0, "Básicos")
     acc.set_title(1, "Familias")
     acc.set_title(2, "Función de similitud")
@@ -1432,13 +1438,9 @@ def _build_orq(cfg: dict):
     w_ruta = W.Text(
         value=str(ent.get("ruta_excel", "")), layout=W.Layout(width="600px")
     )
-    w_dir_salida = W.Text(
-        value=str(default_dir), layout=W.Layout(width="600px")
-    )
+    w_dir_salida = W.Text(value=str(default_dir), layout=W.Layout(width="600px"))
 
-    w_it = W.BoundedIntText(
-        value=int(orq.get("max_iteraciones", 5)), min=1, max=999
-    )
+    w_it = W.BoundedIntText(value=int(orq.get("max_iteraciones", 5)), min=1, max=999)
     w_sim = W.Checkbox(
         value=bool(orq.get("ejecutar_similitud", True)),
         description="Ejecutar similitud",
@@ -1458,12 +1460,8 @@ def _build_orq(cfg: dict):
         value=bool(orq.get("mostrar_consola", True)), description="Mostrar consola"
     )
 
-    w_rows = W.BoundedIntText(
-        value=int(ent.get("max_rows", 200)), min=10, max=9999
-    )
-    w_cols = W.BoundedIntText(
-        value=int(ent.get("max_columns", 120)), min=10, max=9999
-    )
+    w_rows = W.BoundedIntText(value=int(ent.get("max_rows", 200)), min=10, max=9999)
+    w_cols = W.BoundedIntText(value=int(ent.get("max_columns", 120)), min=10, max=9999)
 
     conf = orq.get("confirmaciones", {})
     w_conf_modo = W.Dropdown(
@@ -1733,7 +1731,9 @@ def _build_tabs(cfg: dict):
             )
             modelos_corr = cfg_new.get("correlacion", {}).get("modelos")
             if modelos_corr:
-                cfg_new["modelos"] = deepcopy(modelos_corr)  # compat con módulos que leen raíz
+                cfg_new["modelos"] = deepcopy(
+                    modelos_corr
+                )  # compat con módulos que leen raíz
             if "_outliers_embed" in corr_adv:
                 cfg_new.setdefault("correlacion_outliers", {}).update(
                     corr_adv["_outliers_embed"]
@@ -1796,7 +1796,9 @@ def _build_tabs(cfg: dict):
                 "• Se ejecutarán las etapas marcadas (Similitud/Correlación) con los valores del panel.<br>"
                 "• No se pedirá escribir nada por teclado durante el proceso.<br>"
             )
-            btn_ok = W.Button(description="Confirmar y ejecutar", button_style="success")
+            btn_ok = W.Button(
+                description="Confirmar y ejecutar", button_style="success"
+            )
             btn_no = W.Button(description="Cancelar", button_style="warning")
             out_resumen = W.Output()
             box.children = [W.HTML(resumen), W.HBox([btn_ok, btn_no]), out_resumen]

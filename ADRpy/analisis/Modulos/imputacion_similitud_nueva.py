@@ -558,6 +558,14 @@ def imputacion_por_similitud(
         tuple: (df_resultado con valores imputados, lista de reportes detallados)
     """
 
+    try:
+        print("\u25b6 Etapa de similitud en marcha.")
+        print(
+            "  \u2022 Par\u00e1metros de trabajo: umbral de diferencia, cantidad de vecinos y esquema de confianza tomados del panel."
+        )
+    except Exception:
+        pass
+
     df_resultado = df_filtrado.copy()
     reporte_similitud = []
 

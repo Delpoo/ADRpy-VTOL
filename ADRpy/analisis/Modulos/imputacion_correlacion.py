@@ -1704,6 +1704,13 @@ def imputaciones_correlacion(
     Mantiene contrato de retorno: (df_resultado, reporte, modelos_info).
     Advertencias unificadas bajo clave 'Advertencia'. Rango y extrapolación con 0% de tolerancia.
     """
+    try:
+        print("\u25b6 Etapa de correlaci\u00f3n en marcha.")
+        print(
+            "  \u2022 Se est\u00e1n probando modelos con los par\u00e1metros definidos en el panel (tipos de modelo, control de extrapolaci\u00f3n, validaci\u00f3n y outliers)."
+        )
+    except Exception:
+        pass
     if isinstance(df, str):
         df = pd.read_excel(df)
     df = df.rename(columns=lambda c: str(c).strip())

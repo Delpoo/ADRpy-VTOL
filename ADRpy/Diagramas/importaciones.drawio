@@ -1,0 +1,598 @@
+<mxfile host="65bd71144e">
+    <diagram id="-zMaNozmhjUsrNvMNphL" name="Page-1">
+        <mxGraphModel dx="2830" dy="2384" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="hewICfd9gimmvaOH5mAM-1" value="" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="410" y="-290" width="120" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-2" value="Obencion de datos&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="-175" y="-210" width="340" height="40" as="geometry">
+                        <mxRectangle x="290" y="210" width="270" height="30" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-36" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-5" target="hewICfd9gimmvaOH5mAM-7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-37" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-5" target="hewICfd9gimmvaOH5mAM-6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-38" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-5" target="hewICfd9gimmvaOH5mAM-8" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-39" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-5" target="hewICfd9gimmvaOH5mAM-9" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-5" value="&lt;div&gt;INCOTerMS&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="410" y="290" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-33" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-62" target="hewICfd9gimmvaOH5mAM-128" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="295" y="1740" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="380" y="1460"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-6" value="FCA&amp;nbsp;(al carrier/CFS que vos nomines)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-35" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-7" target="hewICfd9gimmvaOH5mAM-10" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-104" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-7" target="hewICfd9gimmvaOH5mAM-60" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-7" value="&lt;div&gt;EXW&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-44" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-8" target="hewICfd9gimmvaOH5mAM-130" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="590" y="610" as="sourcePoint"/>
+                        <mxPoint x="500" y="1740" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="570" y="1410"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-8" value="FOB&amp;nbsp;(abordo en puerto)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="530" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-9" value="CIF" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-14" value="SI" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry x="-450" y="200" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-15" value="NO" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry x="-320" y="210" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-31" value="DAP" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-32" value="DPP" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1060" y="400" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-79" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-40" target="hewICfd9gimmvaOH5mAM-41" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-80" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-40" target="hewICfd9gimmvaOH5mAM-42" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-40" value="formato de envio&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="2110" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-41" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;LCL (por m³ con terceros)&lt;br&gt;&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1" collapsed="1">
+                    <mxGeometry x="10" y="2220" width="180" height="70" as="geometry">
+                        <mxRectangle x="10" y="2220" width="200" height="200" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-133" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Pro: no hay demurrage del contenedor para vos; útil &amp;lt; ~10–12 m³.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Contra: cargos CFS por m³ en origen/destino; tiempos menos predecibles.&lt;/p&gt;&lt;p&gt;Docs: recibo CFS LCL; luego HBL LCL.&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-41" vertex="1">
+                    <mxGeometry x="5.88" y="50" width="188.24" height="140.48" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-42" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;FCL (contenedor completo)&lt;br&gt;&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;container=1;" parent="1" vertex="1" collapsed="1">
+                    <mxGeometry x="257.5" y="2220" width="190" height="70" as="geometry">
+                        <mxRectangle x="257.5" y="2220" width="212.5" height="200" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-135" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;p style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Pro: mejor costo unitario si llenás buena parte; control total.&lt;/p&gt;&lt;p style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Contra: riesgo de demurrage/detention si se demora en destino.&lt;/p&gt;&lt;p style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Docs: recibo CFS/FCL; nº precinto.&lt;/p&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-42" vertex="1">
+                    <mxGeometry x="8.75" y="50" width="195" height="141.3" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-112" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" target="hewICfd9gimmvaOH5mAM-50" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1150" y="963.11" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-115" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" target="hewICfd9gimmvaOH5mAM-51" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1210" y="939.9952459016389" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-47" value="datos declarados en horigen&lt;br&gt;HS&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-65" y="-280" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-48" value="A tener en ceunta que si algun elemnto tiene mucha demora en la aduana separar en varios HBL o MBL para que no quede atado todo el ambarque a ese elemento" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-360" y="30" width="340" height="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-107" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-49" target="hewICfd9gimmvaOH5mAM-99" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-108" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-49" target="hewICfd9gimmvaOH5mAM-100" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-109" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-49" target="hewICfd9gimmvaOH5mAM-103" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-110" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-49" target="hewICfd9gimmvaOH5mAM-101" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-49" value="Despacho en Origen" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="870" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-82" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-50" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1165" y="1123.1100000000001" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-123" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-50" target="hewICfd9gimmvaOH5mAM-118" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-124" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-50" target="hewICfd9gimmvaOH5mAM-120" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-50" value="Docuemtancion Naviera" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1090" y="1013.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-81" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-51" target="hewICfd9gimmvaOH5mAM-52" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-55" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-52" target="hewICfd9gimmvaOH5mAM-54" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1860" y="1273.1100000000001" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1845" y="1163.1100000000001"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-56" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-52" target="hewICfd9gimmvaOH5mAM-53" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1675" y="1163.1100000000001"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-52" value="¿Items con tramite lento?" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1700" y="1103.1100000000001" width="120" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-94" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-53" target="hewICfd9gimmvaOH5mAM-90" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-53" value="Separarlo articulos en HBL diferentes&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1" collapsed="1">
+                    <mxGeometry x="1570" y="1183.1100000000001" width="130" height="50" as="geometry">
+                        <mxRectangle x="610" y="1080" width="140" height="220" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-136" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;Pro: no “ata” al resto; en destino podés despachar por DUA distinto.&lt;/p&gt;&lt;p&gt;Contra: puede subir flete/manipuleo por envío adicional.&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-53" vertex="1">
+                    <mxGeometry x="5" y="40" width="130" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-95" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-54" target="hewICfd9gimmvaOH5mAM-90" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-54" value="Unificar todo en un unico HBL" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1" collapsed="1">
+                    <mxGeometry x="1820" y="1183.1100000000001" width="140" height="50" as="geometry">
+                        <mxRectangle x="850" y="1080" width="140" height="220" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-137" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;Pro: menos papeles; mejor tarifa por volumen.&lt;/p&gt;&lt;p&gt;Contra: si algo se tranca en destino, conviene plan destufar.&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-54" vertex="1">
+                    <mxGeometry x="5" y="40" width="130" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-67" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-58" target="hewICfd9gimmvaOH5mAM-5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-58" value="&lt;br&gt;Emitir Purchase Orders (PO) a cada proveedor con Incoterm y lugar de entrega si corresponde.&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="257.5" y="120" width="425" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-105" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-60" target="hewICfd9gimmvaOH5mAM-49" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-60" value="Docuemnto proveedor (POA)&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1" collapsed="1">
+                    <mxGeometry x="-345" y="660" width="150" height="60" as="geometry">
+                        <mxRectangle x="130" y="520" width="230" height="130" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-66" value="&lt;strong data-end=&quot;1234&quot; data-start=&quot;1221&quot;&gt;Necesario&lt;/strong&gt;: &lt;strong data-end=&quot;1255&quot; data-start=&quot;1236&quot;&gt;POA/Entrustment&lt;/strong&gt; del proveedor para que tu forwarder &lt;strong data-end=&quot;1332&quot; data-start=&quot;1292&quot;&gt;presente la exportación en su nombre&lt;/strong&gt; (exportador legal = proveedor/trading)." style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-60" vertex="1">
+                    <mxGeometry x="10" y="30" width="210" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-61" value="" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-6" target="hewICfd9gimmvaOH5mAM-62" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="362" y="460" as="sourcePoint"/>
+                        <mxPoint x="-90" y="940" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-113" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-10" target="hewICfd9gimmvaOH5mAM-49" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="190" y="800" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-10" value="trasnporte interno en origen" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="650" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-64" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-62" target="hewICfd9gimmvaOH5mAM-22" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="170" y="1460"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-62" value="enviar &lt;strong data-end=&quot;3610&quot; data-start=&quot;3593&quot;&gt;nº de booking&lt;/strong&gt;, &lt;strong data-end=&quot;3638&quot; data-start=&quot;3612&quot;&gt;dirección CFS/terminal&lt;/strong&gt;, &lt;strong data-end=&quot;3673&quot; data-start=&quot;3640&quot;&gt;cut-off de carga y documental&lt;/strong&gt;, formato de &lt;strong data-end=&quot;3706&quot; data-start=&quot;3686&quot;&gt;marcas/etiquetas&lt;/strong&gt;." style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="490" width="150" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-69" value="&#xa;CI, PL, HS, contrato si piden, licencias si aplica, &lt;strong data-end=&quot;5760&quot; data-start=&quot;5753&quot;&gt;VGM&lt;/strong&gt; (Verified Gross Mass) antes de carga&#xa;&#xa;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-570" y="540" width="150" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-84" value="&lt;br&gt;&lt;p data-end=&quot;349&quot; data-start=&quot;296&quot;&gt;&lt;strong data-end=&quot;347&quot; data-start=&quot;296&quot;&gt;Selección de productos / volúmenes / fechas&lt;/strong&gt;&lt;/p&gt;&lt;p data-end=&quot;349&quot; data-start=&quot;296&quot;&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;definir SKUs, m³/kg, valor, fecha lista en planta (CRD).&lt;/span&gt;&lt;/p&gt;&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="-130" width="335" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-85" value="&lt;p data-end=&quot;447&quot; data-start=&quot;410&quot;&gt;&lt;strong data-end=&quot;445&quot; data-start=&quot;410&quot;&gt;Validar HS/NCM y requisitos&lt;/strong&gt;&lt;/p&gt;&lt;p data-end=&quot;447&quot; data-start=&quot;410&quot;&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;con tu despachante UY: HS por ítem y si exige permiso/ensayo.&lt;/span&gt;&lt;/p&gt;&lt;p data-end=&quot;447&quot; data-start=&quot;410&quot;&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;si &lt;/span&gt;&lt;strong style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot; data-end=&quot;540&quot; data-start=&quot;519&quot;&gt;algún HS es lento&lt;/strong&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt; (URSEA, contacto alimentario, telecom…), marcálo para decisión de “separar o no”.&lt;/span&gt;&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="225" y="-20" width="510" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-88" value="" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-8" target="hewICfd9gimmvaOH5mAM-126" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="590" y="460" as="sourcePoint"/>
+                        <mxPoint x="100" y="1740" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="370" y="1410"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-51" value="Docuemtnacion Forwarded" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1700" y="1003.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-96" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="hewICfd9gimmvaOH5mAM-90" target="hewICfd9gimmvaOH5mAM-92" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1760" y="1393.1100000000001" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-97" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-90" target="hewICfd9gimmvaOH5mAM-93" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1900" y="1313.1100000000001"/>
+                            <mxPoint x="1840" y="1313.1100000000001"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-98" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-90" target="hewICfd9gimmvaOH5mAM-91" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1680" y="1313.1100000000001"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-90" value="Release a elegir" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1710" y="1283.1100000000001" width="100" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-91" value="Express/Sea Waybill" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1570" y="1413.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-92" value="&#xa;Telex&#xa;&#xa;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1700" y="1413.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-93" value="&#xa;OBL&#xa;&#xa;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1830" y="1413.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-99" value="Invoice (CI)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-60" y="980" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-100" value="Packing List (PL)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="980" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-101" value="HS/NVMN" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="980" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-103" value="SLI" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="980" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-116" value="Licencia si aplica" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-190" y="980" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-117" value="VGM" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="980" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-118" value="Booking Nº&lt;div&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;(buque/viaje, cut-offs)&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="1123.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-120" value="&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;Precinto físico registrado.&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="1123.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-121" value="MBL" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1135" y="1123.1100000000001" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-130" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Directo a puerto (terminal / gate-in)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="1750" width="220" height="260" as="geometry">
+                        <mxRectangle x="490" y="1750" width="190" height="60" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-131" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;Ventajas: menos manipulaciones si es un proveedor.&lt;/p&gt;&lt;p&gt;Desventajas: consolidar varios proveedores es engorroso; si uno llega tarde, pierde buque.&lt;/p&gt;&lt;p&gt;Advertencias: booking único y closing time; precinto correcto.&lt;/p&gt;&lt;p&gt;Docs: gate-in, VGM.&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-130" vertex="1">
+                    <mxGeometry x="10" y="47.27272727272727" width="200" height="204.84848484848484" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-28" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-11" target="hewICfd9gimmvaOH5mAM-126" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="100" y="1740" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="110" y="1630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-29" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-11" target="hewICfd9gimmvaOH5mAM-128" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="295" y="1740" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="270" y="1630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-30" style="edgeStyle=elbowEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-11" target="hewICfd9gimmvaOH5mAM-130" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="500" y="1740" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="370" y="1630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-11" value="Consolidacion de items?" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="135" y="1600" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-16" value="SI" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry y="1600" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-17" value="NO" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="1600" width="60" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-126" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Consolidación en puerto (CFS intraportuario)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="-30" y="1750" width="220" height="280" as="geometry">
+                        <mxRectangle x="-30" y="1750" width="190" height="60" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-127" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;Ventajas: menos traslados hasta terminal; rápido a gate-in.&lt;/p&gt;&lt;p&gt;Desventajas: tarifas portuarias/handling suelen ser más altas que CFS extrapuerto.&lt;/p&gt;&lt;p&gt;Advertencias: cupos/turnos; cut-off ajustado.&lt;/p&gt;&lt;p&gt;Docs: ticket CFS puerto, VGM si corresponde.&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-126" vertex="1">
+                    <mxGeometry x="10" y="50.909090909090914" width="200" height="220.6060606060606" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-128" value="&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;span style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); color: rgb(0, 0, 0);&quot;&gt;deposito forwarded&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;span style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); color: rgb(0, 0, 0);&quot;&gt;(puede ser que su deposito esté en el puerto)&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1" collapsed="1">
+                    <mxGeometry x="230" y="1750" width="190" height="60" as="geometry">
+                        <mxRectangle x="-140" y="150" width="220" height="330" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-129" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;Ventajas: ideal buyer’s consolidation (varios proveedores → 1 FCL); control de medidas reales; retiros escalonados.&lt;/p&gt;&lt;p&gt;Desventajas: costos CFS (ingreso, handling, consolidación).&lt;/p&gt;&lt;p&gt;Advertencias: respetar cut-offs; embalaje/etiquetas uniformes; confirmar VGM.&lt;/p&gt;&lt;p&gt;Docs: receiving tally, consolidation sheet, fotos/medidas.&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-128" vertex="1">
+                    <mxGeometry x="10" y="60" width="200" height="260" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-22" value="&lt;div&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Depósito forwarder (CFS)&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;(puede ser que su deposito esté en el puerto)&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="-290" y="1750" width="220" height="310" as="geometry">
+                        <mxRectangle x="-290" y="1750" width="190" height="60" as="alternateBounds"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-125" value="&lt;p data-pm-slice=&quot;1 1 []&quot;&gt;Ventajas: ideal buyer’s consolidation (varios proveedores → 1 FCL); control de medidas reales; retiros escalonados.&lt;/p&gt;&lt;p&gt;Desventajas: costos CFS (ingreso, handling, consolidación).&lt;/p&gt;&lt;p&gt;Advertencias: respetar cut-offs; embalaje/etiquetas uniformes; confirmar VGM.&lt;/p&gt;&lt;p&gt;Docs: receiving tally, consolidation sheet, fotos/medidas.&lt;/p&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-22" vertex="1">
+                    <mxGeometry x="10" y="56.36363636363637" width="200" height="244.24242424242425" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-27" style="edgeStyle=elbowEdgeStyle;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;elbow=vertical;" parent="1" source="hewICfd9gimmvaOH5mAM-11" target="hewICfd9gimmvaOH5mAM-22" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="20" y="1630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-138" value="Emisión BL" style="rounded=1;whiteSpace=wrap;html=1;container=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="135" y="1120" width="165" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="hewICfd9gimmvaOH5mAM-139" value="" style="rounded=1;whiteSpace=wrap;html=1;" parent="hewICfd9gimmvaOH5mAM-138" vertex="1">
+                    <mxGeometry x="5" y="30" width="155" height="150" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="rutaContenedor" name="Ruta del contenedor">
+        <mxGraphModel dx="3371" dy="2259" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1400" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="A" value="Arribo del buque" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="-310" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="B" value="Descarga a patio (CY) de TCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="-200" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="C" value="Registrar DUA en LUCIA (BL + facturas + packing list)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="-10" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="E" value="¿Aduana ordena escáner?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="920" y="-210" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="S" value="Movimiento a escáner (tarifa terminal) y regreso a patio" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+                    <mxGeometry x="1160" y="90" width="320" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="SEL" value="Selectividad" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="610" y="160" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="D" value="Disponibilidad (Levante/Cumplido)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="350" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="DR" value="¿Cómo retiro?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="490" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="A1" value="Gate-out contenedor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="10" y="640" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="A2" value="Camión con chasis → tu dirección" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="-30" y="790" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="A3" value="Descarga en tu local" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-10" y="870" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="A4" value="Devolución de vacío al depósito de la naviera" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="-50" y="980" width="300" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="A5" value="Riesgo: demurrage/detention si excedés free days" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="-60" y="1080" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="B1" value="CFS intraportuario (depósito dentro del puerto)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="640" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="B2" value="Destufado bajo control aduanero" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="770" width="280" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="B3" value="Devolución inmediata de vacío (corta reloj del contenedor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="820" y="770" width="360" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="B4" value="Salida en camión con caja (retiros parciales por DUA si querés)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="460" y="870" width="380" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="B5" value="Si algo demora: storage por m³/día en CFS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="1080" y="390" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="C1" value="Tránsito terminal → CFS extraportuario" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="1230" y="640" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="C4" value="CFS extraportuario (depósito fiscal)" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1250" y="990" width="280" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="C5" value="Destufado en CFS extraportuario" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1260" y="1190" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="Tcost" value="Terminal (TCP):&#xa;• PBIP/ISPS (seguridad)&#xa;• Tasa logística&#xa;• Storage CY (días libres)&#xa;• Gate in/out" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="-90" width="260" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="Ncost" value="Naviera/Agente:&#xa;• Free days demurrage/detention&#xa;• Depósito de vacíos designado&#xa;• BL release (Telex/Express/Sea Waybill)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="1240" width="330" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="CFScost" value="CFS (intra/extra):&#xa;• Vaciado/Desconsolidación&#xa;• Ingreso/Egreso/Manipuleo&#xa;• Storage por m³/día" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="430" y="1280" width="300" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="TRcost" value="Transporte local:&#xa;• Camión con chasis (A)&#xa;• Camión con caja (B/B2)&#xa;• Esperas/estadías" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="790" y="1300" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="SCcost" value="Escáner (si lo ordena Aduana):&#xa;• Movimiento tarifado por terminal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="1130" y="1290" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="PEcost" value="Precinto Electrónico (si hay tránsito a extraportuario)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="1460" y="1300" width="300" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" parent="1" source="A" target="B" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" parent="1" source="B" target="C" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="Sí" parent="1" source="B" target="E" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="Sí" parent="1" source="E" target="S" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" parent="1" source="S" target="B" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="No" parent="1" source="E" target="B" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" parent="1" source="C" target="SEL" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="Verde" parent="1" source="SEL" target="D" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="Naranja (doc)" parent="1" source="SEL" target="D" edge="1">
+                    <mxGeometry x="0.137" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="540" y="280"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e10" value="Rojo (física)" parent="1" source="SEL" target="D" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="800" y="290"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e11" parent="1" source="D" target="DR" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" value="A" parent="1" source="DR" target="A1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e13" parent="1" source="A1" target="A2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e14" parent="1" source="A2" target="A3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e15" parent="1" source="A3" target="A4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e16" parent="1" source="A4" target="A5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e17" value="B" parent="1" source="DR" target="B1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e18" parent="1" source="B1" target="B2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e19" parent="1" source="B2" target="B3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e20" parent="1" source="B2" target="B4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e21" parent="1" source="B1" target="B5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e22" value="B2" parent="1" source="DR" target="C1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e23" parent="1" source="C1" target="C2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e24" value="Sí" parent="1" source="C2" target="C3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e25" parent="1" source="C3" target="C4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e26" value="No" parent="1" source="C3" target="C4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e27" parent="1" source="C4" target="C5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e28" parent="1" source="C5" target="B4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e29" parent="1" source="C5" target="B3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e30" parent="1" source="C2" target="B5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="cQdGfrGEojZEdgZ5UZb2-1" value="" edge="1" parent="1" source="C2" target="C3">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1322" y="818" as="sourcePoint"/>
+                        <mxPoint x="1089" y="960" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="C3" value="Colocar/gestionar PE para tránsito interno" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+                    <mxGeometry x="1490" y="860" width="300" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="cQdGfrGEojZEdgZ5UZb2-3" value="" edge="1" parent="1" source="C4" target="C2">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1326" y="990" as="sourcePoint"/>
+                        <mxPoint x="1244" y="450" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="C2" value="¿Precinto Electrónico (PE) requerido?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="1280" y="740" width="220" height="70" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

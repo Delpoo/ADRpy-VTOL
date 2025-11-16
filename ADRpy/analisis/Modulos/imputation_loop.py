@@ -79,15 +79,7 @@ def bucle_imputacion_similitud_correlacion(
     debug_mode=False,
     permitir_sin_filtro=False,
 ):
-    """
-    Realiza un bucle alternando imputaciones por similitud y correlación, consolidando los resultados.
-    Ahora se evita actualizar los DataFrames inmediatamente, y se eligen las imputaciones finales
-    al final de cada iteración.
-
-    Retorna:
-        df_procesado_base (pd.DataFrame): DataFrame con imputaciones realizadas.
-        df_resumen (pd.DataFrame): Detalle consolidado de imputaciones realizadas.
-    """
+    """Bucle de imputaciones alternando similitud y correlación con mensajes de progreso."""
 
     # --- Configuración central ---
     cfg = _cargar_configuracion()
@@ -167,8 +159,8 @@ def bucle_imputacion_similitud_correlacion(
         except Exception:
             _restore_streams = False  # si falla, no silenciar
 
+    print("[INFO] Preparando los datos de trabajo. Esto puede demorar unos segundos...")
     df_procesado_base = df_procesado.copy()
-    # Copia base del DataFrame original (mostrar HTML según toggle)
     if export_cfg.get("html_df_base", {}).get("mostrar", True):
         convertir_a_html(
             df_procesado_base,
@@ -177,6 +169,14 @@ def bucle_imputacion_similitud_correlacion(
             alto=f"{cfg['html']['alto_px']}px",
             mostrar=True,
         )
+
+    print("\n=== Estado inicial del proceso ===")
+    try:
+        total_celdas = df_procesado_base.size
+        faltantes = df_procesado_base.isna().sum().sum()
+        print(f"[INFO] Celdas totales: {total_celdas}. Celdas vacias: {faltantes}.")
+    except Exception:
+        print("[INFO] Tabla cargada correctamente.")
 
     resumen_imputaciones = (
         []
@@ -193,13 +193,18 @@ def bucle_imputacion_similitud_correlacion(
 
     iteracion = 0  # Inicializar iteracion antes del bucle
     _sin_mejora_consec = 0  # contador de iteraciones sin mejora
+    print(
+        f"\n[INFO] Se iniciara el ciclo de imputaciones (maximo {max_iteraciones} iteraciones)."
+    )
     for iteracion in range(1, max_iteraciones + 1):
         imputaciones_iteracion = []  # Inicializar la lista para cada iteración
         print("\n" + "=" * 80)
-        print(f"\033[1m=== INICIO DE ITERACIÓN {iteracion} ===\033[0m")
+        print(
+            f"\033[1m=== Iteracion {iteracion}: el sistema esta trabajando ===\033[0m"
+        )
         print("=" * 80)
 
-        print(f"\n=== Iteración {iteracion}: Resumen antes de imputaciones ===")
+        print(f"\n-- Resumen previo a las imputaciones (iteracion {iteracion}) --")
         resumen_antes, total_faltantes_antes = generar_resumen_faltantes(
             df_procesado_base,
             titulo=f"Resumen de Valores Faltantes Antes de Iteración {iteracion}",
@@ -217,9 +222,12 @@ def bucle_imputacion_similitud_correlacion(
             if metodo == "similitud" and ejecutar_sim:
                 print("\n" + "-" * 80)
                 print(
-                    f"\033[1m*** IMPUTACIÓN POR SIMILITUD NUEVA - ITERACIÓN {iteracion} ***\033[0m"
+                    f"\033[1m*** Etapa de similitud (iteracion {iteracion}) ***\033[0m"
                 )
                 print("-" * 80)
+                print(
+                    "  [INFO] Buscando aeronaves similares y calculando propuestas..."
+                )
                 df_similitud_resultado, reporte_similitud = imputacion_por_similitud(
                     df_filtrado=df_similitud,
                     df_procesado_base=df_procesado_base,
@@ -244,9 +252,12 @@ def bucle_imputacion_similitud_correlacion(
             if metodo == "correlacion" and ejecutar_corr:
                 print("\n" + "-" * 80)
                 print(
-                    f"\033[1m*** IMPUTACIÓN POR CORRELACIÓN - ITERACIÓN {iteracion} ***\033[0m"
+                    f"\033[1m*** Etapa de correlacion (iteracion {iteracion}) ***\033[0m"
                 )
                 print("-" * 80)
+                print(
+                    "  [INFO] Probando relaciones matematicas entre parametros para completar valores..."
+                )
                 (
                     df_correlacion_resultado,
                     reporte_correlacion,
@@ -646,7 +657,7 @@ def bucle_imputacion_similitud_correlacion(
         imputaciones_finales.extend(imputaciones_iteracion)
         detalles_para_excel.extend(detalles_iteracion)
 
-        print(f"\n=== Iteración {iteracion}: Resumen después de imputaciones ===")
+        print(f"\n-- Resumen posterior a las imputaciones (iteracion {iteracion}) --")
         resumen_despues, total_faltantes_despues = generar_resumen_faltantes(
             df_procesado_base,
             titulo=f"Resumen de Valores Faltantes Después de Iteración {iteracion}",
@@ -670,11 +681,11 @@ def bucle_imputacion_similitud_correlacion(
             break
 
         print("\n" + "=" * 80)
-        print(f"\033[1m=== FIN DE ITERACIÓN {iteracion} ===\033[0m")
+        print(f"\033[1m=== Fin de la iteracion {iteracion} ===\033[0m")
         print("=" * 80)
 
     print("\n" + "=" * 80)
-    print("\033[1m=== RESUMEN FINAL ===\033[0m")
+    print("\033[1m=== Resumen final del proceso ===\033[0m")
     print("=" * 80)
 
     print(f"\033[1mTotal de iteraciones realizadas: {iteracion}\033[0m")
@@ -685,6 +696,9 @@ def bucle_imputacion_similitud_correlacion(
         if not is_missing(imp.get("Valor imputado", None))
     ]
     print(f"\033[1mTotal de valores imputados: {len(imputaciones_validas)}\033[0m")
+    print(
+        "[INFO] El proceso termino. Si aun quedan celdas vacias, no se encontraron datos confiables en esta ejecucion."
+    )
 
     # === EXPORTAR JSON OPTIMIZADO (estructura unificada por celda) ===
     import json
