@@ -3,7 +3,9 @@ import numpy as np
 import logging
 from itertools import combinations
 from collections import defaultdict
+from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
+from collections import Counter
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.model_selection import LeaveOneOut
@@ -20,7 +22,18 @@ except Exception:
     )  # fallback cuando se ejecuta fuera de paquete
 
 
+# Si se provee desde el loop, fuerza el uso del mismo cfg efectivo (evita ambigüedad de paths/cwd
+# y elimina re-lecturas repetidas de config_overrides.json durante un run).
+_CFG_OVERRIDE: dict | None = None
+
+# Debug público: queda disponible tras ejecutar imputaciones_correlacion().
+LAST_CORR_DEBUG: dict[str, Any] = {}
+
+
 def _CFG() -> dict:
+    global _CFG_OVERRIDE
+    if isinstance(_CFG_OVERRIDE, dict):
+        return _CFG_OVERRIDE
     try:
         return load_effective_config()
     except Exception:
@@ -1696,6 +1709,8 @@ def imputaciones_correlacion(
     alpha_pesos: float = 0.5,
     w_min: float = 0.2,
     remover_duro: bool = False,
+    # (Opcional) Pasar cfg efectivo desde el loop/notebook para garantizar consistencia
+    cfg_override: Optional[Dict[str, Any]] = None,
 ) -> Tuple[pd.DataFrame, List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Imputa valores faltantes por correlación/modelado.
 
@@ -1704,130 +1719,124 @@ def imputaciones_correlacion(
     Mantiene contrato de retorno: (df_resultado, reporte, modelos_info).
     Advertencias unificadas bajo clave 'Advertencia'. Rango y extrapolación con 0% de tolerancia.
     """
+    global _CFG_OVERRIDE, LAST_CORR_DEBUG
+    _old_cfg = _CFG_OVERRIDE
+    if isinstance(cfg_override, dict):
+        _CFG_OVERRIDE = cfg_override
+
+    # Debug stats (siempre se recolectan; solo se imprimen si verbose=True)
+    debug_stats: dict[str, Any] = {
+        "knobs": {
+            "checks_2d_enabled": bool(_COR().get("checks_2d", {}).get("enabled", True)),
+            "min_unicos": deepcopy(
+                _COR().get("diversidad_minima", {}).get("min_unicos", {})
+            ),
+            "min_muestras": deepcopy(
+                _COR().get("diversidad_minima", {}).get("min_muestras", {})
+            ),
+        },
+        "counts": {
+            "cells_missing": 0,
+            "cells_modeled": 0,
+            "cells_error": 0,
+            "models_total": 0,
+            "models_none": 0,
+            "models_discarded": 0,
+            "models_discarded_2d_checks": 0,
+            "models_discarded_diversidad": 0,
+        },
+        "discard_motivos_top": [],
+    }
+    motivos_counter: Counter[str] = Counter()
+
     try:
-        print("\u25b6 Etapa de correlaci\u00f3n en marcha.")
-        print(
-            "  \u2022 Se est\u00e1n probando modelos con los par\u00e1metros definidos en el panel (tipos de modelo, control de extrapolaci\u00f3n, validaci\u00f3n y outliers)."
-        )
-    except Exception:
-        pass
-    if isinstance(df, str):
-        df = pd.read_excel(df)
-    df = df.rename(columns=lambda c: str(c).strip())
-    # Reemplazar valores inválidos por np.nan
-    df.replace("", np.nan, inplace=True)
-
-    # Logger interno controlado por 'verbose'
-    def _log(*args, **kwargs):
-        if verbose:
-            print(*args, **kwargs)
-
-    df_original = df.copy()  # <- Copia del DF original antes de filtrar
-    df_completo = df.copy()  # NUEVO: DataFrame completo para exportar
-    df_resultado = df_original.copy()
-    reporte = []
-    modelos_info = []  # Lista de modelos completos (solo descartado=False)
-
-    for objetivo in [c for c in df_original.columns if df_original[c].isna().any()]:
-        faltantes = df_original[df_original[objetivo].isna()].index
-        for idx in faltantes:
-            modelos_validos = []
-            familia_usada = ""
-            filtro_aplicado = False
-            modelos_info_familia = []
-            df_filtrado_usado = (
-                None  # Track the df_filtrado used for the selected model
+        try:
+            print("\u25b6 Etapa de correlaci\u00f3n en marcha.")
+            print(
+                "  \u2022 Se est\u00e1n probando modelos con los par\u00e1metros definidos en el panel (tipos de modelo, control de extrapolaci\u00f3n, validaci\u00f3n y outliers)."
             )
-            # 1. Intentar con filtros de familia en orden F0, F1, F2 (explícito)
-            for capa in (0, 1, 2):
-                df_filtrado, fam, filtro = seleccionar_predictores_validos(
-                    df_original,
-                    objetivo,
-                    idx,
-                    nivel_familia=capa,
-                    min_datos_validos=min_datos_validos,
-                )
-                if fam != f"F{capa}" or df_filtrado is None or df_filtrado.empty:
-                    continue
-                predictores = [
-                    col
-                    for col in df_filtrado.columns
-                    if col != df_filtrado.columns[0] and col != objetivo
-                ]
-                if not predictores:
-                    continue
-                modelos = []
-                for combo in generar_combinaciones(predictores):
-                    for poly in (False, True):
-                        # Respetar configuraciones de modelos habilitados
-                        if poly:
-                            if (
-                                modelos_habilitados is not None
-                                and not modelos_habilitados.get("polinomico2", True)
-                            ):
-                                continue
-                        else:
-                            if (
-                                modelos_habilitados is not None
-                                and not modelos_habilitados.get("lineal", True)
-                            ):
-                                continue
-                        try:
-                            modelos.append(
-                                entrenar_modelo(
-                                    df_filtrado,
-                                    objetivo,
-                                    combo,
-                                    poly,
-                                    idx,
-                                    # Outliers/robustez
-                                    manejar_outliers=manejar_outliers,
-                                    umbral_z_suave=umbral_z_suave,
-                                    umbral_z_duro=umbral_z_duro,
-                                    alpha_pesos=alpha_pesos,
-                                    w_min=w_min,
-                                    remover_duro=remover_duro,
-                                )
-                            )
-                        except ModeloDescartado as e:
-                            modelos.append(
-                                {
-                                    "Aeronave": idx,
-                                    "Parámetro": objetivo,
-                                    "descartado": True,
-                                    "motivo": str(e),
-                                    "predictores": combo,
-                                    "tipo": f"{'poly' if poly else 'linear'}-{len(combo)}",
-                                    "tipo_transformacion": None,
-                                }
-                            )
-                    if len(combo) == 1:
-                        for modelo_extra in ("log", "potencia", "exp"):
-                            if modelos_habilitados is not None:
-                                if (
-                                    modelo_extra == "log"
-                                    and not modelos_habilitados.get("log", True)
-                                ):
-                                    continue
-                                if (
-                                    modelo_extra == "potencia"
-                                    and not modelos_habilitados.get("potencia", True)
-                                ):
-                                    continue
-                                if (
-                                    modelo_extra == "exponencial"
-                                    and not modelos_habilitados.get("exponencial", True)
-                                ):
-                                    continue
-                            try:
-                                modelos.append(
-                                    entrenar_modelo(
+        except Exception:
+            pass
+
+        if isinstance(df, str):
+            df = pd.read_excel(df)
+        df = df.rename(columns=lambda c: str(c).strip())
+        # Reemplazar valores inválidos por np.nan
+        df.replace("", np.nan, inplace=True)
+
+        # Logger interno controlado por 'verbose'
+        def _log(*args, **kwargs):
+            if verbose:
+                print(*args, **kwargs)
+
+        df_original = df.copy()  # <- Copia del DF original antes de filtrar
+        df_completo = df.copy()  # NUEVO: DataFrame completo para exportar
+        df_resultado = df_original.copy()
+        reporte = []
+        modelos_info = []  # Lista de modelos completos (solo descartado=False)
+
+        for objetivo in [c for c in df_original.columns if df_original[c].isna().any()]:
+            faltantes = df_original[df_original[objetivo].isna()].index
+            for idx in faltantes:
+                debug_stats["counts"]["cells_missing"] += 1
+
+                # Aislar errores por celda: no abortar toda la etapa de correlación
+                try:
+                    modelos_validos = []
+                    familia_usada = ""
+                    filtro_aplicado = False
+                    modelos_info_familia = []
+                    df_filtrado_usado = (
+                        None  # Track the df_filtrado used for the selected model
+                    )
+
+                    # 1. Intentar con filtros de familia en orden F0, F1, F2 (explícito)
+                    for capa in (0, 1, 2):
+                        df_filtrado, fam, filtro = seleccionar_predictores_validos(
+                            df_original,
+                            objetivo,
+                            idx,
+                            nivel_familia=capa,
+                            min_datos_validos=min_datos_validos,
+                        )
+                        if (
+                            fam != f"F{capa}"
+                            or df_filtrado is None
+                            or df_filtrado.empty
+                        ):
+                            continue
+                        predictores = [
+                            col
+                            for col in df_filtrado.columns
+                            if col != df_filtrado.columns[0] and col != objetivo
+                        ]
+                        if not predictores:
+                            continue
+                        modelos = []
+                        for combo in generar_combinaciones(predictores):
+                            for poly in (False, True):
+                                # Respetar configuraciones de modelos habilitados
+                                if poly:
+                                    if (
+                                        modelos_habilitados is not None
+                                        and not modelos_habilitados.get(
+                                            "polinomico2", True
+                                        )
+                                    ):
+                                        continue
+                                else:
+                                    if (
+                                        modelos_habilitados is not None
+                                        and not modelos_habilitados.get("lineal", True)
+                                    ):
+                                        continue
+                                try:
+                                    m = entrenar_modelo(
                                         df_filtrado,
                                         objetivo,
                                         combo,
-                                        False,
+                                        poly,
                                         idx,
-                                        modelo_extra=modelo_extra,
                                         # Outliers/robustez
                                         manejar_outliers=manejar_outliers,
                                         umbral_z_suave=umbral_z_suave,
@@ -1836,220 +1845,588 @@ def imputaciones_correlacion(
                                         w_min=w_min,
                                         remover_duro=remover_duro,
                                     )
-                                )
-                            except ModeloDescartado as e:
-                                modelos.append(
-                                    {
-                                        "Aeronave": idx,
-                                        "Parámetro": objetivo,
-                                        "descartado": True,
-                                        "motivo": str(e),
-                                        "predictores": combo,
-                                        "tipo": f"{modelo_extra}-1",
-                                        "tipo_transformacion": None,
-                                    }
-                                )
-                constantes = [m for m in modelos if m and m.get("tipo") == "constante"]
-                predictivos = [
-                    m
-                    for m in modelos
-                    if m
-                    and m.get("tipo") != "constante"
-                    and not m.get("descartado", False)
-                ]
-                train_cfg = _COR().get("seleccion_modelos", {}).get("train", {})
-                train_mape_max = float(train_cfg.get("mape_max", umbral_mape_max))
-                train_r2_min = float(train_cfg.get("r2_min", 0.6))
-                validos = [
-                    m
-                    for m in predictivos
-                    if m["mape"] <= train_mape_max and m["r2"] >= train_r2_min
-                ]
-                if validos:
-                    modelos_validos = validos
-                    familia_usada = fam
-                    filtro_aplicado = filtro
-                    modelos_info_familia = modelos
-                    df_filtrado_usado = df_filtrado
-                    break
-                if constantes:
-                    constante = constantes[0]
-                    total_validos = df_original[objetivo].notna().sum()
-                    respaldo_constante = constante["n"]
-                    if (
-                        respaldo_constante >= 8
-                        and respaldo_constante >= 0.5 * total_validos
-                    ):
-                        modelos_validos = [constante]
-                        familia_usada = fam
-                        filtro_aplicado = filtro
-                        modelos_info_familia = modelos
-                        df_filtrado_usado = df_filtrado
-                        break
-            if not modelos_validos:
-                if permitir_sin_filtro:
-                    # Intentar recién ahora modo progresivo que puede terminar en 'sin filtro'
-                    df_filtrado, fam, filtro = seleccionar_predictores_validos(
-                        df_original,
-                        objetivo,
-                        idx,
-                        nivel_familia=None,
-                        min_datos_validos=min_datos_validos,
-                    )
-                    if (
-                        fam == "sin filtro"
-                        and df_filtrado is not None
-                        and not df_filtrado.empty
-                    ):
-                        predictores = [
-                            col
-                            for col in df_filtrado.columns
-                            if col != df_filtrado.columns[0] and col != objetivo
-                        ]
-                        if predictores:
-                            modelos = []
-                            for combo in generar_combinaciones(predictores):
-                                for poly in (False, True):
-                                    if poly:
+                                    modelos.append(m)
+                                    debug_stats["counts"]["models_total"] += 1
+                                    if m is None:
+                                        debug_stats["counts"]["models_none"] += 1
+                                except ModeloDescartado as e:
+                                    motivo = str(e)
+                                    modelos.append(
+                                        {
+                                            "Aeronave": idx,
+                                            "Parámetro": objetivo,
+                                            "descartado": True,
+                                            "motivo": motivo,
+                                            "predictores": combo,
+                                            "tipo": f"{'poly' if poly else 'linear'}-{len(combo)}",
+                                            "tipo_transformacion": None,
+                                        }
+                                    )
+                                    debug_stats["counts"]["models_total"] += 1
+                                    debug_stats["counts"]["models_discarded"] += 1
+                                    motivos_counter[motivo] += 1
+                                    if "Descartado 2D por:" in motivo:
+                                        debug_stats["counts"][
+                                            "models_discarded_2d_checks"
+                                        ] += 1
+                                    if "Insuficiente diversidad" in motivo:
+                                        debug_stats["counts"][
+                                            "models_discarded_diversidad"
+                                        ] += 1
+                            if len(combo) == 1:
+                                for modelo_extra in ("log", "potencia", "exp"):
+                                    if modelos_habilitados is not None:
                                         if (
-                                            modelos_habilitados is not None
+                                            modelo_extra == "log"
+                                            and not modelos_habilitados.get("log", True)
+                                        ):
+                                            continue
+                                        if (
+                                            modelo_extra == "potencia"
                                             and not modelos_habilitados.get(
-                                                "polinomico2", True
+                                                "potencia", True
                                             )
                                         ):
                                             continue
-                                    else:
                                         if (
-                                            modelos_habilitados is not None
+                                            modelo_extra == "exponencial"
                                             and not modelos_habilitados.get(
-                                                "lineal", True
+                                                "exponencial", True
                                             )
                                         ):
                                             continue
                                     try:
-                                        modelos.append(
-                                            entrenar_modelo(
-                                                df_filtrado,
-                                                objetivo,
-                                                combo,
-                                                poly,
-                                                idx,
-                                                manejar_outliers=manejar_outliers,
-                                                umbral_z_suave=umbral_z_suave,
-                                                umbral_z_duro=umbral_z_duro,
-                                                alpha_pesos=alpha_pesos,
-                                                w_min=w_min,
-                                                remover_duro=remover_duro,
-                                            )
+                                        m = entrenar_modelo(
+                                            df_filtrado,
+                                            objetivo,
+                                            combo,
+                                            False,
+                                            idx,
+                                            modelo_extra=modelo_extra,
+                                            # Outliers/robustez
+                                            manejar_outliers=manejar_outliers,
+                                            umbral_z_suave=umbral_z_suave,
+                                            umbral_z_duro=umbral_z_duro,
+                                            alpha_pesos=alpha_pesos,
+                                            w_min=w_min,
+                                            remover_duro=remover_duro,
                                         )
+                                        modelos.append(m)
+                                        debug_stats["counts"]["models_total"] += 1
+                                        if m is None:
+                                            debug_stats["counts"]["models_none"] += 1
                                     except ModeloDescartado as e:
+                                        motivo = str(e)
                                         modelos.append(
                                             {
                                                 "Aeronave": idx,
                                                 "Parámetro": objetivo,
                                                 "descartado": True,
-                                                "motivo": str(e),
+                                                "motivo": motivo,
                                                 "predictores": combo,
-                                                "tipo": f"{'poly' if poly else 'linear'}-{len(combo)}",
+                                                "tipo": f"{modelo_extra}-1",
                                                 "tipo_transformacion": None,
                                             }
                                         )
-                                if len(combo) == 1:
-                                    for modelo_extra in ("log", "potencia", "exp"):
-                                        if modelos_habilitados is not None:
-                                            if (
-                                                modelo_extra == "log"
-                                                and not modelos_habilitados.get(
-                                                    "log", True
-                                                )
-                                            ):
-                                                continue
-                                            if (
-                                                modelo_extra == "potencia"
-                                                and not modelos_habilitados.get(
-                                                    "potencia", True
-                                                )
-                                            ):
-                                                continue
-                                            if (
-                                                modelo_extra == "exponencial"
-                                                and not modelos_habilitados.get(
-                                                    "exponencial", True
-                                                )
-                                            ):
-                                                continue
-                                        try:
-                                            modelos.append(
-                                                entrenar_modelo(
-                                                    df_filtrado,
-                                                    objetivo,
-                                                    combo,
-                                                    False,
-                                                    idx,
-                                                    modelo_extra=modelo_extra,
-                                                    manejar_outliers=manejar_outliers,
-                                                    umbral_z_suave=umbral_z_suave,
-                                                    umbral_z_duro=umbral_z_duro,
-                                                    alpha_pesos=alpha_pesos,
-                                                    w_min=w_min,
-                                                    remover_duro=remover_duro,
-                                                )
-                                            )
-                                        except ModeloDescartado as e:
-                                            modelos.append(
-                                                {
-                                                    "Aeronave": idx,
-                                                    "Parámetro": objetivo,
-                                                    "descartado": True,
-                                                    "motivo": str(e),
-                                                    "predictores": combo,
-                                                    "tipo": f"{modelo_extra}-1",
-                                                    "tipo_transformacion": None,
-                                                }
-                                            )
-                            constantes = [
-                                m for m in modelos if m and m.get("tipo") == "constante"
-                            ]
-                            predictivos = [
-                                m
-                                for m in modelos
-                                if m
-                                and m.get("tipo") != "constante"
-                                and not m.get("descartado", False)
-                            ]
-                            train_cfg = (
-                                _COR().get("seleccion_modelos", {}).get("train", {})
-                            )
-                            train_mape_max = float(
-                                train_cfg.get("mape_max", umbral_mape_max)
-                            )
-                            train_r2_min = float(train_cfg.get("r2_min", 0.6))
-                            validos = [
-                                m
-                                for m in predictivos
-                                if m["mape"] <= train_mape_max
-                                and m["r2"] >= train_r2_min
-                            ]
-                            if validos:
-                                modelos_validos = validos
+                                        debug_stats["counts"]["models_total"] += 1
+                                        debug_stats["counts"]["models_discarded"] += 1
+                                        motivos_counter[motivo] += 1
+                                        if "Descartado 2D por:" in motivo:
+                                            debug_stats["counts"][
+                                                "models_discarded_2d_checks"
+                                            ] += 1
+                                        if "Insuficiente diversidad" in motivo:
+                                            debug_stats["counts"][
+                                                "models_discarded_diversidad"
+                                            ] += 1
+                        constantes = [
+                            m for m in modelos if m and m.get("tipo") == "constante"
+                        ]
+                        predictivos = [
+                            m
+                            for m in modelos
+                            if m
+                            and m.get("tipo") != "constante"
+                            and not m.get("descartado", False)
+                        ]
+                        train_cfg = _COR().get("seleccion_modelos", {}).get("train", {})
+                        train_mape_max = float(
+                            train_cfg.get("mape_max", umbral_mape_max)
+                        )
+                        train_r2_min = float(train_cfg.get("r2_min", 0.6))
+                        validos = [
+                            m
+                            for m in predictivos
+                            if m["mape"] <= train_mape_max and m["r2"] >= train_r2_min
+                        ]
+                        if validos:
+                            modelos_validos = validos
+                            familia_usada = fam
+                            filtro_aplicado = filtro
+                            modelos_info_familia = modelos
+                            df_filtrado_usado = df_filtrado
+                            break
+                        if constantes:
+                            constante = constantes[0]
+                            total_validos = df_original[objetivo].notna().sum()
+                            respaldo_constante = constante["n"]
+                            if (
+                                respaldo_constante >= 8
+                                and respaldo_constante >= 0.5 * total_validos
+                            ):
+                                modelos_validos = [constante]
                                 familia_usada = fam
                                 filtro_aplicado = filtro
                                 modelos_info_familia = modelos
                                 df_filtrado_usado = df_filtrado
-                            elif constantes:
-                                constante = constantes[0]
-                                total_validos = df_original[objetivo].notna().sum()
-                                respaldo_constante = constante["n"]
+                                break
+
+                    # 2) Si no hubo modelos válidos en F0/F1/F2, evaluar fallback a "sin filtro"
+                    if not modelos_validos:
+                        if permitir_sin_filtro:
+                            # Intentar recién ahora modo progresivo que puede terminar en 'sin filtro'
+                            df_filtrado, fam, filtro = seleccionar_predictores_validos(
+                                df_original,
+                                objetivo,
+                                idx,
+                                nivel_familia=None,
+                                min_datos_validos=min_datos_validos,
+                            )
+                            if (
+                                fam == "sin filtro"
+                                and df_filtrado is not None
+                                and not df_filtrado.empty
+                            ):
+                                predictores = [
+                                    col
+                                    for col in df_filtrado.columns
+                                    if col != df_filtrado.columns[0] and col != objetivo
+                                ]
+                                if predictores:
+                                    modelos = []
+                                    for combo in generar_combinaciones(predictores):
+                                        for poly in (False, True):
+                                            if poly:
+                                                if (
+                                                    modelos_habilitados is not None
+                                                    and not modelos_habilitados.get(
+                                                        "polinomico2", True
+                                                    )
+                                                ):
+                                                    continue
+                                            else:
+                                                if (
+                                                    modelos_habilitados is not None
+                                                    and not modelos_habilitados.get(
+                                                        "lineal", True
+                                                    )
+                                                ):
+                                                    continue
+                                            try:
+                                                modelos.append(
+                                                    entrenar_modelo(
+                                                        df_filtrado,
+                                                        objetivo,
+                                                        combo,
+                                                        poly,
+                                                        idx,
+                                                        manejar_outliers=manejar_outliers,
+                                                        umbral_z_suave=umbral_z_suave,
+                                                        umbral_z_duro=umbral_z_duro,
+                                                        alpha_pesos=alpha_pesos,
+                                                        w_min=w_min,
+                                                        remover_duro=remover_duro,
+                                                    )
+                                                )
+                                            except ModeloDescartado as e:
+                                                modelos.append(
+                                                    {
+                                                        "Aeronave": idx,
+                                                        "Parámetro": objetivo,
+                                                        "descartado": True,
+                                                        "motivo": str(e),
+                                                        "predictores": combo,
+                                                        "tipo": f"{'poly' if poly else 'linear'}-{len(combo)}",
+                                                        "tipo_transformacion": None,
+                                                    }
+                                                )
+                                        if len(combo) == 1:
+                                            for modelo_extra in (
+                                                "log",
+                                                "potencia",
+                                                "exp",
+                                            ):
+                                                if modelos_habilitados is not None:
+                                                    if (
+                                                        modelo_extra == "log"
+                                                        and not modelos_habilitados.get(
+                                                            "log", True
+                                                        )
+                                                    ):
+                                                        continue
+                                                    if (
+                                                        modelo_extra == "potencia"
+                                                        and not modelos_habilitados.get(
+                                                            "potencia", True
+                                                        )
+                                                    ):
+                                                        continue
+                                                    if (
+                                                        modelo_extra == "exponencial"
+                                                        and not modelos_habilitados.get(
+                                                            "exponencial", True
+                                                        )
+                                                    ):
+                                                        continue
+                                                try:
+                                                    modelos.append(
+                                                        entrenar_modelo(
+                                                            df_filtrado,
+                                                            objetivo,
+                                                            combo,
+                                                            False,
+                                                            idx,
+                                                            modelo_extra=modelo_extra,
+                                                            manejar_outliers=manejar_outliers,
+                                                            umbral_z_suave=umbral_z_suave,
+                                                            umbral_z_duro=umbral_z_duro,
+                                                            alpha_pesos=alpha_pesos,
+                                                            w_min=w_min,
+                                                            remover_duro=remover_duro,
+                                                        )
+                                                    )
+                                                except ModeloDescartado as e:
+                                                    modelos.append(
+                                                        {
+                                                            "Aeronave": idx,
+                                                            "Parámetro": objetivo,
+                                                            "descartado": True,
+                                                            "motivo": str(e),
+                                                            "predictores": combo,
+                                                            "tipo": f"{modelo_extra}-1",
+                                                            "tipo_transformacion": None,
+                                                        }
+                                                    )
+                                    constantes = [
+                                        m
+                                        for m in modelos
+                                        if m and m.get("tipo") == "constante"
+                                    ]
+                                    predictivos = [
+                                        m
+                                        for m in modelos
+                                        if m
+                                        and m.get("tipo") != "constante"
+                                        and not m.get("descartado", False)
+                                    ]
+                                    train_cfg = (
+                                        _COR()
+                                        .get("seleccion_modelos", {})
+                                        .get("train", {})
+                                    )
+                                    train_mape_max = float(
+                                        train_cfg.get("mape_max", umbral_mape_max)
+                                    )
+                                    train_r2_min = float(train_cfg.get("r2_min", 0.6))
+                                    validos = [
+                                        m
+                                        for m in predictivos
+                                        if m["mape"] <= train_mape_max
+                                        and m["r2"] >= train_r2_min
+                                    ]
+                                    if validos:
+                                        modelos_validos = validos
+                                        familia_usada = fam
+                                        filtro_aplicado = filtro
+                                        modelos_info_familia = modelos
+                                        df_filtrado_usado = df_filtrado
+                                    elif constantes:
+                                        constante = constantes[0]
+                                        total_validos = (
+                                            df_original[objetivo].notna().sum()
+                                        )
+                                        respaldo_constante = constante["n"]
+                                        if (
+                                            respaldo_constante >= 8
+                                            and respaldo_constante
+                                            >= 0.5 * total_validos
+                                        ):
+                                            modelos_validos = [constante]
+                                            familia_usada = fam
+                                            filtro_aplicado = filtro
+                                            modelos_info_familia = modelos
+                                            df_filtrado_usado = df_filtrado
+                        else:
+                            reporte.append(
+                                {
+                                    "Aeronave": idx,
+                                    "Parámetro": objetivo,
+                                    "Valor imputado": np.nan,
+                                    "Confianza": 0.0,
+                                    "Corr": 0.0,
+                                    "k": 0,
+                                    "Tipo Modelo": "n/a",
+                                    "Predictores": "",
+                                    "Penalizacion_k": 0.0,
+                                    "Familia": "sin filtro",
+                                    "Método predictivo": "Correlacion",
+                                    "Advertencia": "[X] No se permite imputación sin filtro para esta celda.",
+                                }
+                            )
+                            continue
+
+                    # Conteo por celda (una vez que se terminaron todos los intentos)
+                    if modelos_validos:
+                        debug_stats["counts"]["cells_modeled"] += 1
+
+                    # 3) Si hay modelos válidos, ejecutar selección + imputación
+                    if modelos_validos and df_filtrado_usado is not None:
+                        if modelos_validos[0].get("tipo") != "constante":
+                            if usar_loocv:
+                                for m in modelos_validos:
+                                    lo = validar_con_loocv(
+                                        df_filtrado_usado, objetivo, m
+                                    )
+                                    m.update(lo)
+                                    lo_class = _clasificar_loocv(
+                                        m.get("MAPE_LOOCV", np.inf),
+                                        m.get("R2_LOOCV", -np.inf),
+                                    )
+                                    m["loocv_class"] = lo_class
+                                    la = (
+                                        _COR()
+                                        .get("confianza", {})
+                                        .get("loocv_aporte", {})
+                                    )
+                                    w = float(la.get("w", 0.2))
+                                    w = max(0.0, min(1.0, w))
+                                    conf_base = float(m.get("Confianza", 0.0))
+                                    conf_loocv = float(m.get("Confianza_LOOCV", 0.0))
+                                    conf_mix = (1.0 - w) * conf_base + w * conf_loocv
+                                    m["Confianza_promedio"] = conf_mix
+                                    m["Confianza"] = conf_mix
+                                    mape_tr = m.get("mape", None)
+                                    mape_val = m.get("MAPE_LOOCV", None)
+                                    if mape_tr is not None and mape_val is not None:
+                                        ratio = (
+                                            np.inf
+                                            if mape_tr == 0
+                                            else mape_val / mape_tr
+                                        )
+                                        m["ratio_MAPE_val_vs_train"] = ratio
+                                        limite_ratio = float(
+                                            _COR()
+                                            .get("loocv", {})
+                                            .get("ratio_val_train_alerta", 5.0)
+                                        )
+                                        if ratio > limite_ratio:
+                                            advert_msg = (
+                                                f"Advertencia: El MAPE de validación es más de {limite_ratio:.0f} veces mayor que el de entrenamiento "
+                                                f"({mape_val:.2f}% vs {mape_tr:.2f}%). Posible sobreajuste."
+                                            )
+                                            if "Advertencia" in m and m["Advertencia"]:
+                                                m["Advertencia"] += "; " + advert_msg
+                                            else:
+                                                m["Advertencia"] = advert_msg
+                                    else:
+                                        m["ratio_MAPE_val_vs_train"] = None
+                            else:
+                                for m in modelos_validos:
+                                    m["n_LOOCV"] = m.get("n", 0)
+                                    m["MAPE_LOOCV"] = m["mape"]
+                                    m["R2_LOOCV"] = m["r2"]
+                                    m["Corr_LOOCV"] = m["corr"]
+                                    m["Confianza_LOOCV"] = m["Confianza"]
+                                    m["Confianza_promedio"] = m["Confianza"]
+                                    m["ratio_MAPE_val_vs_train"] = 1.0
+
+                            for m in modelos_validos:
+                                if m is not None and not m.get("descartado", False):
+                                    columnas_grafico = list(m["predictores"]) + [
+                                        objetivo
+                                    ]
+                                    df_filtrado_graf = (
+                                        df_filtrado_usado[columnas_grafico]
+                                        .dropna()
+                                        .to_dict(orient="list")
+                                    )
+                                    modelos_info.append(
+                                        {
+                                            "Aeronave": idx,
+                                            "Parámetro": objetivo,
+                                            "Familia": familia_usada,
+                                            "Filtro_aplicado": filtro_aplicado,
+                                            "predictores": list(m["predictores"]),
+                                            "n_predictores": len(m["predictores"]),
+                                            "n_muestras_entrenamiento": m["n"],
+                                            "tipo": m["tipo"],
+                                            "tipo_transformacion": m[
+                                                "tipo_transformacion"
+                                            ],
+                                            "coeficientes_originales": m[
+                                                "coeficientes_originales"
+                                            ],
+                                            "Peso de predictores": m.get(
+                                                "Peso de predictores", []
+                                            ),
+                                            "intercepto_original": m[
+                                                "intercepto_original"
+                                            ],
+                                            "ecuacion_string": m.get("ecuacion_string"),
+                                            "variable_independiente_1": m.get(
+                                                "variable_independiente_1"
+                                            ),
+                                            "variable_independiente_2": m.get(
+                                                "variable_independiente_2"
+                                            ),
+                                            "mape": m["mape"],
+                                            "r2": m["r2"],
+                                            "corr": m["corr"],
+                                            "Confianza": m["Confianza"],
+                                            "Confianza_LOOCV": m.get("Confianza_LOOCV"),
+                                            "k_LOOCV": m.get("n_LOOCV"),
+                                            "Corr_LOOCV": m.get("Corr_LOOCV"),
+                                            "MAPE_LOOCV": m.get("MAPE_LOOCV"),
+                                            "R2_LOOCV": m.get("R2_LOOCV"),
+                                            "Advertencia": m.get("Advertencia", None),
+                                            "datos_entrenamiento": m.get(
+                                                "datos_entrenamiento",
+                                                m["datos_originales"],
+                                            ),
+                                            "indices_entrenamiento": m.get(
+                                                "indices_entrenamiento", []
+                                            ),
+                                            "X_entrenamiento_original": m.get(
+                                                "X_entrenamiento_original",
+                                                m["datos_originales"].get(
+                                                    "X_original", []
+                                                ),
+                                            ),
+                                            "df_filtrado_shape": df_filtrado_usado.shape,
+                                            "df_filtrado_columns": list(
+                                                df_filtrado_usado.columns
+                                            ),
+                                            "df_original_shape": df_completo.shape,
+                                            "df_original_columns": list(
+                                                df_completo.columns
+                                            ),
+                                            "df_original": df_completo.to_dict(
+                                                orient="list"
+                                            ),
+                                            "df_filtrado": df_filtrado_graf,
+                                        }
+                                    )
+
+                            crit = _COR().get("loocv", {}).get("criterios", {})
+                            rob = crit.get("robusto", {"mape_max": 7.5, "r2_min": 0.6})
+                            nor = crit.get(
+                                "no_robusto", {"mape_max": 12.5, "r2_min": 0.45}
+                            )
+                            robustos = [
+                                m
+                                for m in modelos_validos
+                                if m["MAPE_LOOCV"] <= float(rob.get("mape_max", 7.5))
+                                and m["R2_LOOCV"] >= float(rob.get("r2_min", 0.6))
+                            ]
+                            no_robustos = [
+                                m
+                                for m in modelos_validos
                                 if (
-                                    respaldo_constante >= 8
-                                    and respaldo_constante >= 0.5 * total_validos
-                                ):
-                                    modelos_validos = [constante]
-                                    familia_usada = fam
-                                    filtro_aplicado = filtro
-                                    modelos_info_familia = modelos
-                                    df_filtrado_usado = df_filtrado
-                else:
+                                    m["MAPE_LOOCV"] <= float(nor.get("mape_max", 12.5))
+                                    and m["R2_LOOCV"] >= float(nor.get("r2_min", 0.45))
+                                )
+                                and not (
+                                    m["MAPE_LOOCV"] <= float(rob.get("mape_max", 7.5))
+                                    and m["R2_LOOCV"] >= float(rob.get("r2_min", 0.6))
+                                )
+                            ]
+                            if robustos:
+                                mejor = max(
+                                    robustos, key=lambda x: x["Confianza_promedio"]
+                                )
+                                warning_text = "Modelo robusto"
+                            elif no_robustos:
+                                mejor = max(
+                                    no_robustos, key=lambda x: x["Confianza_promedio"]
+                                )
+                                warning_text = "Modelo no robusto"
+                            else:
+                                reporte.append(
+                                    {
+                                        "Aeronave": idx,
+                                        "Parámetro": objetivo,
+                                        "Valor imputado": np.nan,
+                                        "Confianza": 0.0,
+                                        "Corr": 0.0,
+                                        "k": 0,
+                                        "Tipo Modelo": "n/a",
+                                        "Predictores": "",
+                                        "Penalizacion_k": 0.0,
+                                        "Familia": familia_usada,
+                                        "Método predictivo": "Correlacion",
+                                        "Advertencia": "[X] Todos los modelos descartados por LOOCV (MAPE > 12.5% o R2 <= 0.45)",
+                                    }
+                                )
+                                continue
+
+                            if "Advertencia" in mejor and mejor["Advertencia"]:
+                                if warning_text not in mejor["Advertencia"]:
+                                    mejor["Advertencia"] += "; " + warning_text
+                            else:
+                                mejor["Advertencia"] = warning_text
+                            mejor["Familia"] = familia_usada
+
+                            if not pd.isna(df_resultado.at[idx, objetivo]):
+                                if verbose:
+                                    print(
+                                        f"[WARN] Ya se imputó {objetivo} en fila {idx}. No debería ocurrir."
+                                    )
+
+                            df_resultado, imputacion = imputar_valores_celda(
+                                df_resultado, df_filtrado_usado, objetivo, mejor, idx
+                            )
+                            imputacion["Familia"] = familia_usada
+                            advertencia_final = imputacion.get("Advertencia", "")
+                            if warning_text not in advertencia_final:
+                                if advertencia_final:
+                                    advertencia_final += "; " + warning_text
+                                else:
+                                    advertencia_final = warning_text
+                                imputacion["Advertencia"] = advertencia_final
+                            reporte.append(imputacion)
+                            continue
+                        else:
+                            constante = modelos_validos[0]
+                            total_validos = df_original[objetivo].notna().sum()
+                            respaldo_constante = constante["n"]
+                            porcentaje = (
+                                100 * respaldo_constante / total_validos
+                                if total_validos
+                                else 0
+                            )
+                            advertencia = (
+                                f"Imputación por valor constante respaldada por {respaldo_constante} de {total_validos} valores "
+                                f"({porcentaje:.1f}% de la muestra original)."
+                            )
+                            if "Advertencia" in constante and constante["Advertencia"]:
+                                if advertencia not in constante["Advertencia"]:
+                                    constante["Advertencia"] += "; " + advertencia
+                            else:
+                                constante["Advertencia"] = advertencia
+                            constante["Familia"] = familia_usada
+                            df_resultado, imputacion = imputar_valores_celda(
+                                df_resultado,
+                                df_filtrado_usado,
+                                objetivo,
+                                constante,
+                                idx,
+                            )
+                            imputacion["Familia"] = familia_usada
+                            imputacion["Advertencia"] = advertencia
+                            reporte.append(imputacion)
+                            continue
+
+                    # 4) Si no se pudo imputar nada, registrar evaluación sin valor
                     reporte.append(
                         {
                             "Aeronave": idx,
@@ -2061,238 +2438,57 @@ def imputaciones_correlacion(
                             "Tipo Modelo": "n/a",
                             "Predictores": "",
                             "Penalizacion_k": 0.0,
-                            "Familia": "sin filtro",
+                            "Familia": familia_usada if familia_usada else "n/a",
                             "Método predictivo": "Correlacion",
-                            "Advertencia": "❌ No se permite imputación sin filtro para esta celda.",
+                            "Advertencia": "[X] No se pudo imputar valor por ningún método.",
+                        }
+                    )
+                except Exception as e:
+                    debug_stats["counts"]["cells_error"] += 1
+                    reporte.append(
+                        {
+                            "Aeronave": idx,
+                            "Parámetro": objetivo,
+                            "Valor imputado": np.nan,
+                            "Confianza": 0.0,
+                            "Corr": 0.0,
+                            "k": 0,
+                            "Tipo Modelo": "error",
+                            "Predictores": "",
+                            "Penalizacion_k": 0.0,
+                            "Familia": "n/a",
+                            "Método predictivo": "Correlacion",
+                            "Advertencia": f"ERROR: {type(e).__name__}: {e}",
                         }
                     )
                     continue
-            if modelos_validos and df_filtrado_usado is not None:
-                if modelos_validos[0].get("tipo") != "constante":
-                    if usar_loocv:
-                        for m in modelos_validos:
-                            lo = validar_con_loocv(df_filtrado_usado, objetivo, m)
-                            m.update(lo)
-                            # Clasificar LOOCV (opcional, para trazabilidad/penalizaciones externas)
-                            lo_class = _clasificar_loocv(
-                                m.get("MAPE_LOOCV", np.inf), m.get("R2_LOOCV", -np.inf)
-                            )
-                            m["loocv_class"] = lo_class
-                            # Mezcla final de confianza: base vs LOOCV segun peso w
-                            la = _COR().get("confianza", {}).get("loocv_aporte", {})
-                            w = float(la.get("w", 0.2))
-                            w = max(0.0, min(1.0, w))
-                            conf_base = float(m.get("Confianza", 0.0))
-                            conf_loocv = float(m.get("Confianza_LOOCV", 0.0))
-                            conf_mix = (1.0 - w) * conf_base + w * conf_loocv
-                            m["Confianza_promedio"] = conf_mix
-                            m["Confianza"] = conf_mix
-                            # Ratio de validación vs entrenamiento por modelo
-                            mape_tr = m.get("mape", None)
-                            mape_val = m.get("MAPE_LOOCV", None)
-                            if mape_tr is not None and mape_val is not None:
-                                ratio = np.inf if mape_tr == 0 else mape_val / mape_tr
-                                m["ratio_MAPE_val_vs_train"] = ratio
-                                limite_ratio = float(
-                                    _COR()
-                                    .get("loocv", {})
-                                    .get("ratio_val_train_alerta", 5.0)
-                                )
-                                if ratio > limite_ratio:
-                                    advert_msg = (
-                                        f"Advertencia: El MAPE de validación es más de {limite_ratio:.0f} veces mayor que el de entrenamiento "
-                                        f"({mape_val:.2f}% vs {mape_tr:.2f}%). Posible sobreajuste."
-                                    )
-                                    if "Advertencia" in m and m["Advertencia"]:
-                                        m["Advertencia"] += "; " + advert_msg
-                                    else:
-                                        m["Advertencia"] = advert_msg
-                            else:
-                                m["ratio_MAPE_val_vs_train"] = None
-                    else:
-                        for m in modelos_validos:
-                            m["n_LOOCV"] = m.get("n", 0)
-                            m["MAPE_LOOCV"] = m["mape"]
-                            m["R2_LOOCV"] = m["r2"]
-                            m["Corr_LOOCV"] = m["corr"]
-                            m["Confianza_LOOCV"] = m["Confianza"]
-                            m["Confianza_promedio"] = m["Confianza"]
-                            # En modo sin LOOCV, el ratio es 1 por construcción
-                            m["ratio_MAPE_val_vs_train"] = 1.0
-                    for m in modelos_validos:
-                        if m is not None and not m.get("descartado", False):
-                            columnas_grafico = list(m["predictores"]) + [objetivo]
-                            df_filtrado_graf = (
-                                df_filtrado_usado[columnas_grafico]
-                                .dropna()
-                                .to_dict(orient="list")
-                            )
-                            modelos_info.append(
-                                {
-                                    "Aeronave": idx,
-                                    "Parámetro": objetivo,
-                                    "Familia": familia_usada,
-                                    "Filtro_aplicado": filtro_aplicado,
-                                    "predictores": list(m["predictores"]),
-                                    "n_predictores": len(m["predictores"]),
-                                    "n_muestras_entrenamiento": m["n"],
-                                    "tipo": m["tipo"],
-                                    "tipo_transformacion": m["tipo_transformacion"],
-                                    "coeficientes_originales": m[
-                                        "coeficientes_originales"
-                                    ],
-                                    "Peso de predictores": m.get(
-                                        "Peso de predictores", []
-                                    ),
-                                    "intercepto_original": m["intercepto_original"],
-                                    "ecuacion_string": m.get("ecuacion_string"),
-                                    "variable_independiente_1": m.get(
-                                        "variable_independiente_1"
-                                    ),
-                                    "variable_independiente_2": m.get(
-                                        "variable_independiente_2"
-                                    ),
-                                    "mape": m["mape"],
-                                    "r2": m["r2"],
-                                    "corr": m["corr"],
-                                    "Confianza": m["Confianza"],
-                                    "Confianza_LOOCV": m.get("Confianza_LOOCV"),
-                                    "k_LOOCV": m.get("n_LOOCV"),
-                                    "Corr_LOOCV": m.get("Corr_LOOCV"),
-                                    "MAPE_LOOCV": m.get("MAPE_LOOCV"),
-                                    "R2_LOOCV": m.get("R2_LOOCV"),
-                                    "Advertencia": m.get("Advertencia", None),
-                                    "datos_entrenamiento": m.get(
-                                        "datos_entrenamiento", m["datos_originales"]
-                                    ),
-                                    "indices_entrenamiento": m.get(
-                                        "indices_entrenamiento", []
-                                    ),
-                                    "X_entrenamiento_original": m.get(
-                                        "X_entrenamiento_original",
-                                        m["datos_originales"].get("X_original", []),
-                                    ),
-                                    "df_filtrado_shape": df_filtrado_usado.shape,
-                                    "df_filtrado_columns": list(
-                                        df_filtrado_usado.columns
-                                    ),
-                                    "df_original_shape": df_completo.shape,
-                                    "df_original_columns": list(df_completo.columns),
-                                    "df_original": df_completo.to_dict(orient="list"),
-                                    "df_filtrado": df_filtrado_graf,
-                                }
-                            )
-                    crit = _COR().get("loocv", {}).get("criterios", {})
-                    rob = crit.get("robusto", {"mape_max": 7.5, "r2_min": 0.6})
-                    nor = crit.get("no_robusto", {"mape_max": 12.5, "r2_min": 0.45})
-                    robustos = [
-                        m
-                        for m in modelos_validos
-                        if m["MAPE_LOOCV"] <= float(rob.get("mape_max", 7.5))
-                        and m["R2_LOOCV"] >= float(rob.get("r2_min", 0.6))
-                    ]
-                    no_robustos = [
-                        m
-                        for m in modelos_validos
-                        if (
-                            m["MAPE_LOOCV"] <= float(nor.get("mape_max", 12.5))
-                            and m["R2_LOOCV"] >= float(nor.get("r2_min", 0.45))
-                        )
-                        and not (
-                            m["MAPE_LOOCV"] <= float(rob.get("mape_max", 7.5))
-                            and m["R2_LOOCV"] >= float(rob.get("r2_min", 0.6))
-                        )
-                    ]
-                    if robustos:
-                        mejor = max(robustos, key=lambda x: x["Confianza_promedio"])
-                        warning_text = "🟢 Modelo robusto"
-                    elif no_robustos:
-                        mejor = max(no_robustos, key=lambda x: x["Confianza_promedio"])
-                        warning_text = "🟡 Modelo no robusto"
-                    else:
-                        reporte.append(
-                            {
-                                "Aeronave": idx,
-                                "Parámetro": objetivo,
-                                "Valor imputado": np.nan,
-                                "Confianza": 0.0,
-                                "Corr": 0.0,
-                                "k": 0,
-                                "Tipo Modelo": "n/a",
-                                "Predictores": "",
-                                "Penalizacion_k": 0.0,
-                                "Familia": familia_usada,
-                                "Método predictivo": "Correlacion",
-                                "Advertencia": "❌ Todos los modelos descartados por LOOCV (MAPE > 12.5% o R2 <= 0.45)",
-                            }
-                        )
-                        continue
-                    # Añadir o concatenar etiqueta de robustez en 'Advertencia'
-                    if "Advertencia" in mejor and mejor["Advertencia"]:
-                        if warning_text not in mejor["Advertencia"]:
-                            mejor["Advertencia"] += "; " + warning_text
-                    else:
-                        mejor["Advertencia"] = warning_text
-                    mejor["Familia"] = familia_usada
-                    if not pd.isna(df_resultado.at[idx, objetivo]):
-                        if verbose:
-                            print(
-                                f"⚠️ [ADVERTENCIA] Ya se imputó {objetivo} en fila {idx}. No debería ocurrir."
-                            )
-                    df_resultado, imputacion = imputar_valores_celda(
-                        df_resultado, df_filtrado_usado, objetivo, mejor, idx
-                    )
-                    imputacion["Familia"] = familia_usada
-                    advertencia_final = imputacion.get("Advertencia", "")
-                    if warning_text not in advertencia_final:
-                        if advertencia_final:
-                            advertencia_final += "; " + warning_text
-                        else:
-                            advertencia_final = warning_text
-                        imputacion["Advertencia"] = advertencia_final
-                    reporte.append(imputacion)
-                    continue
-                else:
-                    constante = modelos_validos[0]
-                    total_validos = df_original[objetivo].notna().sum()
-                    respaldo_constante = constante["n"]
-                    porcentaje = (
-                        100 * respaldo_constante / total_validos if total_validos else 0
-                    )
-                    advertencia = (
-                        f"Imputación por valor constante respaldada por {respaldo_constante} de {total_validos} valores "
-                        f"({porcentaje:.1f}% de la muestra original)."
-                    )
-                    if "Advertencia" in constante and constante["Advertencia"]:
-                        if advertencia not in constante["Advertencia"]:
-                            constante["Advertencia"] += "; " + advertencia
-                    else:
-                        constante["Advertencia"] = advertencia
-                    constante["Familia"] = familia_usada
-                    df_resultado, imputacion = imputar_valores_celda(
-                        df_resultado, df_filtrado_usado, objetivo, constante, idx
-                    )
-                    imputacion["Familia"] = familia_usada
-                    imputacion["Advertencia"] = advertencia
-                    reporte.append(imputacion)
-                    continue
-            # 4. Si no se pudo imputar nada
-            reporte.append(
-                {
-                    "Aeronave": idx,
-                    "Parámetro": objetivo,
-                    "Valor imputado": np.nan,
-                    "Confianza": 0.0,
-                    "Corr": 0.0,
-                    "k": 0,
-                    "Tipo Modelo": "n/a",
-                    "Predictores": "",
-                    "Penalizacion_k": 0.0,
-                    "Familia": familia_usada if familia_usada else "n/a",
-                    "Método predictivo": "Correlacion",
-                    "Advertencia": "❌ No se pudo imputar valor por ningún método.",
-                }
+        debug_stats["discard_motivos_top"] = [
+            {"motivo": k, "count": int(v)} for k, v in motivos_counter.most_common(15)
+        ]
+        LAST_CORR_DEBUG = debug_stats
+        if verbose:
+            _log("[DEBUG] correlación.knobs:")
+            _log(f"  - checks_2d.enabled = {debug_stats['knobs']['checks_2d_enabled']}")
+            _log(
+                "  - min_unicos(linear-2/poly-2) = "
+                f"{_min_unicos('linear-2')}/{_min_unicos('poly-2')}"
             )
+            _log(
+                "  - min_muestras(linear-2/poly-2) = "
+                f"{_min_muestras('linear-2')}/{_min_muestras('poly-2')}"
+            )
+            _log("[DEBUG] correlación.stats:")
+            _log(
+                "  - modelos_total / descartados / none = "
+                f"{debug_stats['counts']['models_total']} / {debug_stats['counts']['models_discarded']} / {debug_stats['counts']['models_none']}"
+            )
+            _log(
+                "  - descartados 2D-checks / diversidad = "
+                f"{debug_stats['counts']['models_discarded_2d_checks']} / {debug_stats['counts']['models_discarded_diversidad']}"
+            )
+    finally:
+        _CFG_OVERRIDE = _old_cfg
+
     return df_resultado, reporte, modelos_info
 
 

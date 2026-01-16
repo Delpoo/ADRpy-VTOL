@@ -21,7 +21,10 @@ Uso:
 
 import pandas as pd
 import numpy as np
+import sys
 from typing import Dict, List, Optional, Tuple
+
+from .column_aliases import canonicalize_parametro
 
 try:
     from Modulos.controller import load_effective_config
@@ -37,7 +40,14 @@ def imprimir(msg, bold=False):
     """Imprime mensaje con formato opcional en negrita."""
     prefix = "\033[1m" if bold else ""
     suffix = "\033[0m" if bold else ""
-    print(f"{prefix}{msg}{suffix}")
+    text = f"{prefix}{msg}{suffix}"
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        # Consolas Windows con cp1252 pueden fallar con emoji.
+        enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+        safe = text.encode(enc, errors="replace").decode(enc, errors="replace")
+        print(safe)
 
 
 def is_missing(val):
@@ -107,8 +117,9 @@ def clasificar_parametro(parametro: str, familias: dict) -> str:
     Returns:
         str: Nombre de la familia ('fisica', 'geometrica', 'prestacional') o 'desconocida'
     """
+    canon = canonicalize_parametro(parametro)
     for familia_nombre, parametros in familias.items():
-        if parametro in parametros:
+        if canon in parametros or parametro in parametros:
             return familia_nombre
     return "desconocida"
 
@@ -206,7 +217,18 @@ def imputar_por_similitud_nueva(
         imprimir(
             f"🔍 Parámetros disponibles en df_filtrado: {len(df_filtrado.columns)}"
         )
-        imprimir(f"🔍 Aeronaves candidatas: {len(df_filtrado.index) - 1}")
+        total_candidatas = len(df_filtrado.index) - 1
+        try:
+            candidatas_con_valor_objetivo = int(
+                df_filtrado[parametro_objetivo].notna().sum()
+            )
+        except Exception:
+            candidatas_con_valor_objetivo = None
+        imprimir(f"🔍 Aeronaves candidatas (totales): {total_candidatas}")
+        if candidatas_con_valor_objetivo is not None:
+            imprimir(
+                f"🔍 Candidatas con valor en '{parametro_objetivo}': {candidatas_con_valor_objetivo}"
+            )
 
     # Lista para almacenar aeronaves similares válidas
     aeronaves_similares = []

@@ -4,6 +4,8 @@ import json
 import os
 import sys
 import io
+import time
+import contextlib
 from datetime import datetime
 
 # from .imputacion_similitud_flexible import *  # COMENTADO: Reemplazado por nueva implementación
@@ -47,7 +49,23 @@ def is_missing(val):
 
 
 def _cargar_configuracion() -> dict:
-    """Carga configuración centralizada con posibles overrides y panel opcional."""
+    """Carga configuración centralizada con posibles overrides.
+
+    Nota importante:
+    - En notebooks, el `cwd` suele ser `notebooks/` y NO `analisis/`.
+    - Por eso priorizamos `Modulos.controller.load_effective_config()`, que resuelve
+      `config_overrides.json` relativo a `analisis/` (PROJECT_ROOT).
+    """
+    # 1) Fuente de verdad: controller (respeta overrides en analisis/config_overrides.json)
+    try:
+        from Modulos.controller import load_effective_config as _load_effective_config
+
+        cfg = _load_effective_config()
+        return cfg
+    except Exception:
+        pass
+
+    # 2) Fallback: buscar overrides en el cwd (compat) y aplicar a config local
     overrides = None
     overrides_path = os.path.join(os.getcwd(), "config_overrides.json")
     if os.path.exists(overrides_path):
@@ -146,6 +164,58 @@ def bucle_imputacion_similitud_correlacion(
     )
     orden = loop_cfg.get("orden", ["similitud", "correlacion"])
 
+    # --- Auditoría de ejecución (siempre a archivo, para evitar dependencia de prints) ---
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    _t0 = time.time()
+
+    def _write_json_no_overwrite(path: str, payload: dict) -> str:
+        base, ext = os.path.splitext(path)
+        candidate = path
+        i = 1
+        while os.path.exists(candidate):
+            candidate = f"{base}({i}){ext}"
+            i += 1
+        try:
+            os.makedirs(os.path.dirname(candidate) or ".", exist_ok=True)
+            with open(candidate, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+        except Exception:
+            return path
+        return candidate
+
+    # Dónde guardar auditorías (mismo Results que export), SIEMPRE relativo a analisis/
+    audit_dir = None
+    try:
+        base_dir_name = export_cfg.get("dir") if isinstance(export_cfg, dict) else None
+        audit_dir = base_dir_name or export_cfg.get("json", {}).get("dir") or "Results"
+    except Exception:
+        audit_dir = "Results"
+
+    _analisis_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    audit_dir_abs = (
+        os.path.join(_analisis_dir, audit_dir)
+        if audit_dir and not os.path.isabs(audit_dir)
+        else (audit_dir or os.path.join(_analisis_dir, "Results"))
+    )
+    audit_path = os.path.join(audit_dir_abs, f"audit_evaluacion_{run_id}.json")
+    audit: dict = {
+        "run_id": run_id,
+        "timestamp": run_id,
+        "config": {
+            "max_iteraciones": max_iteraciones,
+            "orden": orden,
+            "permitir_sin_filtro": permitir_sin_filtro,
+            "min_datos_validos": min_datos_validos,
+            "mostrar_consola": mostrar_consola,
+            "correlacion_checks_2d": (
+                (cfg.get("correlacion", {}).get("checks_2d", {}) or {}).get("enabled")
+            ),
+        },
+        "initial": {},
+        "iterations": [],
+        "final": {},
+    }
+
     # Redirección global de consola si se solicita silencio
     _restore_streams = False
     _old_stdout = None
@@ -175,6 +245,11 @@ def bucle_imputacion_similitud_correlacion(
         total_celdas = df_procesado_base.size
         faltantes = df_procesado_base.isna().sum().sum()
         print(f"[INFO] Celdas totales: {total_celdas}. Celdas vacias: {faltantes}.")
+        audit["initial"] = {
+            "total_cells": int(total_celdas),
+            "missing_cells": int(faltantes),
+            "shape": list(df_procesado_base.shape),
+        }
     except Exception:
         print("[INFO] Tabla cargada correctamente.")
 
@@ -209,6 +284,16 @@ def bucle_imputacion_similitud_correlacion(
             df_procesado_base,
             titulo=f"Resumen de Valores Faltantes Antes de Iteración {iteracion}",
         )
+
+        # Auditoría por iteración
+        audit_iter = {
+            "iter": int(iteracion),
+            "missing_before": int(df_procesado_base.isna().sum().sum()),
+            "reporte_similitud": 0,
+            "reporte_correlacion": 0,
+            "corr_debug": None,
+            "imputaciones_validas": 0,
+        }
 
         # Crear copias independientes para cada método
         df_similitud = df_filtrado.copy()
@@ -249,6 +334,7 @@ def bucle_imputacion_similitud_correlacion(
                         )
                     },
                 )
+                audit_iter["reporte_similitud"] = int(len(reporte_similitud or []))
             if metodo == "correlacion" and ejecutar_corr:
                 print("\n" + "-" * 80)
                 print(
@@ -277,7 +363,38 @@ def bucle_imputacion_similitud_correlacion(
                     alpha_pesos=out_kwargs.get("alpha_pesos", 0.5),
                     w_min=out_kwargs.get("w_min", 0.2),
                     remover_duro=out_kwargs.get("remover_duro", False),
+                    cfg_override=cfg,
                 )
+
+                audit_iter["reporte_correlacion"] = int(len(reporte_correlacion or []))
+
+                # Capturar debug de correlación (para análisis de performance y cobertura)
+                try:
+                    from .imputacion_correlacion import LAST_CORR_DEBUG
+
+                    audit_iter["corr_debug"] = LAST_CORR_DEBUG
+                except Exception:
+                    audit_iter["corr_debug"] = None
+
+                # Resumen rápido para verificar que realmente se están entrenando/evaluando modelos
+                # (no afecta la lógica, solo observabilidad)
+                if mostrar_consola:
+                    try:
+                        from .imputacion_correlacion import LAST_CORR_DEBUG
+
+                        counts = (LAST_CORR_DEBUG or {}).get("counts", {})
+                        knobs = (LAST_CORR_DEBUG or {}).get("knobs", {})
+                        print(
+                            "[DEBUG] correlación: "
+                            f"cells_missing={counts.get('cells_missing')} "
+                            f"cells_modeled={counts.get('cells_modeled')} "
+                            f"models_total={counts.get('models_total')} "
+                            f"discarded={counts.get('models_discarded')} "
+                            f"none={counts.get('models_none')} "
+                            f"checks_2d={knobs.get('checks_2d_enabled')}"
+                        )
+                    except Exception:
+                        pass
 
         # Guardar modelos_info_correlacion por cada celda (idx, objetivo)
         if modelos_info_correlacion:
@@ -671,6 +788,9 @@ def bucle_imputacion_similitud_correlacion(
                 if not is_missing(imp.get("Valor imputado", None))
             ]
         )
+        audit_iter["imputaciones_validas"] = int(nuevas_validas)
+        audit_iter["missing_after"] = int(df_procesado_base.isna().sum().sum())
+        audit["iterations"].append(audit_iter)
         if nuevas_validas < int(stop_cfg.get("min_nuevas_por_iter", 1)):
             _sin_mejora_consec = _sin_mejora_consec + 1
         else:
@@ -701,10 +821,9 @@ def bucle_imputacion_similitud_correlacion(
     )
 
     # === EXPORTAR JSON OPTIMIZADO (estructura unificada por celda) ===
-    import json
 
     try:
-        import os
+        import re
 
         exp_json = export_cfg.get(
             "json",
@@ -715,8 +834,14 @@ def bucle_imputacion_similitud_correlacion(
             },
         )
         if exp_json.get("enabled", True):
+            # Compat: algunos paneles guardan `loop.export.dir` en vez de `loop.export.json.dir`
+            base_dir_name = (
+                export_cfg.get("dir") if isinstance(export_cfg, dict) else None
+            )
             results_dir = os.path.join(
-                os.path.dirname(__file__), "..", exp_json.get("dir", "Results")
+                os.path.dirname(__file__),
+                "..",
+                (exp_json.get("dir") or base_dir_name or "Results"),
             )
             if not os.path.exists(results_dir):
                 os.makedirs(results_dir)
@@ -876,6 +1001,17 @@ def bucle_imputacion_similitud_correlacion(
             output_path = os.path.join(
                 results_dir, exp_json.get("fname", "modelos_completos_por_celda.json")
             )
+
+            # Evitar sobreescritura: si existe, generar sufijo (1), (2), ...
+            base, ext = os.path.splitext(output_path)
+            base_no_num = re.sub(r"\s*\(\d+\)$", "", base)
+            candidate = output_path
+            i = 1
+            while os.path.exists(candidate):
+                candidate = f"{base_no_num}({i}){ext}"
+                i += 1
+            output_path = candidate
+
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(
                     export_dict_unificado,
@@ -903,6 +1039,21 @@ def bucle_imputacion_similitud_correlacion(
             cfg_local if isinstance(cfg_local, dict) else _cargar_configuracion()
         )
         save_config_snapshot(cfg_final, out_dir, prefix="config_usada")
+    except Exception:
+        pass
+
+    # Escribir auditoría SIEMPRE (incluso si la consola está silenciada)
+    try:
+        audit["final"] = {
+            "missing_cells": int(df_procesado_base.isna().sum().sum()),
+            "shape": list(df_procesado_base.shape),
+            "resumen_imputaciones": int(len(resumen_imputaciones or [])),
+            "detalles_para_excel": int(len(detalles_para_excel or [])),
+            "duration_seconds": float(max(0.0, time.time() - _t0)),
+        }
+        audit_written_path = _write_json_no_overwrite(audit_path, audit)
+        if mostrar_consola:
+            print(f"\n🧾 Auditoría escrita en: {audit_written_path}")
     except Exception:
         pass
 
@@ -955,97 +1106,164 @@ def ejecutar_pipeline(cfg: dict | None = None) -> None:
             cfg = default_config()
     cfg = get_config(cfg)
 
-    # Preparar datos como en main.py pero sin interacción CLI
-    try:
-        # Preferir las utilidades existentes
-        from .config_and_loading import configurar_entorno, cargar_datos
-        from .data_processing import procesar_datos_y_manejar_duplicados
-        from .derivados import completar_campos_derivados
-    except Exception as _e:
-        print(f"[WARN] No se pudieron importar utilidades de carga/procesamiento: {_e}")
-        return
+    # Respetar flag global de consola (silenciar TODO el pipeline cuando esté apagado)
+    mostrar_consola = bool(cfg.get("orquestacion", {}).get("mostrar_consola", True))
 
-    try:
-        # Display y entorno
-        configurar_entorno(
-            max_rows=cfg.get("entorno", {}).get("max_rows", 200),
-            max_columns=cfg.get("entorno", {}).get("max_columns", 120),
-        )
+    with contextlib.ExitStack() as _stack:
+        if not mostrar_consola:
+            _stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+            _stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
 
-        # Cargar Excel desde cfg (evitar prompt)
-        ruta_excel = cfg.get("entorno", {}).get("ruta_excel")
-        df_inicial, ruta_archivo = cargar_datos(ruta_archivo=ruta_excel)
-        print(f"✅ Datos cargados desde: {ruta_archivo}")
-
-        # Procesamiento base + derivados (con defaults seguros)
-        df_procesado = procesar_datos_y_manejar_duplicados(df_inicial)
-    except Exception as e:
-        print(f"[ERROR] Falló la carga/procesamiento: {e}")
-        return
-
-    try:
-        df_procesado, _ = completar_campos_derivados(
-            df=df_procesado,
-            solo_completar_vacios=True,
-            usar_IAS_para_alcance=True,
-        )
-    except Exception as e:
-        print(f"[WARN] completar_campos_derivados falló o no está disponible: {e}")
-
-    # Selección de parámetros basada en cfg (familias) o fallback a intersección/numéricos
-    try:
-        familias_cfg = cfg.get("similitud", {}).get("familias", {}) or {}
-        usadas = cfg.get("similitud", {}).get(
-            "familias_usadas", list(familias_cfg.keys())
-        )
-        candidatos = []
-        for fam in usadas:
-            lst = familias_cfg.get(fam, [])
-            if isinstance(lst, (list, tuple)):
-                candidatos.extend(list(lst))
-        columnas = list(df_procesado.columns)
-        parametros_preseleccionados = [c for c in candidatos if c in columnas]
-        if not parametros_preseleccionados:
-            # Fallback: usar columnas numéricas o todas si no hay numéricas
-            try:
-                import pandas as _pd  # local
-
-                parametros_preseleccionados = _pd.Index(columnas)[
-                    _pd.Series(columnas).map(
-                        lambda c: _pd.api.types.is_numeric_dtype(df_procesado[c])
-                    )
-                ].tolist()
-            except Exception:
-                parametros_preseleccionados = columnas
-        df_filtrado = df_procesado[parametros_preseleccionados].copy()
-    except Exception as e:
-        print(f"[WARN] No se pudo construir df_filtrado desde familias: {e}")
-        df_filtrado = df_procesado.copy()
-        parametros_preseleccionados = list(df_procesado.columns)
-
-    # Capas de familia (no críticas en el loop actual)
-    capas_familia = [
-        ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal"],
-        ["Misión", "Despegue"],
-        ["Misión"],
-    ]
-
-    # Ejecutar el bucle principal con config actual (el propio bucle lee cfg internamente)
-    try:
-        # Firma moderna (solo cfg): si existiera en tu repo, descomenta y usa
-        bucle_imputacion_similitud_correlacion(cfg)  # type: ignore[arg-type]
-    except TypeError:
-        # Firma actual: requiere dataframes y otros parámetros
+        # Preparar datos como en main.py pero sin interacción CLI
         try:
-            bucle_imputacion_similitud_correlacion(
-                df_filtrado=df_filtrado,
-                parametros_preseleccionados=parametros_preseleccionados,
-                capas_familia=capas_familia,
-                df_procesado=df_procesado,
-                debug_mode=bool(cfg.get("entorno", {}).get("debug_mode", False)),
-                permitir_sin_filtro=bool(
-                    cfg.get("orquestacion", {}).get("permitir_sin_filtro", False)
-                ),
+            # Preferir las utilidades existentes
+            from .config_and_loading import configurar_entorno, cargar_datos
+            from .data_processing import procesar_datos_y_manejar_duplicados
+            from .derivados import completar_campos_derivados
+        except Exception as _e:
+            print(
+                f"[WARN] No se pudieron importar utilidades de carga/procesamiento: {_e}"
+            )
+            return
+
+        try:
+            # Display y entorno
+            configurar_entorno(
+                max_rows=cfg.get("entorno", {}).get("max_rows", 200),
+                max_columns=cfg.get("entorno", {}).get("max_columns", 120),
+            )
+
+            # Cargar Excel desde cfg (evitar prompt)
+            ruta_excel = cfg.get("entorno", {}).get("ruta_excel")
+            df_inicial, ruta_archivo = cargar_datos(ruta_archivo=ruta_excel)
+            print(f"[OK] Datos cargados desde: {ruta_archivo}")
+
+            # Procesamiento base + derivados (con defaults seguros)
+            df_procesado = procesar_datos_y_manejar_duplicados(df_inicial)
+        except Exception as e:
+            print(f"[ERROR] Falló la carga/procesamiento: {e}")
+            return
+
+        try:
+            df_procesado, origen_por_celda = completar_campos_derivados(
+                df=df_procesado,
+                solo_completar_vacios=True,
+                usar_IAS_para_alcance=True,
             )
         except Exception as e:
-            print(f"[ERROR] Falló el bucle de imputación: {e}")
+            print(f"[WARN] completar_campos_derivados falló o no está disponible: {e}")
+            origen_por_celda = None
+
+        # Selección de parámetros basada en cfg (familias) o fallback a intersección/numéricos
+        try:
+            from .column_aliases import resolve_name_in_columns
+
+            familias_cfg = cfg.get("similitud", {}).get("familias", {}) or {}
+            usadas = cfg.get("similitud", {}).get(
+                "familias_usadas", list(familias_cfg.keys())
+            )
+            candidatos = []
+            for fam in usadas:
+                lst = familias_cfg.get(fam, [])
+                if isinstance(lst, (list, tuple)):
+                    candidatos.extend(list(lst))
+            columnas = list(df_procesado.columns)
+            parametros_preseleccionados = []
+            for c in candidatos:
+                resolved = resolve_name_in_columns(c, columnas)
+                if resolved and resolved not in parametros_preseleccionados:
+                    parametros_preseleccionados.append(resolved)
+            if not parametros_preseleccionados:
+                # Fallback: usar columnas numéricas o todas si no hay numéricas
+                try:
+                    import pandas as _pd  # local
+
+                    parametros_preseleccionados = _pd.Index(columnas)[
+                        _pd.Series(columnas).map(
+                            lambda c: _pd.api.types.is_numeric_dtype(df_procesado[c])
+                        )
+                    ].tolist()
+                except Exception:
+                    parametros_preseleccionados = columnas
+            df_filtrado = df_procesado[parametros_preseleccionados].copy()
+        except Exception as e:
+            print(f"[WARN] No se pudo construir df_filtrado desde familias: {e}")
+            df_filtrado = df_procesado.copy()
+            parametros_preseleccionados = list(df_procesado.columns)
+
+        # Capas de familia (no críticas en el loop actual)
+        capas_familia = [
+            ["Misión", "Despegue", "Propulsión vertical", "Propulsión horizontal"],
+            ["Misión", "Despegue"],
+            ["Misión"],
+        ]
+
+        # Ejecutar el bucle principal con config actual (el propio bucle lee cfg internamente)
+        try:
+            # Firma moderna (solo cfg): si existiera en tu repo, descomenta y usa
+            bucle_imputacion_similitud_correlacion(cfg)  # type: ignore[arg-type]
+        except TypeError:
+            # Firma actual: requiere dataframes y otros parámetros
+            try:
+                (
+                    df_final,
+                    df_resumen,
+                    imputaciones_finales,
+                    detalles_para_excel,
+                    modelos_por_celda,
+                ) = bucle_imputacion_similitud_correlacion(
+                    df_filtrado=df_filtrado,
+                    parametros_preseleccionados=parametros_preseleccionados,
+                    capas_familia=capas_familia,
+                    df_procesado=df_procesado,
+                    debug_mode=bool(cfg.get("entorno", {}).get("debug_mode", False)),
+                    permitir_sin_filtro=bool(
+                        cfg.get("orquestacion", {}).get("permitir_sin_filtro", False)
+                    ),
+                )
+
+                # --- Exportación Excel (antes estaba desconectada del pipeline) ---
+                try:
+                    from .excel_export import exportar_excel_con_imputaciones
+                    from pathlib import Path
+
+                    # Resolver carpeta de salida (prioridad: loop.export.dir, luego loop.export.json.dir)
+                    loop_export = (
+                        cfg.get("loop", {}).get("export", {})
+                        if isinstance(cfg, dict)
+                        else {}
+                    )
+                    export_dir_name = None
+                    if isinstance(loop_export, dict):
+                        export_dir_name = loop_export.get("dir")
+                        if not export_dir_name:
+                            export_dir_name = (loop_export.get("json") or {}).get("dir")
+                    if not export_dir_name:
+                        export_dir_name = "Results"
+
+                    # Base: carpeta analisis/
+                    try:
+                        from Modulos.controller import PROJECT_ROOT as _ANALISIS_ROOT
+
+                        base_dir = Path(_ANALISIS_ROOT)
+                    except Exception:
+                        base_dir = Path(__file__).resolve().parent.parent
+
+                    out_dir = (base_dir / str(export_dir_name)).resolve()
+                    out_dir.mkdir(parents=True, exist_ok=True)
+
+                    # Nombre de salida: <input>_imputado.xlsx
+                    in_name = Path(str(ruta_archivo)).stem if ruta_archivo else "Datos"
+                    out_xlsx = out_dir / f"{in_name}_imputado.xlsx"
+
+                    exportar_excel_con_imputaciones(
+                        source_file=str(ruta_archivo),
+                        df_processed=df_final,
+                        details_for_excel=detalles_para_excel,
+                        output_file=str(out_xlsx),
+                        origen_por_celda=origen_por_celda,
+                    )
+                except Exception as _e:
+                    print(f"[WARN] No se pudo exportar Excel: {_e}")
+            except Exception as e:
+                print(f"[ERROR] Falló el bucle de imputación: {e}")

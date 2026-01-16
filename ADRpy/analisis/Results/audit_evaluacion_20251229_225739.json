@@ -1,0 +1,138 @@
+{
+  "run_id": "20251229_225739",
+  "timestamp": "20251229_225739",
+  "config": {
+    "max_iteraciones": 1,
+    "orden": [
+      "similitud",
+      "correlacion"
+    ],
+    "permitir_sin_filtro": true,
+    "min_datos_validos": 5,
+    "mostrar_consola": true,
+    "correlacion_checks_2d": true
+  },
+  "initial": {
+    "total_cells": 3735,
+    "missing_cells": 2096,
+    "shape": [
+      83,
+      45
+    ]
+  },
+  "iterations": [
+    {
+      "iter": 1,
+      "missing_before": 2096,
+      "reporte_similitud": 63,
+      "reporte_correlacion": 2096,
+      "corr_debug": {
+        "knobs": {
+          "checks_2d_enabled": true,
+          "min_unicos": {
+            "exp-1": 3,
+            "log-1": 3,
+            "pot-1": 4,
+            "linear-1": 4,
+            "poly-1": 6,
+            "linear-2": 7,
+            "poly-2": 9
+          },
+          "min_muestras": {
+            "exp-1": 4,
+            "log-1": 4,
+            "pot-1": 4,
+            "linear-1": 4,
+            "poly-1": 6,
+            "linear-2": 6,
+            "poly-2": 8
+          }
+        },
+        "counts": {
+          "cells_missing": 2096,
+          "cells_modeled": 233,
+          "cells_error": 0,
+          "models_total": 90840,
+          "models_none": 354,
+          "models_discarded": 43903,
+          "models_discarded_2d_checks": 0,
+          "models_discarded_diversidad": 43903
+        },
+        "discard_motivos_top": [
+          {
+            "motivo": "Insuficiente diversidad en y: 6 < 7 para 'linear-2'",
+            "count": 2494
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 6 < 9 para 'poly-2'",
+            "count": 2494
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 8 < 9 para 'poly-2'",
+            "count": 2419
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 7 < 9 para 'poly-2'",
+            "count": 2412
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 5 < 7 para 'linear-2'",
+            "count": 2315
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 5 < 9 para 'poly-2'",
+            "count": 2315
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 3 < 7 para 'linear-2'",
+            "count": 2269
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 3 < 9 para 'poly-2'",
+            "count": 2269
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 4 < 7 para 'linear-2'",
+            "count": 1877
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 4 < 9 para 'poly-2'",
+            "count": 1877
+          },
+          {
+            "motivo": "Insuficiente diversidad en predictor 'Clase': 3 < 7 para 'linear-2'",
+            "count": 1730
+          },
+          {
+            "motivo": "Insuficiente diversidad en predictor 'Clase': 2 < 7 para 'linear-2'",
+            "count": 1554
+          },
+          {
+            "motivo": "Insuficiente diversidad en predictor 'Clase': 3 < 9 para 'poly-2'",
+            "count": 1483
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 2 < 7 para 'linear-2'",
+            "count": 1414
+          },
+          {
+            "motivo": "Insuficiente diversidad en y: 2 < 9 para 'poly-2'",
+            "count": 1414
+          }
+        ]
+      },
+      "imputaciones_validas": 250,
+      "missing_after": 1846
+    }
+  ],
+  "final": {
+    "missing_cells": 1846,
+    "shape": [
+      83,
+      45
+    ],
+    "resumen_imputaciones": 250,
+    "detalles_para_excel": 2096,
+    "duration_seconds": 310.3509759902954
+  }
+}

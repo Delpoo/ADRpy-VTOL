@@ -143,20 +143,80 @@ def exportar_excel_con_imputaciones(
     :param details_for_excel: List of dicts with details for each imputation (final, similarity, correlation).
     """
     import os
+    import re
+
+    def _norm_label(x):
+        if x is None:
+            return None
+        # openpyxl puede devolver tipos no-str (números, fechas). Igualamos a str.
+        try:
+            s = x if isinstance(x, str) else str(x)
+        except Exception:
+            return x
+        return s.replace("\xa0", " ").strip()
+
+    def _detect_header_row_and_index_col(
+        ws, df_processed, max_header_rows: int = 5, max_index_cols: int = 3
+    ):
+        """Detecta (de forma conservadora) dónde están los encabezados de parámetros y el índice de aeronaves.
+
+        Problema típico: Excel con filas de título/agrupación (encabezado real no está en fila 1).
+        Elegimos la fila/col que maximiza coincidencias con df_processed.
+        """
+        # Precalcular sets normalizados
+        df_cols_norm = {_norm_label(c) for c in getattr(df_processed, "columns", [])}
+        df_idx_norm = {_norm_label(i) for i in getattr(df_processed, "index", [])}
+
+        # Heurística: encabezados suelen estar desde col 2 (o más), y no vacíos
+        best_row = 1
+        best_score = -1
+        max_col = ws.max_column or 1
+        for r in range(1, min(max_header_rows, ws.max_row or 1) + 1):
+            vals = []
+            for c in range(2, min(max_col, 200) + 1):
+                v = ws.cell(row=r, column=c).value
+                if v is None:
+                    continue
+                s = _norm_label(v)
+                if s:
+                    vals.append(s)
+            if not vals:
+                continue
+            score = sum(1 for v in vals if v in df_cols_norm)
+            if score > best_score:
+                best_score = score
+                best_row = r
+
+        best_col = 1
+        best_score = -1
+        max_row = ws.max_row or 1
+        for c in range(1, min(max_index_cols, max_col) + 1):
+            vals = []
+            for r in range(best_row + 1, min(max_row, best_row + 1 + 500) + 1):
+                v = ws.cell(row=r, column=c).value
+                if v is None:
+                    continue
+                s = _norm_label(v)
+                if s:
+                    vals.append(s)
+            if not vals:
+                continue
+            score = sum(1 for v in vals if v in df_idx_norm)
+            if score > best_score:
+                best_score = score
+                best_col = c
+
+        return best_row, best_col
 
     try:
 
         # --- Buscar nombre de archivo disponible para no sobrescribir ---
         base, ext = os.path.splitext(output_file)
+        base_no_num = re.sub(r"\s*\(\d+\)$", "", base)
         candidate = output_file
         i = 1
         while os.path.exists(candidate):
-            if base.endswith(")"):
-                # Si ya tiene (n), reemplazarlo
-                base_no_num = base[: base.rfind("(")].rstrip()
-                candidate = f"{base_no_num}({i}){ext}"
-            else:
-                candidate = f"{base} ({i}){ext}"
+            candidate = f"{base_no_num}({i}){ext}"
             i += 1
         if candidate != output_file:
             print(
@@ -176,9 +236,16 @@ def exportar_excel_con_imputaciones(
             print(f"❌ Error: The file '{source_file}' contains no sheets.")
             return
 
-        # Freeze panes at B2 (keep top row and first column visible)
+        # Detectar encabezados/índice (para no perder formato cuando el Excel tiene filas de título)
+        header_row, index_col = 1, 1
         try:
-            ws.freeze_panes = ws["B2"]
+            header_row, index_col = _detect_header_row_and_index_col(ws, df_processed)
+        except Exception:
+            header_row, index_col = 1, 1
+
+        # Freeze panes (mantener visible encabezado e índice)
+        try:
+            ws.freeze_panes = ws.cell(row=header_row + 1, column=index_col + 1)
         except Exception:
             pass
 
@@ -195,6 +262,9 @@ def exportar_excel_con_imputaciones(
         color_orange = PatternFill(
             start_color="FFA500", end_color="FFA500", fill_type="solid"
         )  # Orange
+        color_error = PatternFill(
+            start_color="000000", end_color="000000", fill_type="solid"
+        )  # Black
 
         # Build a quick-access dictionary by cell (can be empty)
         details_dict = (
@@ -203,7 +273,40 @@ def exportar_excel_con_imputaciones(
             else {}
         )
 
-        for row in ws.iter_rows(min_row=2, min_col=2):
+        # Mapas para tolerar variaciones de encabezados (espacios, NBSP, unidades, mojibake)
+        try:
+            from .column_aliases import resolve_name_in_columns, canonicalize_parametro
+        except Exception:
+            resolve_name_in_columns = None  # type: ignore
+            canonicalize_parametro = None  # type: ignore
+
+        df_index_map = {_norm_label(i): i for i in getattr(df_processed, "index", [])}
+        df_col_map = {_norm_label(c): c for c in getattr(df_processed, "columns", [])}
+
+        if details_for_excel:
+            # Añadir llaves normalizadas para no perder comentarios/colores por pequeñas diferencias
+            for d in details_for_excel:
+                try:
+                    p_raw = d.get("Parámetro")
+                    a_raw = d.get("Aeronave")
+                except Exception:
+                    continue
+                if p_raw is None or a_raw is None:
+                    continue
+                p_norm = _norm_label(p_raw)
+                a_norm = _norm_label(a_raw)
+                # Mantener la primera ocurrencia (consistente con el comportamiento actual)
+                if p_norm is not None and a_norm is not None:
+                    details_dict.setdefault((p_norm, a_norm), d)
+                if canonicalize_parametro:
+                    try:
+                        p_can = canonicalize_parametro(p_raw)
+                        if p_can:
+                            details_dict.setdefault((p_can, a_norm), d)
+                    except Exception:
+                        pass
+
+        for row in ws.iter_rows(min_row=header_row + 1, min_col=index_col + 1):
             for cell in row:
                 if (
                     ws is None
@@ -215,18 +318,56 @@ def exportar_excel_con_imputaciones(
                 # Skip non-top-left cells of merged ranges
                 if isinstance(cell, MergedCell):
                     continue
-                parameter = ws.cell(row=1, column=cell.column).value
-                aircraft = ws.cell(row=cell.row, column=1).value
-                key = (parameter, aircraft)
+                parameter_raw = ws.cell(row=header_row, column=cell.column).value
+                aircraft_raw = ws.cell(row=cell.row, column=index_col).value
+                parameter = _norm_label(parameter_raw)
+                aircraft = _norm_label(aircraft_raw)
+
+                # Resolver a nombres reales en df_processed (sin renombrar el Excel)
+                df_parameter = df_col_map.get(parameter)
+                if (
+                    df_parameter is None
+                    and resolve_name_in_columns
+                    and parameter is not None
+                ):
+                    try:
+                        df_parameter = resolve_name_in_columns(
+                            parameter, list(df_processed.columns)
+                        )
+                    except Exception:
+                        df_parameter = None
+                df_aircraft = df_index_map.get(aircraft, aircraft_raw)
+
+                # Construir llaves candidatas para detalles (orden conservador)
+                candidate_keys = []
+                candidate_keys.append((parameter_raw, aircraft_raw))
+                candidate_keys.append((parameter, aircraft))
+                candidate_keys.append((df_parameter, df_aircraft))
+                if canonicalize_parametro and parameter is not None:
+                    try:
+                        candidate_keys.append(
+                            (canonicalize_parametro(parameter), aircraft)
+                        )
+                    except Exception:
+                        pass
                 # Do not overwrite non-empty cells
                 if not is_missing(cell.value):
                     continue
                 wrote_something = False
-                if key in details_dict:
-                    detail = details_dict[key]
+
+                detail = None
+                for k in candidate_keys:
+                    if k in details_dict:
+                        detail = details_dict[k]
+                        break
+
+                if detail is not None:
                     # Only write if there's a value in df_processed
                     try:
-                        imputed_value = df_processed.at[aircraft, parameter]
+                        if df_aircraft is not None and df_parameter is not None:
+                            imputed_value = df_processed.at[df_aircraft, df_parameter]
+                        else:
+                            imputed_value = None
                     except Exception:
                         imputed_value = None
                     if imputed_value is not None and not (
@@ -247,8 +388,27 @@ def exportar_excel_con_imputaciones(
                         and valid_sim
                         and valid_corr
                     )
+
+                    # Error detection (si el motor registró un fallo por celda)
+                    advert_sim = ""
+                    advert_corr = ""
+                    try:
+                        advert_sim = str(
+                            (detail.get("similitud") or {}).get("Advertencia") or ""
+                        )
+                        advert_corr = str(
+                            (detail.get("correlacion") or {}).get("Advertencia") or ""
+                        )
+                    except Exception:
+                        advert_sim = ""
+                        advert_corr = ""
+                    has_error = ("ERROR:" in advert_sim.upper()) or (
+                        "ERROR:" in advert_corr.upper()
+                    )
                     # Color logic
-                    if valid_weighted:
+                    if has_error:
+                        cell.fill = color_error
+                    elif valid_weighted:
                         cell.fill = color_weighted
                     elif valid_sim:
                         cell.fill = color_similarity
@@ -287,7 +447,10 @@ def exportar_excel_con_imputaciones(
                 else:
                     # No details_for_excel: try writing from df_processed if available
                     try:
-                        value_df = df_processed.at[aircraft, parameter]
+                        if df_aircraft is not None and df_parameter is not None:
+                            value_df = df_processed.at[df_aircraft, df_parameter]
+                        else:
+                            value_df = None
                     except Exception:
                         value_df = None
                     if value_df is not None and not (
@@ -298,8 +461,19 @@ def exportar_excel_con_imputaciones(
 
                 # Mark calculated cells (bold+italic) without changing fill
                 try:
-                    if origen_por_celda and (aircraft, parameter) in origen_por_celda:
-                        meta = origen_por_celda.get((aircraft, parameter), {})
+                    # Intentar el match con llave exacta y con llave normalizada
+                    meta = None
+                    if origen_por_celda:
+                        if (df_aircraft, df_parameter) in origen_por_celda:
+                            meta = origen_por_celda.get((df_aircraft, df_parameter), {})
+                        elif (aircraft_raw, parameter_raw) in origen_por_celda:
+                            meta = origen_por_celda.get(
+                                (aircraft_raw, parameter_raw), {}
+                            )
+                        elif (aircraft, parameter) in origen_por_celda:
+                            meta = origen_por_celda.get((aircraft, parameter), {})
+
+                    if meta is not None:
                         est = str(meta.get("Estado") or "").upper()
                         fuente = str(meta.get("Fuente") or "").lower()
                         is_calc = ("CALCUL" in est) or any(

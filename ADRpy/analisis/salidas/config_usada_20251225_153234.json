@@ -20,7 +20,7 @@
     }
   },
   "similitud": {
-    "umbral_pct_diferencia": 0.5,
+    "umbral_pct_diferencia": 0.3,
     "min_familias": 3,
     "excepcion_min_familias": {
       "min_familias": 2,
@@ -152,46 +152,46 @@
   },
   "correlacion": {
     "checks_2d": {
-      "enabled": true,
+      "enabled": false,
       "pearson": {
-        "enabled": true,
+        "enabled": false,
         "abs_r_max": 0.8
       },
       "vif": {
-        "enabled": true,
+        "enabled": false,
         "max": 10.0
       },
       "pc2": {
-        "enabled": true,
+        "enabled": false,
         "ratio_min": 0.03
       },
       "rank": {
-        "enabled": true,
+        "enabled": false,
         "min": 2.0
       },
       "cond": {
-        "enabled": true,
+        "enabled": false,
         "max": 100000.0
       },
       "coverage_unique_pair": {
-        "enabled": true,
+        "enabled": false,
         "ratio_min": 0.6
       },
       "coverage_hull": {
-        "enabled": true,
+        "enabled": false,
         "ratio_min": 0.15
       },
       "coverage_ellipse": {
-        "enabled": true,
+        "enabled": false,
         "ratio_min": 0.1
       },
       "n_per_param": {
-        "enabled": true,
+        "enabled": false,
         "linear2_min": 6.0,
         "poly2_min": 8.0
       },
       "agresivo": {
-        "enabled": true,
+        "enabled": false,
         "abs_r_min": 0.94
       }
     },

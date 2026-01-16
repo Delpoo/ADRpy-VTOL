@@ -12,14 +12,16 @@ import pandas as pd
 import numpy as np
 from typing import Tuple, Dict, Any
 
+from .column_aliases import resolve_name_in_columns
+
 
 def completar_campos_derivados(
     df: pd.DataFrame,
-    decimales: int = 2,                  # Decimales fijos después de la coma (16.59 en lugar de cifras significativas)
-    sigma_5000: float = 0.8617,          # densidad relativa ISA a 5000 ft (constante)
-    altitud_crucero: float = 5000,       # altitud de crucero asumida en pies para cálculos
+    decimales: int = 2,  # Decimales fijos después de la coma (16.59 en lugar de cifras significativas)
+    sigma_5000: float = 0.8617,  # densidad relativa ISA a 5000 ft (constante)
+    altitud_crucero: float = 5000,  # altitud de crucero asumida en pies para cálculos
     solo_completar_vacios: bool = True,
-    usar_IAS_para_alcance: bool = True   # RESPETA tu fórmula: alcance con IAS
+    usar_IAS_para_alcance: bool = True,  # RESPETA tu fórmula: alcance con IAS
 ) -> Tuple[pd.DataFrame, Dict[tuple, Dict[str, Any]]]:
     """
     Completa columnas derivadas usando fórmulas (sin verificación).
@@ -41,18 +43,43 @@ def completar_campos_derivados(
             return 0.0
         return float(round(x, decimales))
 
-    # === Nombres de columnas (compatibles con tu archivo) ===
-    COL_B    = "Envergadura"
-    COL_C    = "Cuerda"
-    COL_AR   = "Relación de aspecto del ala"
-    COL_W0   = "Peso Vacio (MTOW - payload)"
-    COL_PL   = "Payload"
-    COL_MTOW = "Peso máximo al despegue (MTOW)"
-    COL_VIAS = "Velocidad crucero m/s"  # IAS (entrada)
-    COL_VTAS = "Velocidad a la que se realiza el crucero (m/s TAS)"  # salida
-    COL_AUTO = "Autonomía de la aeronave"  # horas
-    COL_RNG  = "Alcance de la aeronave"    # salida: km
-    COL_ALT  = "Altitud de crucero"        # altitud asumida en pies
+    # === Nombres de columnas (tolerantes a alias/mojibake) ===
+    COL_B = resolve_name_in_columns("Envergadura", df.columns) or "Envergadura"
+    COL_C = resolve_name_in_columns("Cuerda", df.columns) or "Cuerda"
+    COL_AR = (
+        resolve_name_in_columns("Relación de aspecto del ala", df.columns)
+        or "Relación de aspecto del ala"
+    )
+    COL_W0 = (
+        resolve_name_in_columns("Peso Vacio (MTOW - payload)", df.columns)
+        or "Peso Vacio (MTOW - payload)"
+    )
+    COL_PL = resolve_name_in_columns("Payload", df.columns) or "Payload"
+    COL_MTOW = (
+        resolve_name_in_columns("Peso máximo al despegue (MTOW)", df.columns)
+        or "Peso máximo al despegue (MTOW)"
+    )
+    # IAS (entrada) - tolerar encabezados con unidades
+    COL_VIAS = (
+        resolve_name_in_columns("Velocidad crucero m/s", df.columns)
+        or "Velocidad crucero m/s"
+    )
+    COL_VTAS = (
+        resolve_name_in_columns(
+            "Velocidad a la que se realiza el crucero (m/s TAS)", df.columns
+        )
+        or "Velocidad a la que se realiza el crucero (m/s TAS)"
+    )  # salida
+    # Tolerar alias (p.ej. con unidades) sin renombrar el Excel
+    _COL_AUTO_CAN = "Autonomía de la aeronave"  # horas
+    _COL_RNG_CAN = "Alcance de la aeronave"  # salida: km
+    COL_AUTO = resolve_name_in_columns(_COL_AUTO_CAN, df.columns) or _COL_AUTO_CAN
+    COL_RNG = resolve_name_in_columns(_COL_RNG_CAN, df.columns) or _COL_RNG_CAN
+    # Altitud (si ya viene en el Excel con otro nombre, usarla)
+    COL_ALT = (
+        resolve_name_in_columns("Altitud de crucero", df.columns)
+        or "Altitud de crucero"
+    )
 
     for col in [COL_AR, COL_MTOW, COL_VTAS, COL_RNG, COL_ALT]:
         if col not in df.columns:
@@ -67,7 +94,7 @@ def completar_campos_derivados(
             "Fuente": fuente,
             "formula": formula,
             "inputs": inputs,
-            "calculado": True
+            "calculado": True,
         }
 
     def escribir(idx, col, nuevo, fuente, formula, inputs):
@@ -82,10 +109,16 @@ def completar_campos_derivados(
         return True
 
     # === Utilidad: resolver exactamente una variable faltante en una relación ===
-    def try_solve_relation(idx: Any, cols: list, compute_map: Dict[str, Any], fuente: str = "fórmula derivada") -> bool:
+    def try_solve_relation(
+        idx: Any,
+        cols: list,
+        compute_map: Dict[str, Any],
+        fuente: str = "fórmula derivada",
+    ) -> bool:
         """Si en 'cols' hay exactamente una celda NaN y existe compute_map para esa columna,
         calcula el valor faltante usando exclusivamente las demás columnas de la relación y lo escribe.
-        compute_map[col] debe retornar (valor, formula_text, inputs_dict). Devuelve True si escribió algo."""
+        compute_map[col] debe retornar (valor, formula_text, inputs_dict). Devuelve True si escribió algo.
+        """
         # Verificar presencia de columnas
         for c in cols:
             if c not in df.columns:
@@ -117,15 +150,33 @@ def completar_campos_derivados(
     def inferir_geom(idx) -> bool:
         changed = False
         cols = [COL_B, COL_C, COL_AR]
+
         def safe_div(a, b):
             try:
                 return None if b == 0 else a / b
             except Exception:
                 return None
+
         compute_map = {
-            COL_AR: lambda v: (safe_div(v[COL_B], v[COL_C]), "AR = b/c", {"b": v[COL_B], "c": v[COL_C]}),
-            COL_C:  lambda v: (safe_div(v[COL_B], v[COL_AR]), "c = b/AR", {"b": v[COL_B], "AR": v[COL_AR]}),
-            COL_B:  lambda v: (None if pd.isna(v[COL_AR]) or pd.isna(v[COL_C]) else v[COL_AR] * v[COL_C], "b = AR*c", {"AR": v[COL_AR], "c": v[COL_C]}),
+            COL_AR: lambda v: (
+                safe_div(v[COL_B], v[COL_C]),
+                "AR = b/c",
+                {"b": v[COL_B], "c": v[COL_C]},
+            ),
+            COL_C: lambda v: (
+                safe_div(v[COL_B], v[COL_AR]),
+                "c = b/AR",
+                {"b": v[COL_B], "AR": v[COL_AR]},
+            ),
+            COL_B: lambda v: (
+                (
+                    None
+                    if pd.isna(v[COL_AR]) or pd.isna(v[COL_C])
+                    else v[COL_AR] * v[COL_C]
+                ),
+                "b = AR*c",
+                {"AR": v[COL_AR], "c": v[COL_C]},
+            ),
         }
         if try_solve_relation(idx, cols, compute_map, "fórmula derivada"):
             changed = True
@@ -148,11 +199,37 @@ def completar_campos_derivados(
                 ch = False
                 cols_pesos = [COL_MTOW, COL_W0, COL_PL]
                 compute_map_pesos = {
-                    COL_MTOW: lambda v: (None if pd.isna(v[COL_W0]) or pd.isna(v[COL_PL]) else v[COL_W0] + v[COL_PL], "MTOW = W0 + Payload", {"W0": v[COL_W0], "Payload": v[COL_PL]}),
-                    COL_W0:   lambda v: (None if pd.isna(v[COL_MTOW]) or pd.isna(v[COL_PL]) else v[COL_MTOW] - v[COL_PL], "W0 = MTOW - Payload", {"MTOW": v[COL_MTOW], "Payload": v[COL_PL]}),
-                    COL_PL:   lambda v: (None if pd.isna(v[COL_MTOW]) or pd.isna(v[COL_W0]) else v[COL_MTOW] - v[COL_W0], "Payload = MTOW - W0", {"MTOW": v[COL_MTOW], "W0": v[COL_W0]}),
+                    COL_MTOW: lambda v: (
+                        (
+                            None
+                            if pd.isna(v[COL_W0]) or pd.isna(v[COL_PL])
+                            else v[COL_W0] + v[COL_PL]
+                        ),
+                        "MTOW = W0 + Payload",
+                        {"W0": v[COL_W0], "Payload": v[COL_PL]},
+                    ),
+                    COL_W0: lambda v: (
+                        (
+                            None
+                            if pd.isna(v[COL_MTOW]) or pd.isna(v[COL_PL])
+                            else v[COL_MTOW] - v[COL_PL]
+                        ),
+                        "W0 = MTOW - Payload",
+                        {"MTOW": v[COL_MTOW], "Payload": v[COL_PL]},
+                    ),
+                    COL_PL: lambda v: (
+                        (
+                            None
+                            if pd.isna(v[COL_MTOW]) or pd.isna(v[COL_W0])
+                            else v[COL_MTOW] - v[COL_W0]
+                        ),
+                        "Payload = MTOW - W0",
+                        {"MTOW": v[COL_MTOW], "W0": v[COL_W0]},
+                    ),
                 }
-                if try_solve_relation(idx, cols_pesos, compute_map_pesos, "fórmula derivada"):
+                if try_solve_relation(
+                    idx, cols_pesos, compute_map_pesos, "fórmula derivada"
+                ):
                     ch = True
                 return ch
 
@@ -165,10 +242,20 @@ def completar_campos_derivados(
                 cols_vel = [COL_VIAS, COL_VTAS]
                 root_sigma = np.sqrt(sigma_5000)
                 compute_map_vel = {
-                    COL_VTAS: lambda v: (None if pd.isna(v[COL_VIAS]) else v[COL_VIAS] / root_sigma, "TAS_5000 = IAS / sqrt(σ_5000)", {"IAS": v[COL_VIAS], "σ_5000": sigma_5000}),
-                    COL_VIAS: lambda v: (None if pd.isna(v[COL_VTAS]) else v[COL_VTAS] * root_sigma, "IAS = VTAS * sqrt(σ_5000)", {"VTAS": v[COL_VTAS], "σ_5000": sigma_5000}),
+                    COL_VTAS: lambda v: (
+                        None if pd.isna(v[COL_VIAS]) else v[COL_VIAS] / root_sigma,
+                        "TAS_5000 = IAS / sqrt(σ_5000)",
+                        {"IAS": v[COL_VIAS], "σ_5000": sigma_5000},
+                    ),
+                    COL_VIAS: lambda v: (
+                        None if pd.isna(v[COL_VTAS]) else v[COL_VTAS] * root_sigma,
+                        "IAS = VTAS * sqrt(σ_5000)",
+                        {"VTAS": v[COL_VTAS], "σ_5000": sigma_5000},
+                    ),
                 }
-                if try_solve_relation(idx, cols_vel, compute_map_vel, "fórmula derivada"):
+                if try_solve_relation(
+                    idx, cols_vel, compute_map_vel, "fórmula derivada"
+                ):
                     ch = True
                 return ch
 
@@ -180,23 +267,47 @@ def completar_campos_derivados(
                 ch = False
                 col_vel = COL_VIAS if usar_IAS_para_alcance else COL_VTAS
                 cols_rng = [COL_RNG, COL_AUTO, col_vel]
+
                 def calc_R(v):
                     return (v[COL_AUTO] * 3600.0 * v[col_vel]) / 1000.0
+
                 def calc_h(v):
                     return (v[COL_RNG] * 1000.0) / (v[col_vel] * 3600.0)
+
                 def calc_V(v):
                     return (v[COL_RNG] * 1000.0) / (v[COL_AUTO] * 3600.0)
+
                 def safe_val(x):
                     try:
-                        return None if x is None or (isinstance(x, float) and (np.isnan(x) or np.isinf(x))) else x
+                        return (
+                            None
+                            if x is None
+                            or (isinstance(x, float) and (np.isnan(x) or np.isinf(x)))
+                            else x
+                        )
                     except Exception:
                         return None
+
                 compute_map_rng = {
-                    COL_RNG:  lambda v: (safe_val(calc_R(v)), "R[km] = h*3600*V/1000", {"Autonomía[h]": v[COL_AUTO], "Velocidad[m/s]": v[col_vel]}),
-                    COL_AUTO: lambda v: (safe_val(calc_h(v)), "h = R*1000/(V*3600)", {"R[km]": v[COL_RNG], "Velocidad[m/s]": v[col_vel]}),
-                    col_vel:  lambda v: (safe_val(calc_V(v)), "V = R*1000/(h*3600)", {"R[km]": v[COL_RNG], "Autonomía[h]": v[COL_AUTO]}),
+                    COL_RNG: lambda v: (
+                        safe_val(calc_R(v)),
+                        "R[km] = h*3600*V/1000",
+                        {"Autonomía[h]": v[COL_AUTO], "Velocidad[m/s]": v[col_vel]},
+                    ),
+                    COL_AUTO: lambda v: (
+                        safe_val(calc_h(v)),
+                        "h = R*1000/(V*3600)",
+                        {"R[km]": v[COL_RNG], "Velocidad[m/s]": v[col_vel]},
+                    ),
+                    col_vel: lambda v: (
+                        safe_val(calc_V(v)),
+                        "V = R*1000/(h*3600)",
+                        {"R[km]": v[COL_RNG], "Autonomía[h]": v[COL_AUTO]},
+                    ),
                 }
-                if try_solve_relation(idx, cols_rng, compute_map_rng, "fórmula derivada"):
+                if try_solve_relation(
+                    idx, cols_rng, compute_map_rng, "fórmula derivada"
+                ):
                     ch = True
                 return ch
 
@@ -208,7 +319,14 @@ def completar_campos_derivados(
                 ch = False
                 alt_val = df.at[idx, COL_ALT]
                 if pd.isna(alt_val):
-                    if escribir(idx, COL_ALT, altitud_crucero, "valor asumido", f"Altitud asumida = {altitud_crucero} pies", {}):
+                    if escribir(
+                        idx,
+                        COL_ALT,
+                        altitud_crucero,
+                        "valor asumido",
+                        f"Altitud asumida = {altitud_crucero} pies",
+                        {},
+                    ):
                         ch = True
                 return ch
 
