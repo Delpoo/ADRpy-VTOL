@@ -1,0 +1,117 @@
+<mxfile host="65bd71144e">
+    <diagram id="pipelineM1" name="Módulo 1 — Pipeline de imputación">
+        <mxGraphModel dx="633" dy="613" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3400" pageHeight="6000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="A" value="📁 &lt;b&gt;DATASET DE ENTRADA&lt;/b&gt;&lt;br&gt;Tabla de aeronaves eVTOL con&lt;br&gt;parámetros numéricos y celdas vacías" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#0D47A1;fontColor=#0D47A1;strokeWidth=8;fontSize=51;align=center;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="80" width="1800" height="260" as="geometry"/>
+                </mxCell>
+                <mxCell id="B" value="🧹 &lt;b&gt;CARGA Y LIMPIEZA DE DATOS&lt;/b&gt;&lt;br&gt;• Lectura del archivo fuente&lt;br&gt;• Sanitización de tipos de datos&lt;br&gt;• Resolución de duplicados&lt;br&gt;• Eliminación de valores inválidos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;fontColor=#1B5E20;strokeWidth=8;fontSize=51;align=left;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="440" width="1800" height="360" as="geometry"/>
+                </mxCell>
+                <mxCell id="C" value="🧮 &lt;b&gt;CÁLCULO DE CAMPOS DERIVADOS&lt;/b&gt;&lt;br&gt;• IAS → TAS mediante modelo atmosférico&lt;br&gt;• Relación de aspecto desde envergadura y cuerda&lt;br&gt;• Alcance desde velocidad y autonomía&lt;br&gt;• Peso vacío desde MTOW y carga útil&lt;br&gt;&lt;i&gt;Solo se completan celdas vacías con fórmulas físicas&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;fontColor=#1B5E20;strokeWidth=8;fontSize=51;align=left;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="740" y="900" width="1920" height="440" as="geometry"/>
+                </mxCell>
+                <mxCell id="D" value="🎯 &lt;b&gt;SELECCIÓN DE PARÁMETROS RELEVANTES&lt;/b&gt;&lt;br&gt;Variables de interés agrupadas en familias:&lt;br&gt;física, geométrica, prestacional" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;fontColor=#1B5E20;strokeWidth=8;fontSize=51;align=center;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="1440" width="1800" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="E" value="🔍 &lt;b&gt;IDENTIFICACIÓN DE DATOS FALTANTES&lt;/b&gt;&lt;br&gt;Relevamiento de celdas vacías&lt;br&gt;por aeronave y por parámetro" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;fontColor=#1B5E20;strokeWidth=8;fontSize=51;align=center;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="1780" width="1800" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="F" value="🔄 &lt;b&gt;CICLO ITERATIVO&lt;/b&gt;&lt;br&gt;¿Quedan celdas vacías y no se&lt;br&gt;alcanzó el máximo de iteraciones?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#880E4F;fontColor=#880E4F;strokeWidth=8;fontSize=51;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="2120" width="2000" height="560" as="geometry"/>
+                </mxCell>
+                <mxCell id="G" value="🧭 &lt;b&gt;IMPUTACIÓN POR SIMILITUD&lt;/b&gt;&lt;br&gt;&lt;br&gt;Para cada celda vacía:&lt;br&gt;① Buscar aeronaves con parámetros conocidos&lt;br&gt;② Comparar diferencias relativas ≤ umbral %&lt;br&gt;③ Exigir cobertura de familias&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;física, geométrica, prestacional&lt;br&gt;④ Calcular coeficiente de similitud por vecino&lt;br&gt;⑤ Promedio ponderado → valor propuesto&lt;br&gt;⑥ Evaluar confianza:&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;similitud × dispersión × cant. vecinos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333333;strokeWidth=8;fontSize=51;align=left;verticalAlign=top;spacingLeft=40;spacingRight=40;spacingTop=32;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="2730" width="1100" height="920" as="geometry"/>
+                </mxCell>
+                <mxCell id="H" value="📈 &lt;b&gt;IMPUTACIÓN POR CORRELACIÓN&lt;/b&gt;&lt;br&gt;&lt;br&gt;Para cada celda vacía:&lt;br&gt;① Filtrar datos por familia: F0 → F1 → F2&lt;br&gt;② Generar combinaciones de 1 y 2 predictores&lt;br&gt;③ Ajustar modelos: lineal, polinómico,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;logarítmico, potencial, exponencial&lt;br&gt;④ Manejar valores atípicos: z-score suave/duro&lt;br&gt;⑤ Validar con LOOCV&lt;br&gt;⑥ Filtrar por MAPE máximo y R² mínimo&lt;br&gt;⑦ Seleccionar el mejor modelo disponible" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333333;strokeWidth=8;fontSize=51;align=left;verticalAlign=top;spacingLeft=40;spacingRight=40;spacingTop=32;" parent="1" vertex="1">
+                    <mxGeometry x="1760" y="2730" width="1120" height="890" as="geometry"/>
+                </mxCell>
+                <mxCell id="I" value="⚖️ &lt;b&gt;COMBINACIÓN DE RESULTADOS&lt;/b&gt;&lt;br&gt;Ambos métodos proponen valor → promedio ponderado por confianza&lt;br&gt;Solo uno propone valor → se adopta directamente&lt;br&gt;Se registra: método, confianza e iteración" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333333;strokeWidth=8;fontSize=51;align=center;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="3760" width="2440" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="J" value="📊 &lt;b&gt;ACTUALIZACIÓN DEL DATASET&lt;/b&gt;&lt;br&gt;Las celdas imputadas se incorporan al dataset&lt;br&gt;para la siguiente iteración — las nuevas&lt;br&gt;imputaciones alimentan los modelos de la próxima vuelta" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;fontColor=#1B5E20;strokeWidth=8;fontSize=51;align=center;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="4180" width="2440" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="K" value="✅ &lt;b&gt;¿HUBO NUEVAS&lt;br&gt;IMPUTACIONES?&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#880E4F;fontColor=#880E4F;strokeWidth=8;fontSize=51;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="4600" width="1600" height="400" as="geometry"/>
+                </mxCell>
+                <mxCell id="L" value="📤 &lt;b&gt;EXPORTACIÓN DE RESULTADOS&lt;/b&gt;&lt;br&gt;• Excel imputado con comentarios por celda&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;i&gt;método usado, confianza, predictores&lt;/i&gt;&lt;br&gt;• Auditoría JSON con trazabilidad completa&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;i&gt;modelos probados, métricas, iteraciones&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#311B92;fontColor=#311B92;strokeWidth=8;fontSize=51;align=left;verticalAlign=middle;spacingLeft=40;spacingRight=40;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="5200" width="2440" height="400" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=51;" parent="1" source="A" target="B" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=51;" parent="1" source="B" target="C" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=51;" parent="1" source="C" target="D" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=51;" parent="1" source="D" target="E" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=51;" parent="1" source="E" target="F" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="&lt;b&gt;Sí&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;fontSize=51;fontColor=#1B5E20;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="F" target="G" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="680" y="2400"/>
+                            <mxPoint x="680" y="2640"/>
+                            <mxPoint x="1070" y="2640"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e7" value="&lt;b&gt;Sí&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;fontSize=51;fontColor=#1B5E20;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="F" target="H" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2720" y="2400"/>
+                            <mxPoint x="2720" y="2610"/>
+                            <mxPoint x="2320" y="2610"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=51;" parent="1" source="G" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1070" y="3760" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontSize=51;" parent="1" source="H" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="2320" y="3760" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=51;" parent="1" source="I" target="J" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=51;" parent="1" source="J" target="K" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" value="&lt;b&gt;Sí, hay mejora&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;html=1;strokeWidth=6;fontSize=51;fontColor=#880E4F;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="K" target="F" edge="1">
+                    <mxGeometry y="-170" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="360" y="4800"/>
+                            <mxPoint x="360" y="2400"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e13" value="&lt;b&gt;No, convergió o se&lt;br&gt;alcanzó el máximo&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=6;fontSize=51;fontColor=#880E4F;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="K" target="L" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e14" value="&lt;b&gt;No quedan&lt;br&gt;celdas vacías&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;html=1;strokeWidth=6;fontSize=51;fontColor=#880E4F;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=default;" parent="1" source="F" target="L" edge="1">
+                    <mxGeometry x="0.041" y="-160" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2200" y="2680"/>
+                            <mxPoint x="3080" y="2680"/>
+                            <mxPoint x="3080" y="5400"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

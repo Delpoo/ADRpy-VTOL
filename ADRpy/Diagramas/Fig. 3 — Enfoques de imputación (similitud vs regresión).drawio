@@ -1,0 +1,180 @@
+<mxfile host="65bd71144e">
+    <diagram id="fig_enfoques" name="Enfoques de imputación — Similitud vs Regresión">
+        <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="2800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+
+                <!-- TITLE -->
+                <mxCell id="title" value="&lt;b style='font-size:44px;'&gt;Enfoques de imputación y su rol en el flujo&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;color:#546E7A'&gt;Similitud vs. Regresión/Modelado&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=44;fontColor=#263238;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="20" width="1200" height="140" as="geometry"/>
+                </mxCell>
+
+                <!-- TRIGGER: celda faltante -->
+                <mxCell id="TRIGGER" value="&lt;b style='font-size:36px;'&gt;Celda faltante&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;color:#546E7A'&gt;Aeronave &lt;i&gt;i&lt;/i&gt; × Parámetro &lt;i&gt;j&lt;/i&gt; = NaN&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#C62828;fontColor=#B71C1C;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="200" width="800" height="160" as="geometry"/>
+                </mxCell>
+
+                <!-- SPLIT label -->
+                <mxCell id="split_label" value="&lt;font style='font-size:32px;color:#455A64'&gt;&lt;i&gt;Se evalúan ambos enfoques en paralelo&lt;/i&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=32;fontColor=#455A64;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="380" width="1000" height="60" as="geometry"/>
+                </mxCell>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- LEFT BRANCH: SIMILITUD -->
+                <!-- ════════════════════════════════════════ -->
+                <mxCell id="SIM_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F9A825;strokeWidth=6;opacity=35;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="460" width="680" height="1360" as="geometry"/>
+                </mxCell>
+                <mxCell id="SIM_title" value="&lt;b style='font-size:36px;'&gt;Enfoque A — Similitud&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=36;fontColor=#E65100;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="472" width="600" height="60" as="geometry"/>
+                </mxCell>
+
+                <mxCell id="SIM_1" value="&lt;b style='font-size:32px;'&gt;1. Perfil del objetivo&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;Vector de parámetros&lt;br&gt;conocidos de aeronave &lt;i&gt;i&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="560" width="600" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="SIM_2" value="&lt;b style='font-size:32px;'&gt;2. Distancia robusta&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;IQR / MAD normalizada&lt;br&gt;entre aeronave &lt;i&gt;i&lt;/i&gt; y cada&lt;br&gt;vecino con dato disponible&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="800" width="600" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="SIM_3" value="&lt;b style='font-size:32px;'&gt;3. Selección Top-K&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;K vecinos más cercanos&lt;br&gt;(umbral mínimo de&lt;br&gt;similitud exigido)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="1080" width="600" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="SIM_4" value="&lt;b style='font-size:32px;'&gt;4. Mediana ponderada&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;Valor estimado =&lt;br&gt;mediana(w&lt;sub&gt;k&lt;/sub&gt; · valor&lt;sub&gt;k&lt;/sub&gt;)&lt;br&gt;con w&lt;sub&gt;k&lt;/sub&gt; = exp(−α · d&lt;sub&gt;k&lt;/sub&gt;)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="1360" width="600" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="SIM_OUT" value="&lt;b style='font-size:32px;'&gt;Valor&lt;sub&gt;sim&lt;/sub&gt;&lt;/b&gt;&lt;font style='font-size:32px;'&gt; + dispersión&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57F17;fontColor=#E65100;strokeWidth=6;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="1640" width="520" height="120" as="geometry"/>
+                </mxCell>
+
+                <!-- SIM edges -->
+                <mxCell id="se1" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#E65100;" parent="1" source="SIM_1" target="SIM_2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="se2" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#E65100;" parent="1" source="SIM_2" target="SIM_3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="se3" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#E65100;" parent="1" source="SIM_3" target="SIM_4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="se4" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#E65100;" parent="1" source="SIM_4" target="SIM_OUT" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- RIGHT BRANCH: REGRESIÓN -->
+                <!-- ════════════════════════════════════════ -->
+                <mxCell id="REG_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=6;opacity=35;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="460" width="680" height="1360" as="geometry"/>
+                </mxCell>
+                <mxCell id="REG_title" value="&lt;b style='font-size:36px;'&gt;Enfoque B — Regresión&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=36;fontColor=#0D47A1;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="472" width="600" height="60" as="geometry"/>
+                </mxCell>
+
+                <mxCell id="REG_1" value="&lt;b style='font-size:32px;'&gt;1. Predictores válidos&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;Columnas con ≥ N datos&lt;br&gt;no constantes para &lt;i&gt;j&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="560" width="600" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="REG_2" value="&lt;b style='font-size:32px;'&gt;2. Ajuste de modelos&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;5 familias por predictor:&lt;br&gt;lineal · log · exp · potencia · poly₂&lt;br&gt;(+ combinaciones 2 predictores)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="800" width="600" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="REG_3" value="&lt;b style='font-size:32px;'&gt;3. Validación LOOCV&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;Leave-One-Out por fold:&lt;br&gt;MAPE, R², residuos,&lt;br&gt;coef. de variación&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="1080" width="600" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="REG_4" value="&lt;b style='font-size:32px;'&gt;4. Mejor modelo&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;'&gt;Ranking por métrica&lt;br&gt;compuesta → predicción&lt;br&gt;con ecuación ganadora&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="1360" width="600" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="REG_OUT" value="&lt;b style='font-size:32px;'&gt;Valor&lt;sub&gt;reg&lt;/sub&gt;&lt;/b&gt;&lt;font style='font-size:32px;'&gt; + R² + MAPE&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#0D47A1;fontColor=#0D47A1;strokeWidth=6;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="940" y="1640" width="520" height="120" as="geometry"/>
+                </mxCell>
+
+                <!-- REG edges -->
+                <mxCell id="re1" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#1565C0;" parent="1" source="REG_1" target="REG_2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="re2" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#1565C0;" parent="1" source="REG_2" target="REG_3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="re3" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#1565C0;" parent="1" source="REG_3" target="REG_4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="re4" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#1565C0;" parent="1" source="REG_4" target="REG_OUT" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- SPLIT from trigger -->
+                <!-- ════════════════════════════════════════ -->
+                <mxCell id="split_L" style="rounded=1;html=1;strokeWidth=4.8;strokeColor=#37474F;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" parent="1" source="TRIGGER" target="SIM_1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="split_R" style="rounded=1;html=1;strokeWidth=4.8;strokeColor=#37474F;exitX=0.75;exitY=1;entryX=0.5;entryY=0;" parent="1" source="TRIGGER" target="REG_1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- VS label in the middle -->
+                <!-- ════════════════════════════════════════ -->
+                <mxCell id="vs_label" value="&lt;font style='font-size:56px;color:#78909C'&gt;&lt;b&gt;vs&lt;/b&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=56;fontColor=#78909C;" parent="1" vertex="1">
+                    <mxGeometry x="740" y="1040" width="120" height="80" as="geometry"/>
+                </mxCell>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- ANNOTATIONS: ventajas de cada enfoque -->
+                <!-- ════════════════════════════════════════ -->
+                <mxCell id="ann_sim" value="&lt;font style='font-size:28px;color:#BF360C'&gt;&lt;b&gt;Fortaleza:&lt;/b&gt; no asume forma&lt;br&gt;funcional; robusto con pocos datos.&lt;br&gt;&lt;b&gt;Limitación:&lt;/b&gt; depende de la&lt;br&gt;existencia de vecinos similares.&lt;/font&gt;" style="text;html=1;strokeColor=#E65100;fillColor=#FFF8E1;align=left;verticalAlign=middle;fontSize=28;fontColor=#BF360C;rounded=1;strokeWidth=2;spacingLeft=16;spacingRight=16;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="1840" width="620" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="ann_reg" value="&lt;font style='font-size:28px;color:#0D47A1'&gt;&lt;b&gt;Fortaleza:&lt;/b&gt; captura tendencias&lt;br&gt;globales con validación cruzada.&lt;br&gt;&lt;b&gt;Limitación:&lt;/b&gt; requiere suficientes&lt;br&gt;pares (x, y) y relación funcional.&lt;/font&gt;" style="text;html=1;strokeColor=#1565C0;fillColor=#E3F2FD;align=left;verticalAlign=middle;fontSize=28;fontColor=#0D47A1;rounded=1;strokeWidth=2;spacingLeft=16;spacingRight=16;" parent="1" vertex="1">
+                    <mxGeometry x="920" y="1840" width="620" height="200" as="geometry"/>
+                </mxCell>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- CONVERGENCE: fusión -->
+                <!-- ════════════════════════════════════════ -->
+                <mxCell id="FUSION" value="&lt;b style='font-size:36px;'&gt;Fusión / Selección&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;color:#37474F'&gt;Se comparan Valor&lt;sub&gt;sim&lt;/sub&gt; y Valor&lt;sub&gt;reg&lt;/sub&gt; según&lt;br&gt;métricas de confianza; se elige el mejor&lt;br&gt;o se promedian ponderadamente&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#455A64;fontColor=#263238;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="2100" width="1200" height="220" as="geometry"/>
+                </mxCell>
+
+                <mxCell id="fus_L" style="rounded=1;html=1;strokeWidth=4.8;strokeColor=#E65100;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" parent="1" source="SIM_OUT" target="FUSION" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fus_R" style="rounded=1;html=1;strokeWidth=4.8;strokeColor=#1565C0;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" parent="1" source="REG_OUT" target="FUSION" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ════════════════════════════════════════ -->
+                <!-- DECISION -->
+                <!-- ════════════════════════════════════════ -->
+                <mxCell id="DEC" value="&lt;font style='font-size:32px;'&gt;¿Confianza&lt;br&gt;suficiente?&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#E65100;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="2380" width="360" height="192" as="geometry"/>
+                </mxCell>
+                <mxCell id="fus_dec" style="rounded=1;html=1;strokeWidth=4;strokeColor=#455A64;" parent="1" source="FUSION" target="DEC" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- YES → valor imputado -->
+                <mxCell id="RESULT" value="&lt;b style='font-size:36px;'&gt;Valor imputado&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:32px;color:#546E7A'&gt;Con trazabilidad: método, ecuación,&lt;br&gt;confianza, datos de entrenamiento&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="2640" width="800" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="dec_yes" value="&lt;font style='font-size:28px;color:#2E7D32'&gt;&lt;b&gt;Sí&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;strokeWidth=4.8;strokeColor=#2E7D32;exitX=0.5;exitY=1;entryX=0.5;entryY=0;labelBackgroundColor=#ffffff;" parent="1" source="DEC" target="RESULT" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- NO → fallback -->
+                <mxCell id="FALLBACK" value="&lt;font style='font-size:28px;'&gt;&lt;b&gt;Fallback&lt;/b&gt;&lt;br&gt;sin filtro&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontColor=#B71C1C;strokeWidth=4;fontSize=28;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="2400" width="280" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="dec_no" value="&lt;font style='font-size:28px;color:#C62828'&gt;&lt;b&gt;No&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;strokeWidth=4;strokeColor=#C62828;exitX=1;exitY=0.5;entryX=0;entryY=0.5;labelBackgroundColor=#ffffff;" parent="1" source="DEC" target="FALLBACK" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fb_result" style="rounded=1;html=1;strokeWidth=4;dashed=1;dashPattern=16 12;strokeColor=#C62828;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" parent="1" source="FALLBACK" target="RESULT" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1380" y="2730.7"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

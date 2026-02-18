@@ -1,0 +1,89 @@
+<mxfile host="65bd71144e">
+    <diagram id="fig2_flow" name="Fig. 2 — Flujo de datos del sistema">
+        <mxGraphModel dx="4180" dy="2576" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1520" pageHeight="2480" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="&lt;b style=&#39;font-size:44px;&#39;&gt;Flujo de datos: del dataset incompleto&lt;br&gt;al análisis conceptual de diseño&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=44;fontColor=#263238;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="20" width="1200" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="S1" value="&lt;b&gt;Dataset incompleto&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:32px;color:#546E7A&#39;&gt;Base de datos eVTOL con valores faltantes (NaN),&lt;br&gt;unidades mixtas, campos heterogéneos&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#C62828;fontColor=#B71C1C;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="200" width="1080" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="S2" value="&lt;b&gt;Depuración y preprocesamiento&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:32px;color:#546E7A&#39;&gt;Normalización numérica · detección de atípicos&lt;br&gt;derivación de variables secundarias · limpieza de tipos&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="500" width="1080" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="S3_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=6;opacity=35;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="820" width="1280" height="520" as="geometry"/>
+                </mxCell>
+                <mxCell id="S3_label" value="&lt;b&gt;Motor de imputación&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=36;fontColor=#0D47A1;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="152" y="832" width="640" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="S3_A" value="&lt;font style=&#39;font-size:32px&#39;&gt;&lt;b&gt;Imputación por&lt;br&gt;correlación&lt;/b&gt;&lt;br&gt;5 familias × n predictores&lt;br&gt;validación LOOCV&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="912" width="540" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="S3_B" value="&lt;font style=&#39;font-size:32px&#39;&gt;&lt;b&gt;Imputación por&lt;br&gt;similitud&lt;/b&gt;&lt;br&gt;Distancia robusta IQR/MAD&lt;br&gt;mediana ponderada&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="820" y="912" width="540" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="S3_SEL" value="&lt;font style=&#39;font-size:32px&#39;&gt;&lt;b&gt;Selección del mejor modelo&lt;/b&gt;&lt;br&gt;MAPE, R², métricas de confianza → fusión&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#0D47A1;fontColor=#0D47A1;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="1192" width="920" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3e1" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#1565C0;exitX=0.5;exitY=1;entryX=0.3;entryY=0;" parent="1" source="S3_A" target="S3_SEL" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3e2" style="rounded=1;html=1;strokeWidth=3.2;strokeColor=#1565C0;exitX=0.5;exitY=1;entryX=0.7;entryY=0;" parent="1" source="S3_B" target="S3_SEL" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="S4" value="&lt;b&gt;Auditoría de modelos&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:32px;color:#546E7A&#39;&gt;Validación de ecuaciones · métricas de cobertura&lt;br&gt;visualización interactiva · dashboard de KPIs&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57F17;fontColor=#E65100;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="1440" width="1080" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="DEC" value="&lt;font style=&#39;font-size:32px&#39;&gt;¿Modelos&lt;br&gt;aceptables?&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#E65100;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="592" y="1688" width="340" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="S5" value="&lt;b&gt;Dataset final completo&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:32px;color:#546E7A&#39;&gt;Excel imputado con trazabilidad por celda,&lt;br&gt;columnas de confianza y método utilizado&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="1980" width="1080" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="S6" value="&lt;b&gt;Análisis conceptual de diseño&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:32px;color:#546E7A&#39;&gt;Ranking por similitud · sugerencias Top-K&lt;br&gt;verificación física · outliers · narrativa integrada&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontColor=#4A148C;strokeWidth=6;fontSize=36;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="2260" width="1080" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="rounded=1;html=1;strokeWidth=6;strokeColor=#37474F;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="S1" target="S2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="rounded=1;html=1;strokeWidth=6;strokeColor=#37474F;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="S2" target="S3_bg" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="rounded=1;html=1;strokeWidth=6;strokeColor=#37474F;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="S3_bg" target="S4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="rounded=1;html=1;strokeWidth=4;strokeColor=#E65100;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="S4" target="DEC" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5_yes" value="&lt;font style=&#39;font-size:28px;color:#2E7D32&#39;&gt;&lt;b&gt;Sí&lt;/b&gt;&lt;/font&gt;" style="rounded=1;html=1;strokeWidth=4.8;strokeColor=#2E7D32;exitX=0.5;exitY=1;entryX=0.5;entryY=0;labelBackgroundColor=#ffffff;" parent="1" source="DEC" target="S5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="rounded=1;html=1;strokeWidth=6;strokeColor=#37474F;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="S5" target="S6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fb_no" value="&lt;font style=&#39;font-size:28px;color:#C62828&#39;&gt;&lt;b&gt;No&lt;/b&gt; — re-imputar&lt;/font&gt;" style="rounded=1;html=1;strokeWidth=2;dashed=1;dashPattern=24 12;strokeColor=#C62828;exitX=1;exitY=0.5;entryX=1;entryY=0.5;labelBackgroundColor=#ffffff;" parent="1" source="DEC" target="S3_bg" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1460" y="1788"/>
+                            <mxPoint x="1460" y="1080"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="fb_iter" value="&lt;font style=&#39;font-size:28px;color:#6A1B9A&#39;&gt;&lt;i&gt;iterar diseño&lt;/i&gt;&lt;/font&gt;" style="rounded=1;html=1;strokeWidth=2;dashed=1;dashPattern=24 12;strokeColor=#6A1B9A;exitX=0;exitY=0.5;entryX=0;entryY=0.5;labelBackgroundColor=#ffffff;" parent="1" source="S6" target="S3_bg" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="60" y="2360"/>
+                            <mxPoint x="60" y="1080"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="adrpy_label" value="&lt;font style=&#39;font-size:28px;color:#78909C&#39;&gt;&lt;i&gt;Integración con ADRpy (constraintanalysis, atmospheres)&lt;/i&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=28;fontColor=#78909C;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="2412" width="1080" height="48" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -1,0 +1,2 @@
+parametro,top_k,n_vecinos,n_usados,n_outliers,low,high,min,q1,mediana,media,q3,max,w_mediana,w_media,n_efectivo,calidad_n
+Alcance de la aeronave (km),10,10,10,0,279.375,632.375,370.0,411.75,434.0,461.688,500.0,613.08,434.0,463.0097775907449,9.205089162738117,buena

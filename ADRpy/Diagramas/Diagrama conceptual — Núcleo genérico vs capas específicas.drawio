@@ -1,0 +1,196 @@
+<mxfile host="65bd71144e">
+    <diagram id="nucleo_vs_capas" name="Núcleo genérico vs capas específicas">
+        <mxGraphModel dx="0" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3600" pageHeight="5200" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- TITLE -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="title" value="&lt;b style='font-size:48px;'&gt;Arquitectura de reutilización del sistema&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:34px;color:#546E7A'&gt;Separación entre núcleo estadístico genérico y capas específicas del dominio&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=48;fontColor=#263238;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="40" width="3200" height="160" as="geometry"/>
+                </mxCell>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- CURRENT DOMAIN: eVTOL (top) -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="EVTOL_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;strokeWidth=6;opacity=40;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="260" width="3280" height="820" as="geometry"/>
+                </mxCell>
+                <mxCell id="EVTOL_title" value="&lt;b style='font-size:40px;'&gt;🛩️ CAPA ESPECÍFICA — Aeronaves eVTOL&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:28px;color:#BF360C'&gt;Implementación actual del sistema para el dominio aeronáutico&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=40;fontColor=#E65100;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="280" width="2800" height="100" as="geometry"/>
+                </mxCell>
+
+                <mxCell id="EV1" value="&lt;b style='font-size:30px;'&gt;Familias de&lt;br&gt;parámetros&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:24px;'&gt;Física · Geométrica&lt;br&gt;Prestacional&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="420" width="560" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="EV2" value="&lt;b style='font-size:30px;'&gt;Campos derivados&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:24px;'&gt;IAS → TAS, AR,&lt;br&gt;alcance, peso vacío&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="420" width="560" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="EV3" value="&lt;b style='font-size:30px;'&gt;Aliases y&lt;br&gt;vocabulario&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:24px;'&gt;Nombres canónicos&lt;br&gt;de columnas&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="1460" y="420" width="560" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="EV4" value="&lt;b style='font-size:30px;'&gt;Dataset eVTOL&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:24px;'&gt;Tabla de aeronaves&lt;br&gt;con celdas faltantes&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="2080" y="420" width="560" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="EV5" value="&lt;b style='font-size:30px;'&gt;Asistente de&lt;br&gt;diseño&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:24px;'&gt;Guías aeronáuticas,&lt;br&gt;narrativa de dominio&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#333333;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="2700" y="420" width="560" height="200" as="geometry"/>
+                </mxCell>
+
+                <!-- Bracket / interface label -->
+                <mxCell id="EV_note" value="&lt;font style='font-size:26px;color:#BF360C'&gt;&lt;i&gt;Estos componentes se reemplazan al cambiar de dominio — el núcleo permanece intacto&lt;/i&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=26;fontColor=#BF360C;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="680" width="2800" height="60" as="geometry"/>
+                </mxCell>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- ADAPTER INTERFACE (top) -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="ADAPTER_TOP" value="&lt;b style='font-size:32px;'&gt;⚙️ INTERFAZ DE CONFIGURACIÓN&lt;/b&gt;&lt;font style='font-size:26px;color:#37474F'&gt;  —  config_overrides.json: familias, umbrales, modelos habilitados, pesos de confianza&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CFD8DC;strokeColor=#455A64;fontColor=#263238;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="790" width="3280" height="100" as="geometry"/>
+                </mxCell>
+
+                <!-- Arrows: domain → adapter -->
+                <mxCell id="a_ev1" style="rounded=0;html=1;strokeWidth=3;strokeColor=#E65100;dashed=1;dashPattern=12 8;exitX=0.5;exitY=1;entryX=0.15;entryY=0;" parent="1" source="EV1" target="ADAPTER_TOP" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_ev2" style="rounded=0;html=1;strokeWidth=3;strokeColor=#E65100;dashed=1;dashPattern=12 8;exitX=0.5;exitY=1;entryX=0.3;entryY=0;" parent="1" source="EV2" target="ADAPTER_TOP" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_ev3" style="rounded=0;html=1;strokeWidth=3;strokeColor=#E65100;dashed=1;dashPattern=12 8;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="EV3" target="ADAPTER_TOP" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_ev4" style="rounded=0;html=1;strokeWidth=3;strokeColor=#E65100;dashed=1;dashPattern=12 8;exitX=0.5;exitY=1;entryX=0.7;entryY=0;" parent="1" source="EV4" target="ADAPTER_TOP" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_ev5" style="rounded=0;html=1;strokeWidth=3;strokeColor=#E65100;dashed=1;dashPattern=12 8;exitX=0.5;exitY=1;entryX=0.85;entryY=0;" parent="1" source="EV5" target="ADAPTER_TOP" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- GENERIC STATISTICAL CORE -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="CORE_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#0D47A1;strokeWidth=8;opacity=40;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="960" width="3280" height="1200" as="geometry"/>
+                </mxCell>
+                <mxCell id="CORE_title" value="&lt;b style='font-size:44px;'&gt;🔧 NÚCLEO ESTADÍSTICO GENÉRICO&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:28px;color:#1565C0'&gt;Componentes reutilizables — independientes del dominio de aplicación&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=44;fontColor=#0D47A1;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="980" width="2800" height="120" as="geometry"/>
+                </mxCell>
+
+                <!-- Row 1: Main imputation engines -->
+                <mxCell id="C1" value="&lt;b style='font-size:30px;'&gt;Imputación por&lt;br&gt;similitud&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;Filtrado por diferencia %,&lt;br&gt;cobertura de familias,&lt;br&gt;coef. polinómico,&lt;br&gt;promedio ponderado&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#0D47A1;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="1140" width="620" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="C2" value="&lt;b style='font-size:30px;'&gt;Imputación por&lt;br&gt;regresión&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;5 familias de modelos,&lt;br&gt;1 y 2 predictores,&lt;br&gt;LOOCV, ranking por&lt;br&gt;métrica compuesta&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#0D47A1;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="920" y="1140" width="620" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="C3" value="&lt;b style='font-size:30px;'&gt;Orquestación&lt;br&gt;iterativa&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;Loop configurable,&lt;br&gt;criterios de parada,&lt;br&gt;realimentación entre&lt;br&gt;iteraciones&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#0D47A1;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="1620" y="1140" width="620" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="C4" value="&lt;b style='font-size:30px;'&gt;Fusión de&lt;br&gt;resultados&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;Promedio ponderado,&lt;br&gt;mejor confianza o&lt;br&gt;prioridad configurable&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#0D47A1;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="2320" y="1140" width="620" height="280" as="geometry"/>
+                </mxCell>
+
+                <!-- Row 2: Support components -->
+                <mxCell id="C5" value="&lt;b style='font-size:30px;'&gt;Cálculo de&lt;br&gt;confianza&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;Penalización por k,&lt;br&gt;CV, similitud,&lt;br&gt;ponderación lineal&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="1500" width="620" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="C6" value="&lt;b style='font-size:30px;'&gt;Manejo de&lt;br&gt;outliers&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;Z-score suave/duro,&lt;br&gt;pesos adaptativos,&lt;br&gt;remoción configurable&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="920" y="1500" width="620" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="C7" value="&lt;b style='font-size:30px;'&gt;Chequeos de&lt;br&gt;calidad 2D&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;VIF, PCA, condición,&lt;br&gt;cobertura espacial,&lt;br&gt;diversidad mínima&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="1620" y="1500" width="620" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="C8" value="&lt;b style='font-size:30px;'&gt;Exportación y&lt;br&gt;trazabilidad&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:22px;'&gt;Auditoría JSON,&lt;br&gt;Excel con comentarios,&lt;br&gt;HTML interactivo&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=4;fontSize=30;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="2320" y="1500" width="620" height="240" as="geometry"/>
+                </mxCell>
+
+                <!-- Core emphasis note -->
+                <mxCell id="CORE_note" value="&lt;font style='font-size:26px;color:#0D47A1'&gt;&lt;i&gt;Todos los hiperparámetros se externalizan en un JSON de configuración —&lt;br&gt;ningún componente del núcleo contiene lógica ligada a un dominio específico&lt;/i&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=26;fontColor=#0D47A1;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="1820" width="2800" height="80" as="geometry"/>
+                </mxCell>
+
+                <!-- Arrow: adapter → core -->
+                <mxCell id="a_top_core" style="rounded=0;html=1;strokeWidth=6;strokeColor=#455A64;entryX=0.5;entryY=0;" parent="1" source="ADAPTER_TOP" target="CORE_bg" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- ADAPTER INTERFACE (bottom) -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="ADAPTER_BOT" value="&lt;b style='font-size:32px;'&gt;⚙️ INTERFAZ DE CONFIGURACIÓN&lt;/b&gt;&lt;font style='font-size:26px;color:#37474F'&gt;  —  Reemplazar: familias, aliases, derivados, dataset y guías del dominio&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CFD8DC;strokeColor=#455A64;fontColor=#263238;strokeWidth=4;fontSize=32;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="2240" width="3280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_core_bot" style="rounded=0;html=1;strokeWidth=6;strokeColor=#455A64;exitX=0.5;exitY=1;" parent="1" source="CORE_bg" target="ADAPTER_BOT" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- POTENTIAL OTHER DOMAINS -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="DOMAINS_label" value="&lt;b style='font-size:36px;color:#2E7D32'&gt;Potencial de reutilización en otros dominios&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=36;fontColor=#2E7D32;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="2400" width="2400" height="80" as="geometry"/>
+                </mxCell>
+
+                <!-- Domain boxes row 1 -->
+                <mxCell id="D1" value="&lt;b style='font-size:28px;'&gt;🚗 Automotriz&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:20px;'&gt;Catálogos de vehículos&lt;br&gt;con specs incompletas&lt;br&gt;&lt;br&gt;&lt;i&gt;Familias: motor, chasis,&lt;br&gt;rendimiento, seguridad&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=4;fontSize=28;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="2540" width="560" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="D2" value="&lt;b style='font-size:28px;'&gt;🏥 Biomédica&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:20px;'&gt;Datos clínicos con&lt;br&gt;registros incompletos&lt;br&gt;&lt;br&gt;&lt;i&gt;Familias: demográfica,&lt;br&gt;bioquímica, funcional&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=4;fontSize=28;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="2540" width="560" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="D3" value="&lt;b style='font-size:28px;'&gt;🔬 Ciencia de&lt;br&gt;materiales&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:20px;'&gt;Propiedades mecánicas&lt;br&gt;y térmicas incompletas&lt;br&gt;&lt;br&gt;&lt;i&gt;Familias: mecánica,&lt;br&gt;térmica, química&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=4;fontSize=28;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="1440" y="2540" width="560" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="D4" value="&lt;b style='font-size:28px;'&gt;⚡ Sistemas&lt;br&gt;energéticos&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:20px;'&gt;Benchmarks de turbinas,&lt;br&gt;baterías, paneles solares&lt;br&gt;&lt;br&gt;&lt;i&gt;Familias: eléctrica,&lt;br&gt;térmica, dimensional&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=4;fontSize=28;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="2080" y="2540" width="560" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="D5" value="&lt;b style='font-size:28px;'&gt;🏭 Manufactura&lt;br&gt;industrial&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:20px;'&gt;Catálogos de equipos&lt;br&gt;y procesos productivos&lt;br&gt;&lt;br&gt;&lt;i&gt;Familias: proceso,&lt;br&gt;dimensional, calidad&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=4;fontSize=28;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="2720" y="2540" width="560" height="300" as="geometry"/>
+                </mxCell>
+
+                <!-- Arrows: adapter → domains -->
+                <mxCell id="a_d1" style="rounded=1;html=1;strokeWidth=4;strokeColor=#2E7D32;dashed=1;dashPattern=16 12;exitX=0.12;exitY=1;entryX=0.5;entryY=0;" parent="1" source="ADAPTER_BOT" target="D1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_d2" style="rounded=1;html=1;strokeWidth=4;strokeColor=#2E7D32;dashed=1;dashPattern=16 12;exitX=0.3;exitY=1;entryX=0.5;entryY=0;" parent="1" source="ADAPTER_BOT" target="D2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_d3" style="rounded=1;html=1;strokeWidth=4;strokeColor=#2E7D32;dashed=1;dashPattern=16 12;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="ADAPTER_BOT" target="D3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_d4" style="rounded=1;html=1;strokeWidth=4;strokeColor=#2E7D32;dashed=1;dashPattern=16 12;exitX=0.7;exitY=1;entryX=0.5;entryY=0;" parent="1" source="ADAPTER_BOT" target="D4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a_d5" style="rounded=1;html=1;strokeWidth=4;strokeColor=#2E7D32;dashed=1;dashPattern=16 12;exitX=0.88;exitY=1;entryX=0.5;entryY=0;" parent="1" source="ADAPTER_BOT" target="D5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- LEFT SIDEBAR: What changes vs what stays -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="LEGEND_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#9E9E9E;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="2920" width="3280" height="360" as="geometry"/>
+                </mxCell>
+                <mxCell id="LEG_title" value="&lt;b style='font-size:32px;'&gt;Resumen de la separación&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=32;fontColor=#263238;" parent="1" vertex="1">
+                    <mxGeometry x="1200" y="2940" width="1200" height="60" as="geometry"/>
+                </mxCell>
+
+                <mxCell id="LEG_change" value="&lt;font style='font-size:26px;'&gt;&lt;b style='color:#E65100'&gt;Cambia al migrar de dominio:&lt;/b&gt;&lt;br&gt;• Definición de familias de parámetros&lt;br&gt;• Fórmulas de campos derivados&lt;br&gt;• Aliases de columnas / vocabulario&lt;br&gt;• Dataset de entrada&lt;br&gt;• Guías y narrativa del asistente&lt;/font&gt;" style="text;html=1;strokeColor=#E65100;fillColor=#FFF8E1;align=left;verticalAlign=middle;fontSize=26;fontColor=#333333;rounded=1;strokeWidth=3;spacingLeft=20;spacingRight=20;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="3020" width="1480" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="LEG_stays" value="&lt;font style='font-size:26px;'&gt;&lt;b style='color:#0D47A1'&gt;Permanece intacto (núcleo):&lt;/b&gt;&lt;br&gt;• Motor de similitud (filtrado, coeficiente, pesos)&lt;br&gt;• Motor de regresión (modelos, LOOCV, ranking)&lt;br&gt;• Orquestación iterativa y criterios de parada&lt;br&gt;• Cálculo de confianza y manejo de outliers&lt;br&gt;• Fusión, exportación y trazabilidad&lt;/font&gt;" style="text;html=1;strokeColor=#0D47A1;fillColor=#E3F2FD;align=left;verticalAlign=middle;fontSize=26;fontColor=#333333;rounded=1;strokeWidth=3;spacingLeft=20;spacingRight=20;" parent="1" vertex="1">
+                    <mxGeometry x="1800" y="3020" width="1580" height="240" as="geometry"/>
+                </mxCell>
+
+                <!-- ══════════════════════════════════════════════ -->
+                <!-- BOTTOM NOTE -->
+                <!-- ══════════════════════════════════════════════ -->
+                <mxCell id="BOTTOM_NOTE" value="&lt;font style='font-size:24px;color:#616161'&gt;&lt;i&gt;La arquitectura desacoplada permite migrar el sistema a cualquier dominio con datos tabulares&lt;br&gt;y parámetros numéricos agrupables en familias, sin modificar el motor de imputación.&lt;/i&gt;&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=24;fontColor=#616161;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="3360" width="2800" height="80" as="geometry"/>
+                </mxCell>
+
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

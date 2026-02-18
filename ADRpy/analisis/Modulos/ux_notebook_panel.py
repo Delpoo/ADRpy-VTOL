@@ -21,9 +21,107 @@ from Modulos.controller import (
     snapshot_config,
     run_pipeline,
 )
+from . import help_texts as HT  # Textos de ayuda en archivo separado
 
 import ipywidgets as W
 from IPython.display import display
+from math import ceil
+
+
+# === Helper para calcular mínimo entero efectivo ===
+def compute_min_n(p: int, n_per_param_min: float) -> int:
+    """
+    Calcula el mínimo entero efectivo de muestras.
+    p: número de coeficientes del modelo
+    n_per_param_min: razón mínima de muestras por coeficiente
+    Retorna: ceil(p * n_per_param_min)
+    """
+    return ceil(p * n_per_param_min)
+
+
+def _normalize_decimal_input(text: str) -> str:
+    """
+    Normaliza input de texto convirtiendo coma a punto.
+    Útil para usuarios que escriben decimales con coma.
+    """
+    return text.replace(",", ".")
+
+
+# Función _create_info_button_with_tooltip removida - ahora usamos paneles expandibles
+
+
+def _create_help_row(label_text: str, widget, help_html: str, label_width="240px"):
+    """
+    Crea una fila con: [Label] [Widget] [Botón ℹ️]
+    Al hacer clic en ℹ️, muestra/oculta un panel de ayuda HTML debajo.
+    """
+    label = W.Label(label_text, layout=W.Layout(width=label_width))
+
+    # Panel de ayuda (inicialmente oculto)
+    help_panel = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;">{help_html}</div>',
+        layout=W.Layout(display="none", width="95%"),
+    )
+
+    # Botón de ayuda
+    help_btn = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Haz clic para ver ayuda detallada",
+        layout=W.Layout(width="40px", height="30px"),
+    )
+
+    # Toggle para mostrar/ocultar ayuda
+    def toggle_help(b):
+        if help_panel.layout.display == "none":
+            help_panel.layout.display = "block"
+            help_btn.button_style = "warning"
+        else:
+            help_panel.layout.display = "none"
+            help_btn.button_style = "info"
+
+    help_btn.on_click(toggle_help)
+
+    # Estructura: fila con controles + panel de ayuda debajo
+    row = W.HBox([label, widget, help_btn])
+    return W.VBox([row, help_panel]), help_panel
+
+
+def _wrap_with_help_panel(control_row, help_html: str):
+    """
+    Envuelve un control_row existente (HBox) con un panel de ayuda expandible.
+    Usado por row_check() y row_check_n_per_param().
+    """
+    # Panel de ayuda (inicialmente oculto)
+    help_panel = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;">{help_html}</div>',
+        layout=W.Layout(display="none", width="95%"),
+    )
+
+    # Botón de ayuda
+    help_btn = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Haz clic para ver ayuda detallada",
+        layout=W.Layout(width="40px", height="30px"),
+    )
+
+    # Toggle para mostrar/ocultar ayuda
+    def toggle_help(b):
+        if help_panel.layout.display == "none":
+            help_panel.layout.display = "block"
+            help_btn.button_style = "warning"
+        else:
+            help_panel.layout.display = "none"
+            help_btn.button_style = "info"
+
+    help_btn.on_click(toggle_help)
+
+    # Agregar botón de ayuda al control_row existente
+    control_row_with_help = W.HBox(list(control_row.children) + [help_btn])
+
+    # Estructura: fila con controles + botón + panel de ayuda debajo
+    return W.VBox([control_row_with_help, help_panel])
 
 
 def _w_bool(val):
@@ -71,128 +169,154 @@ def _build_sim_advanced(cfg: dict):
 
     import ipywidgets as W
 
+    LBL_W = "240px"  # ancho de etiquetas
+    CTL_W = "260px"  # ancho de controles
+    BTN_W = "40px"  # ancho de botón ℹ️
+    BTN_H = "28px"  # alto de botón ℹ️
+
     def _csv_text(lst):
         if isinstance(lst, (list, tuple)):
             return ", ".join(map(str, lst))
         return str(lst or "")
 
-    # --- BÁSICOS (antes en la pestaña "Similitud") ---
+    # ── helper: genera botón ℹ️ + panel ayuda ──
+    def _help_row(label_text, widget, help_html):
+        """Crea una fila [Label][Widget][ℹ️] con panel de ayuda desplegable."""
+        lbl = W.Label(label_text, layout=W.Layout(width=LBL_W))
+        panel = W.HTML(
+            value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;">{help_html}</div>',
+            layout=W.Layout(display="none", width="95%"),
+        )
+        btn = W.Button(
+            description="ℹ️",
+            button_style="info",
+            tooltip="Haz clic para ver ayuda detallada",
+            layout=W.Layout(width=BTN_W, height=BTN_H),
+        )
+
+        def _toggle(b):
+            if panel.layout.display == "none":
+                panel.layout.display = "block"
+                btn.button_style = "warning"
+            else:
+                panel.layout.display = "none"
+                btn.button_style = "info"
+
+        btn.on_click(_toggle)
+        return W.VBox([W.HBox([lbl, widget, btn]), panel])
+
+    def _help_btn_only(help_html):
+        """Devuelve (btn, panel) para agregar a filas complejas."""
+        panel = W.HTML(
+            value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;">{help_html}</div>',
+            layout=W.Layout(display="none", width="95%"),
+        )
+        btn = W.Button(
+            description="ℹ️",
+            button_style="info",
+            tooltip="Haz clic para ver ayuda detallada",
+            layout=W.Layout(width=BTN_W, height=BTN_H),
+        )
+
+        def _toggle(b):
+            if panel.layout.display == "none":
+                panel.layout.display = "block"
+                btn.button_style = "warning"
+            else:
+                panel.layout.display = "none"
+                btn.button_style = "info"
+
+        btn.on_click(_toggle)
+        return btn, panel
+
+    # --- BÁSICOS ---
     w_umbral = W.BoundedFloatText(
         value=float(sim.get("umbral_pct_diferencia", 0.20)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_minfam = W.BoundedIntText(
         value=int(sim.get("min_familias", 3)),
         min=1,
         max=10**6,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     exc = sim.get("excepcion_min_familias", {"min_familias": 2, "min_parametros": 6})
     w_exc_fam = W.BoundedIntText(
         value=int(exc.get("min_familias", 2)),
         min=1,
         max=10**6,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_exc_par = W.BoundedIntText(
         value=int(exc.get("min_parametros", 6)),
         min=1,
         max=10**6,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_kmin = W.BoundedIntText(
         value=int(sim.get("k_min", 3)),
         min=1,
         max=10**6,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_kmax = W.BoundedIntText(
         value=int(sim.get("k_max", 10)),
         min=1,
         max=10**6,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_wsim = W.BoundedFloatText(
         value=float(sim.get("peso_confianza_similitud", 0.7)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_wcv = W.BoundedFloatText(
         value=float(sim.get("peso_confianza_cv", 0.3)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_verb = W.BoundedIntText(
         value=int(sim.get("verbosidad", 0)),
         min=0,
         max=3,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
 
     ui_basicos = W.VBox(
         [
             W.HTML("<b>Básicos</b>"),
-            W.HBox(
-                [
-                    W.Label("Umbral % diferencia (0–1)", layout=W.Layout(width="240px")),
-                    w_umbral,
-                ]
+            _help_row(
+                "Umbral % diferencia (0–1)",
+                w_umbral,
+                HT.SIMILITUD["umbral_pct_diferencia"],
             ),
-            W.HBox(
-                [
-                    W.Label("Mínimo familias", layout=W.Layout(width="240px")),
-                    w_minfam,
-                ]
+            _help_row("Mínimo familias", w_minfam, HT.SIMILITUD["min_familias"]),
+            _help_row(
+                "Excepción: min familias",
+                w_exc_fam,
+                HT.SIMILITUD["excepcion_min_familias"],
             ),
-            W.HBox(
-                [
-                    W.Label("Excepción: min familias", layout=W.Layout(width="240px")),
-                    w_exc_fam,
-                ]
+            _help_row(
+                "Excepción: min parámetros",
+                w_exc_par,
+                HT.SIMILITUD["excepcion_min_familias"],
             ),
-            W.HBox(
-                [
-                    W.Label("Excepción: min parámetros", layout=W.Layout(width="240px")),
-                    w_exc_par,
-                ]
+            _help_row("k mínimo", w_kmin, HT.SIMILITUD["k_min"]),
+            _help_row("k máximo", w_kmax, HT.SIMILITUD["k_max"]),
+            _help_row(
+                "Peso confianza similitud",
+                w_wsim,
+                HT.SIMILITUD["peso_confianza_similitud"],
             ),
-            W.HBox(
-                [
-                    W.Label("k mínimo", layout=W.Layout(width="240px")),
-                    w_kmin,
-                ]
-            ),
-            W.HBox(
-                [
-                    W.Label("k máximo", layout=W.Layout(width="240px")),
-                    w_kmax,
-                ]
-            ),
-            W.HBox(
-                [
-                    W.Label("Peso confianza similitud", layout=W.Layout(width="240px")),
-                    w_wsim,
-                ]
-            ),
-            W.HBox(
-                [
-                    W.Label("Peso confianza CV", layout=W.Layout(width="240px")),
-                    w_wcv,
-                ]
-            ),
-            W.HBox(
-                [
-                    W.Label("Verbosidad (0/1/2/3)", layout=W.Layout(width="240px")),
-                    w_verb,
-                ]
-            ),
+            _help_row("Peso confianza CV", w_wcv, HT.SIMILITUD["peso_confianza_cv"]),
+            _help_row("Verbosidad (0/1/2/3)", w_verb, HT.SIMILITUD["verbosidad"]),
             W.HTML("<hr>"),
         ]
     )
@@ -212,12 +336,20 @@ def _build_sim_advanced(cfg: dict):
         value=tuple([f for f in familias_usadas_def if f in fam_keys])
         or tuple(fam_keys),
         rows=min(6, len(fam_keys)),
-        layout=W.Layout(width="260px", height="120px"),
+        layout=W.Layout(width=CTL_W, height="120px"),
     )
+
+    btn_fam, panel_fam = _help_btn_only(HT.SIMILITUD["familias"])
 
     ui_familias = W.VBox(
         [
-            W.HTML("<b>Familias y características (CSV por familia)</b>"),
+            W.HBox(
+                [
+                    W.HTML("<b>Familias y características (CSV por familia)</b>"),
+                    btn_fam,
+                ]
+            ),
+            panel_fam,
             W.HBox(
                 [
                     W.VBox(
@@ -256,47 +388,47 @@ def _build_sim_advanced(cfg: dict):
         min=-1e3,
         max=1e3,
         step=0.001,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     a1 = W.BoundedFloatText(
         value=float(fun.get("coef", {}).get("a1", -0.01)),
         min=-1e3,
         max=1e3,
         step=0.001,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     a0 = W.BoundedFloatText(
         value=float(fun.get("coef", {}).get("a0", 1.0)),
         min=-1e3,
         max=1e3,
         step=0.001,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     domax = W.BoundedFloatText(
         value=float(fun.get("dominio_max_pct", 20.0)),
         min=0.0,
         max=1e6,
         step=0.5,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
+
+    btn_fun, panel_fun = _help_btn_only(HT.SIMILITUD["funcion_similitud"])
 
     ui_fun = W.VBox(
         [
-            W.HTML(
-                "<b>Función de similitud</b> &nbsp; <i>(x = diferencia %, 0≤x≤dominio)</i>"
-            ),
             W.HBox(
                 [
-                    W.Label("a2"),
-                    a2,
-                    W.Label("a1"),
-                    a1,
-                    W.Label("a0"),
-                    a0,
-                    W.Label("dominio_max_pct"),
-                    domax,
+                    W.HTML(
+                        "<b>Función de similitud</b> &nbsp; <i>(x = diferencia %, 0≤x≤dominio)</i>"
+                    ),
+                    btn_fun,
                 ]
             ),
+            panel_fun,
+            W.HBox([W.Label("a2", layout=W.Layout(width="40px")), a2]),
+            W.HBox([W.Label("a1", layout=W.Layout(width="40px")), a1]),
+            W.HBox([W.Label("a0", layout=W.Layout(width="40px")), a0]),
+            W.HBox([W.Label("dominio_max_pct", layout=W.Layout(width="140px")), domax]),
         ]
     )
 
@@ -305,28 +437,33 @@ def _build_sim_advanced(cfg: dict):
     modo = W.Dropdown(
         options=["todos", "top_k", "k_en_rango"],
         value=vec.get("modo", "todos"),
-        description="modo",
+        layout=W.Layout(width=CTL_W),
     )
     topk = W.BoundedIntText(
         value=int(vec.get("top_k", 10)),
         min=1,
         max=10**6,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     enforce = W.Checkbox(
         value=bool(vec.get("enforce_k_min", True)),
-        description="enforce k_min",
         indent=False,
+        layout=W.Layout(width=CTL_W),
     )
+
+    btn_vec, panel_vec = _help_btn_only(HT.SIMILITUD["vecinos"])
 
     ui_vec = W.VBox(
         [
-            W.HTML("<b>Selección de vecinos</b>"),
-            W.HBox([modo, W.Label("top_k"), topk, enforce]),
+            W.HBox([W.HTML("<b>Selección de vecinos</b>"), btn_vec]),
+            panel_vec,
+            W.HBox([W.Label("Modo", layout=W.Layout(width=LBL_W)), modo]),
+            W.HBox([W.Label("top_k", layout=W.Layout(width=LBL_W)), topk]),
+            W.HBox([W.Label("enforce k_min", layout=W.Layout(width=LBL_W)), enforce]),
         ]
     )
 
-    # --- Confianza: cv_ref y penalización por k (coef. polinomio opcional) ---
+    # --- Confianza: cv_ref y penalización por k ---
     conf = sim.get(
         "confianza",
         {"cv_ref": 0.5, "penalizacion_k": {"tipo": "polinomica", "params": {}}},
@@ -336,35 +473,48 @@ def _build_sim_advanced(cfg: dict):
         min=1e-6,
         max=1e3,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     pk = conf.get("penalizacion_k", {}).get("params", {})
     a5 = W.FloatText(
-        value=float(pk.get("a5", 0.00002281)), layout=W.Layout(width="120px")
+        value=float(pk.get("a5", 0.00002281)), layout=W.Layout(width=CTL_W)
     )
-    a4 = W.FloatText(
-        value=float(pk.get("a4", -0.00024)), layout=W.Layout(width="120px")
-    )
-    a3 = W.FloatText(value=float(pk.get("a3", -0.0036)), layout=W.Layout(width="120px"))
-    a2k = W.FloatText(value=float(pk.get("a2", 0.046)), layout=W.Layout(width="120px"))
-    a1k = W.FloatText(value=float(pk.get("a1", 0.0095)), layout=W.Layout(width="120px"))
-    a0k = W.FloatText(value=float(pk.get("a0", 0.024)), layout=W.Layout(width="120px"))
+    a4 = W.FloatText(value=float(pk.get("a4", -0.00024)), layout=W.Layout(width=CTL_W))
+    a3 = W.FloatText(value=float(pk.get("a3", -0.0036)), layout=W.Layout(width=CTL_W))
+    a2k = W.FloatText(value=float(pk.get("a2", 0.046)), layout=W.Layout(width=CTL_W))
+    a1k = W.FloatText(value=float(pk.get("a1", 0.0095)), layout=W.Layout(width=CTL_W))
+    a0k = W.FloatText(value=float(pk.get("a0", 0.024)), layout=W.Layout(width=CTL_W))
 
+    btn_conf, panel_conf = _help_btn_only(HT.SIMILITUD["confianza_sim"])
+
+    # Sub-acordeón para penalización k
+    btn_pk_sim, panel_pk_sim = _help_btn_only(HT.SIMILITUD["confianza_sim"])
     acc_conf = W.Accordion(
         children=[
             W.VBox(
                 [
-                    W.HBox([W.Label("a5"), a5, W.Label("a4"), a4, W.Label("a3"), a3]),
-                    W.HBox(
-                        [W.Label("a2"), a2k, W.Label("a1"), a1k, W.Label("a0"), a0k]
-                    ),
+                    W.HBox([btn_pk_sim]),
+                    panel_pk_sim,
+                    W.HBox([W.Label("a5", layout=W.Layout(width="40px")), a5]),
+                    W.HBox([W.Label("a4", layout=W.Layout(width="40px")), a4]),
+                    W.HBox([W.Label("a3", layout=W.Layout(width="40px")), a3]),
+                    W.HBox([W.Label("a2", layout=W.Layout(width="40px")), a2k]),
+                    W.HBox([W.Label("a1", layout=W.Layout(width="40px")), a1k]),
+                    W.HBox([W.Label("a0", layout=W.Layout(width="40px")), a0k]),
                 ]
             )
         ]
     )
     acc_conf.set_title(0, "Penalización por k (coef. polinomio)")
 
-    ui_conf = W.VBox([W.HBox([W.Label("cv_ref"), cv_ref]), acc_conf])
+    ui_conf = W.VBox(
+        [
+            W.HBox([W.HTML("<b>Confianza</b>"), btn_conf]),
+            panel_conf,
+            W.HBox([W.Label("cv_ref", layout=W.Layout(width=LBL_W)), cv_ref]),
+            acc_conf,
+        ]
+    )
 
     # --- Umbral por familia (0–1 o vacío para None) ---
     um_pf = sim.get(
@@ -375,13 +525,22 @@ def _build_sim_advanced(cfg: dict):
     for fk in fam_keys:
         val = "" if um_pf.get(fk) in (None, "") else str(um_pf.get(fk))
         um_inputs[fk] = W.Text(
-            value=val, placeholder="None o 0–1", layout=W.Layout(width="140px")
+            value=val, placeholder="None o 0–1", layout=W.Layout(width=CTL_W)
         )
+
+    btn_um, panel_um = _help_btn_only(HT.SIMILITUD["umbral_por_familia"])
+
     ui_um = W.VBox(
         [
-            W.HTML(
-                "<b>Umbral por familia</b> &nbsp; <i>(usar fracción 0–1; vacío = None)</i>"
+            W.HBox(
+                [
+                    W.HTML(
+                        "<b>Umbral por familia</b> &nbsp; <i>(usar fracción 0–1; vacío = None)</i>"
+                    ),
+                    btn_um,
+                ]
             ),
+            panel_um,
             W.VBox(
                 [
                     W.HBox([W.Label(fk, layout=W.Layout(width="140px")), um_inputs[fk]])
@@ -405,65 +564,62 @@ def _build_sim_advanced(cfg: dict):
     )
     w_usar = W.Checkbox(
         value=bool(out.get("usar", False)),
-        description="Usar outliers en vecinos",
         indent=False,
+        layout=W.Layout(width=CTL_W),
     )
     w_zs = W.BoundedFloatText(
         value=float(out.get("umbral_z_suave", 3.0)),
         min=0.0,
         max=1e9,
         step=0.1,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_zd = W.BoundedFloatText(
         value=float(out.get("umbral_z_duro", 6.0)),
         min=0.0,
         max=1e9,
         step=0.1,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_al = W.BoundedFloatText(
         value=float(out.get("alpha_pesos", 0.5)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_wm = W.BoundedFloatText(
         value=float(out.get("w_min", 0.2)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width=CTL_W),
     )
     w_rd = W.Checkbox(
         value=bool(out.get("remover_duro", False)),
-        description="remover_duro",
         indent=False,
+        layout=W.Layout(width=CTL_W),
     )
+
+    btn_out, panel_out = _help_btn_only(HT.SIMILITUD["outliers_sim"])
 
     ui_out = W.VBox(
         [
-            W.HTML("<b>Outliers (Similitud)</b>"),
-            W.HBox(
-                [
-                    w_usar,
-                    W.Label("z_suave"),
-                    w_zs,
-                    W.Label("z_duro"),
-                    w_zd,
-                    W.Label("alpha"),
-                    w_al,
-                    W.Label("w_min"),
-                    w_wm,
-                    w_rd,
-                ]
-            ),
+            W.HBox([W.HTML("<b>Outliers (Similitud)</b>"), btn_out]),
+            panel_out,
+            W.HBox([W.Label("Usar outliers", layout=W.Layout(width=LBL_W)), w_usar]),
+            W.HBox([W.Label("z_suave", layout=W.Layout(width=LBL_W)), w_zs]),
+            W.HBox([W.Label("z_duro", layout=W.Layout(width=LBL_W)), w_zd]),
+            W.HBox([W.Label("alpha", layout=W.Layout(width=LBL_W)), w_al]),
+            W.HBox([W.Label("w_min", layout=W.Layout(width=LBL_W)), w_wm]),
+            W.HBox([W.Label("remover_duro", layout=W.Layout(width=LBL_W)), w_rd]),
         ]
     )
 
     # --- empaquetado en acordeón ---
-    acc = W.Accordion(children=[ui_basicos, ui_familias, ui_fun, ui_vec, ui_conf, ui_um, ui_out])
+    acc = W.Accordion(
+        children=[ui_basicos, ui_familias, ui_fun, ui_vec, ui_conf, ui_um, ui_out]
+    )
     acc.set_title(0, "Básicos")
     acc.set_title(1, "Familias")
     acc.set_title(2, "Función de similitud")
@@ -745,8 +901,10 @@ def _build_corr_advanced(cfg: dict):
 
     # switches + umbrales
     rows = []
+    help_panels = []  # Para almacenar referencias a paneles de ayuda
 
-    def row_check(name, subkey, label, default, kind="float"):
+    def row_check(name, subkey, label, default, kind="float", tooltip="", help_html=""):
+        """Crea fila con switch, label, input y botón de ayuda expandible."""
         cfgk = chk.get(name, {})
         on = _wb(cfgk.get("enabled", True))
         if kind == "float":
@@ -755,33 +913,180 @@ def _build_corr_advanced(cfg: dict):
             val = _wi(cfgk.get(subkey, default))
         else:
             val = _wf(cfgk.get(subkey, default))
+
+        # Agregar tooltip corto si se proporciona
+        if tooltip:
+            val.tooltip = tooltip
+
         rows.append((name, subkey, on, val))
-        return W.HBox([on, W.Label(label, layout=W.Layout(width="240px")), val])
+
+        control_row = W.HBox([on, W.Label(label, layout=W.Layout(width="240px")), val])
+
+        # Si hay help_html, envolver con panel de ayuda expandible
+        if help_html:
+            return _wrap_with_help_panel(control_row, help_html)
+        else:
+            return W.HBox([on, W.Label(label, layout=W.Layout(width="240px")), val])
+
+    def row_check_n_per_param(
+        name, subkey, label, default, p_coefs, tipo_modelo, help_html=None
+    ):
+        """
+        Crea una fila para n_per_param con botón de información y label dinámico.
+        p_coefs: número de coeficientes del modelo
+        tipo_modelo: nombre descriptivo del modelo
+        help_html: HTML para panel de ayuda expandible (opcional)
+        """
+        cfgk = chk.get(name, {})
+        on = _wb(cfgk.get("enabled", True))
+        val = _wf(cfgk.get(subkey, default))
+
+        # Crear widget de salida para mostrar el mínimo efectivo
+        min_n_label = W.Label(
+            value=f"→ n≥{compute_min_n(p_coefs, default)}",
+            layout=W.Layout(width="80px"),
+        )
+
+        # Función para actualizar el label cuando cambia el valor
+        def update_min_n(change):
+            try:
+                input_val = float(_normalize_decimal_input(str(change["new"])))
+                min_n = compute_min_n(p_coefs, input_val)
+                min_n_label.value = f"→ n≥{min_n}"
+            except:
+                min_n_label.value = "→ n≥?"
+
+        val.observe(update_min_n, names="value")
+
+        rows.append((name, subkey, on, val))
+
+        control_row = W.HBox(
+            [on, W.Label(label, layout=W.Layout(width="200px")), val, min_n_label]
+        )
+
+        # Si hay help_html, envolver con panel de ayuda expandible
+        if help_html:
+            return _wrap_with_help_panel(control_row, help_html)
+        else:
+            return control_row
 
     ui_checks = W.VBox(
         [
+            W.HTML(
+                '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Validación de modelos 2D</div>'
+            ),
             w_chk_enabled,
-            row_check("pearson", "abs_r_max", "|r| máx", 0.90, "float"),
-            row_check("vif", "max", "VIF máx", 10.0, "float"),
-            row_check("pc2", "ratio_min", "PC2 ratio mín", 0.03, "float"),
-            row_check("rank", "min", "Rango mínimo", 2, "int"),
-            row_check("cond", "max", "Condición máx", 1e5, "float"),
+            W.HTML(
+                '<div style="margin-top:12px;margin-bottom:4px;color:#888;font-size:11px;font-style:italic;">Correlación y multicolinealidad</div>'
+            ),
+            row_check(
+                "pearson",
+                "abs_r_max",
+                "|r| máx",
+                0.90,
+                "float",
+                tooltip="Correlación de Pearson máxima entre predictores",
+                help_html=HT.CHECKS_2D["pearson"],
+            ),
+            row_check(
+                "vif",
+                "max",
+                "VIF máx",
+                10.0,
+                "float",
+                tooltip="Variance Inflation Factor máximo",
+                help_html=HT.CHECKS_2D["vif"],
+            ),
+            row_check(
+                "pc2",
+                "ratio_min",
+                "PC2 ratio mín",
+                0.03,
+                "float",
+                tooltip="Ratio mínimo de varianza del segundo componente principal",
+                help_html=HT.CHECKS_2D["pc2"],
+            ),
+            row_check(
+                "rank",
+                "min",
+                "Rango mínimo",
+                2,
+                "int",
+                tooltip="Rango mínimo de la matriz de predictores",
+                help_html=HT.CHECKS_2D["rank"],
+            ),
+            row_check(
+                "cond",
+                "max",
+                "Condición máx",
+                1e5,
+                "float",
+                tooltip="Número de condición máximo de la matriz",
+                help_html=HT.CHECKS_2D["cond"],
+            ),
+            W.HTML(
+                '<div style="margin-top:12px;margin-bottom:4px;color:#888;font-size:11px;font-style:italic;">Cobertura del espacio</div>'
+            ),
             row_check(
                 "coverage_unique_pair",
                 "ratio_min",
                 "Cobertura pares únicos mín",
                 0.60,
                 "float",
+                tooltip="Ratio mínimo de pares (x1,x2) únicos",
+                help_html=HT.CHECKS_2D["coverage_unique_pair"],
             ),
             row_check(
-                "coverage_hull", "ratio_min", "Cobertura hull mín", 0.15, "float"
+                "coverage_hull",
+                "ratio_min",
+                "Cobertura hull mín",
+                0.15,
+                "float",
+                tooltip="Ratio mínimo entre área del convex hull y bounding box",
+                help_html=HT.CHECKS_2D["coverage_hull"],
             ),
             row_check(
-                "coverage_ellipse", "ratio_min", "Cobertura elipse mín", 0.10, "float"
+                "coverage_ellipse",
+                "ratio_min",
+                "Cobertura elipse mín",
+                0.10,
+                "float",
+                tooltip="Ratio entre área de elipse 1σ y bounding box",
+                help_html=HT.CHECKS_2D["coverage_ellipse"],
             ),
-            row_check("n_per_param", "linear2_min", "n/param (linear-2)", 8, "int"),
-            row_check("n_per_param", "poly2_min", "n/param (poly-2)", 10, "int"),
-            row_check("agresivo", "abs_r_min", "Modo agresivo |r| mín", 0.95, "float"),
+            W.HTML(
+                '<div style="margin-top:12px;margin-bottom:4px;color:#888;font-size:11px;font-style:italic;">Mínimo de muestras por parámetro</div>'
+            ),
+            row_check_n_per_param(
+                "n_per_param",
+                "linear2_min",
+                "n/param (linear-2)",
+                8,
+                3,
+                "linear-2 (β0, β1, β2)",
+                help_html=HT.CHECKS_2D["n_per_param_linear2"],
+            ),
+            row_check_n_per_param(
+                "n_per_param",
+                "poly2_min",
+                "n/param (poly-2)",
+                10,
+                6,
+                "poly-2 (β0 + 5 términos)",
+                help_html=HT.CHECKS_2D["n_per_param_poly2"],
+            ),
+            W.HTML(
+                '<div style="margin-top:12px;margin-bottom:4px;color:#888;font-size:11px;font-style:italic;">Modo agresivo</div>'
+            ),
+            row_check(
+                "agresivo",
+                "abs_r_min",
+                "Modo agresivo |r| mín",
+                0.95,
+                "float",
+                tooltip="Correlación mínima para activar modo agresivo",
+                help_html=HT.CHECKS_2D["agresivo"],
+            ),
         ]
     )
 
@@ -789,49 +1094,291 @@ def _build_corr_advanced(cfg: dict):
     div = c.get("diversidad_minima", {})
     mu = div.get("min_unicos", {})
     mm = div.get("min_muestras", {})
+
+    # Diccionario con info de cada tipo de modelo (p no es configurable)
+    modelo_info = {
+        "exp-1": {"p": 2, "desc": "exponencial 1D (β0, β1)"},
+        "log-1": {"p": 2, "desc": "logarítmico 1D (β0, β1)"},
+        "pot-1": {"p": 2, "desc": "potencia 1D (β0, β1)"},
+        "linear-1": {"p": 2, "desc": "lineal 1D (β0, β1)"},
+        "poly-1": {"p": 3, "desc": "polinómico 1D grado 2 (β0, β1, β2)"},
+        "linear-2": {"p": 3, "desc": "lineal 2D (β0, β1, β2)"},
+        "poly-2": {"p": 6, "desc": "polinómico 2D (β0 + 5 términos)"},
+    }
+
     tipos = ["exp-1", "log-1", "pot-1", "linear-1", "poly-1", "linear-2", "poly-2"]
     ui_min = []
+
+    # Crear widgets que necesitan actualización dinámica
+    min_muestras_widgets = {}
+    n_min_labels = {}
+
     for t in tipos:
-        ui_min.append(
-            W.HBox(
-                [
-                    W.Label(t, layout=W.Layout(width="90px")),
-                    _wi(mu.get(t, 5)),
-                    _wi(mm.get(t, 6)),
-                ]
-            )
+        info = modelo_info.get(t, {"p": 2, "desc": t})
+        p_coefs = info["p"]
+
+        # Widget min_unicos
+        w_unicos = _wi(mu.get(t, 5))
+        w_unicos.description = ""
+
+        # Widget muestras/coef con paso 0.1
+        default_val = mm.get(t, 6)
+        w_muestras_por_coef = W.BoundedFloatText(
+            value=float(default_val),
+            min=0.0,
+            max=1e9,
+            step=0.1,  # Incremento de 0.1
+            layout=W.Layout(width="120px"),
         )
+        min_muestras_widgets[t] = w_muestras_por_coef
+
+        # Label NO editable para p (coef.)
+        p_label = W.Label(value=str(p_coefs), layout=W.Layout(width="60px"))
+
+        # Label dinámico NO editable para n mínimo
+        min_n = compute_min_n(p_coefs, default_val)
+        n_min_label = W.Label(value=str(min_n), layout=W.Layout(width="70px"))
+        n_min_labels[t] = n_min_label
+
+        # Función de actualización para este tipo
+        def make_updater(tipo, p):
+            def update_n_min(change):
+                try:
+                    # Normalizar entrada (convertir coma a punto)
+                    input_str = str(change["new"])
+                    input_val = float(_normalize_decimal_input(input_str))
+                    # Actualizar el widget con formato de 2 decimales
+                    if abs(change["new"] - input_val) > 1e-9:
+                        w_muestras_por_coef.value = input_val
+                    # Calcular y mostrar n mínimo
+                    min_n = compute_min_n(p, input_val)
+                    n_min_labels[tipo].value = str(min_n)
+                except:
+                    n_min_labels[tipo].value = "?"
+
+            return update_n_min
+
+        w_muestras_por_coef.observe(make_updater(t, p_coefs), names="value")
+
+        # Obtener texto de ayuda del módulo externo
+        help_html_div = HT.DIVERSIDAD.get(t, f"<i>Ayuda para {t} no disponible</i>")
+
+        help_panel_div = W.HTML(
+            value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_div}</div>',
+            layout=W.Layout(display="none", width="98%", margin="5px 0"),
+        )
+        help_panels.append(help_panel_div)
+
+        help_btn_div = W.Button(
+            description="ℹ️",
+            button_style="info",
+            tooltip="Haz clic para ayuda detallada",
+            layout=W.Layout(width="40px", height="28px"),
+        )
+
+        def make_help_toggle(panel, btn):
+            def toggle(b):
+                if panel.layout.display == "none":
+                    panel.layout.display = "block"
+                    btn.button_style = "warning"
+                else:
+                    panel.layout.display = "none"
+                    btn.button_style = "info"
+
+            return toggle
+
+        help_btn_div.on_click(make_help_toggle(help_panel_div, help_btn_div))
+
+        control_row_div = W.HBox(
+            [
+                W.Label(t, layout=W.Layout(width="90px")),
+                w_unicos,
+                w_muestras_por_coef,
+                p_label,
+                n_min_label,
+                help_btn_div,
+            ]
+        )
+        ui_min.append(W.VBox([control_row_div, help_panel_div]))
+
     ui_div = W.VBox(
         [
+            W.HTML(
+                '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Diversidad mínima por tipo de modelo</div>'
+            ),
             W.HBox(
                 [
                     W.Label("tipo", layout=W.Layout(width="90px")),
-                    W.Label("min_unicos"),
-                    W.Label("min_muestras"),
+                    W.Label("mín. únicos", layout=W.Layout(width="120px")),
+                    W.Label("muestras/coef.", layout=W.Layout(width="120px")),
+                    W.Label("p (coef.)", layout=W.Layout(width="60px")),
+                    W.Label("n mínimo", layout=W.Layout(width="70px")),
                 ]
-            )
+            ),
         ]
         + ui_min
     )
 
     # ---- Extrapolación ----
     ex = c.get("extrapolacion", {})
+
+    # Dropdown modo_predictores con ayuda
     w_modo_pred = W.Dropdown(
         options=["eliminar", "permitir_con_tolerancia"],
         value=ex.get("modo_predictores", "eliminar"),
-        description="Predictores",
+        layout=W.Layout(width="260px"),
     )
-    w_tol_pct = _wf(ex.get("tolerancia_pct", 0.0))
+    help_html_modo_pred = HT.EXTRAPOLACION["modo_predictores"]
+    help_panel_modo_pred = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_modo_pred}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_modo_pred = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_modo_pred(b):
+        if help_panel_modo_pred.layout.display == "none":
+            help_panel_modo_pred.layout.display = "block"
+            help_btn_modo_pred.button_style = "warning"
+        else:
+            help_panel_modo_pred.layout.display = "none"
+            help_btn_modo_pred.button_style = "info"
+
+    help_btn_modo_pred.on_click(toggle_modo_pred)
+
+    w_tol_pct = W.BoundedFloatText(
+        value=float(ex.get("tolerancia_pct", 0.0)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    help_html_tol_pct = HT.EXTRAPOLACION["tolerancia_pct"]
+    help_panel_tol_pct = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_tol_pct}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_tol_pct = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_tol_pct(b):
+        if help_panel_tol_pct.layout.display == "none":
+            help_panel_tol_pct.layout.display = "block"
+            help_btn_tol_pct.button_style = "warning"
+        else:
+            help_panel_tol_pct.layout.display = "none"
+            help_btn_tol_pct.button_style = "info"
+
+    help_btn_tol_pct.on_click(toggle_tol_pct)
+
     w_modo2d = W.Dropdown(
         options=["marginal", "convex_hull"],
         value=ex.get("modo_2d", "marginal"),
-        description="2D",
+        layout=W.Layout(width="260px"),
     )
-    w_hull_pad = _wf(ex.get("tolerancia_hull_pad", 0.0))
+    help_html_modo2d = HT.EXTRAPOLACION["modo_2d"]
+    help_panel_modo2d = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_modo2d}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_modo2d = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_modo2d(b):
+        if help_panel_modo2d.layout.display == "none":
+            help_panel_modo2d.layout.display = "block"
+            help_btn_modo2d.button_style = "warning"
+        else:
+            help_panel_modo2d.layout.display = "none"
+            help_btn_modo2d.button_style = "info"
+
+    help_btn_modo2d.on_click(toggle_modo2d)
+
+    w_hull_pad = W.BoundedFloatText(
+        value=float(ex.get("tolerancia_hull_pad", 0.0)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    help_html_hull_pad = HT.EXTRAPOLACION["hull_pad"]
+    help_panel_hull_pad = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_hull_pad}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_hull_pad = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_hull_pad(b):
+        if help_panel_hull_pad.layout.display == "none":
+            help_panel_hull_pad.layout.display = "block"
+            help_btn_hull_pad.button_style = "warning"
+        else:
+            help_panel_hull_pad.layout.display = "none"
+            help_btn_hull_pad.button_style = "info"
+
+    help_btn_hull_pad.on_click(toggle_hull_pad)
+
     ui_ex = W.VBox(
         [
-            W.HBox([w_modo_pred, W.Label("tolerancia_pct"), w_tol_pct]),
-            W.HBox([w_modo2d, W.Label("hull_pad"), w_hull_pad]),
+            W.HTML(
+                '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Extrapolación 1D</div>'
+            ),
+            # Modo predictores
+            W.HBox(
+                [
+                    W.Label("Modo predictores", layout=W.Layout(width="200px")),
+                    w_modo_pred,
+                    help_btn_modo_pred,
+                ]
+            ),
+            help_panel_modo_pred,
+            # Tolerancia 1D
+            W.HBox(
+                [
+                    W.Label("Tolerancia (%)", layout=W.Layout(width="200px")),
+                    w_tol_pct,
+                    help_btn_tol_pct,
+                ]
+            ),
+            help_panel_tol_pct,
+            W.HTML(
+                '<div style="margin-top:16px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Configuración 2D</div>'
+            ),
+            # Modo 2D
+            W.HBox(
+                [
+                    W.Label("Modo 2D", layout=W.Layout(width="200px")),
+                    w_modo2d,
+                    help_btn_modo2d,
+                ]
+            ),
+            help_panel_modo2d,
+            # Hull padding
+            W.HBox(
+                [
+                    W.Label("Hull padding", layout=W.Layout(width="200px")),
+                    w_hull_pad,
+                    help_btn_hull_pad,
+                ]
+            ),
+            help_panel_hull_pad,
         ]
     )
 
@@ -840,9 +1387,87 @@ def _build_corr_advanced(cfg: dict):
     modelos_base = cfg.get("modelos", {})
     habilitados_cfg = md.get("habilitados", modelos_base.get("habilitados", {}))
 
-    w_m1d = _wb(md.get("permitir_1d", True))
-    w_m2d = _wb(md.get("permitir_2d", True))
-    w_pdeg = _wi(md.get("poly_grado", 2))
+    w_m1d = W.Checkbox(
+        value=bool(md.get("permitir_1d", True)),
+        indent=False,
+        layout=W.Layout(width="260px"),
+    )
+    help_html_m1d = HT.MODELOS["permitir_1d"]
+    help_panel_m1d = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_m1d}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_m1d = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_m1d(b):
+        if help_panel_m1d.layout.display == "none":
+            help_panel_m1d.layout.display = "block"
+            help_btn_m1d.button_style = "warning"
+        else:
+            help_panel_m1d.layout.display = "none"
+            help_btn_m1d.button_style = "info"
+
+    help_btn_m1d.on_click(toggle_m1d)
+
+    w_m2d = W.Checkbox(
+        value=bool(md.get("permitir_2d", True)),
+        indent=False,
+        layout=W.Layout(width="260px"),
+    )
+    help_html_m2d = HT.MODELOS["permitir_2d"]
+    help_panel_m2d = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_m2d}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_m2d = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_m2d(b):
+        if help_panel_m2d.layout.display == "none":
+            help_panel_m2d.layout.display = "block"
+            help_btn_m2d.button_style = "warning"
+        else:
+            help_panel_m2d.layout.display = "none"
+            help_btn_m2d.button_style = "info"
+
+    help_btn_m2d.on_click(toggle_m2d)
+
+    w_pdeg = W.BoundedIntText(
+        value=int(md.get("poly_grado", 2)),
+        min=-(10**6),
+        max=10**6,
+        layout=W.Layout(width="260px"),
+    )
+    help_html_pdeg = HT.MODELOS["poly_grado"]
+    help_panel_pdeg = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_pdeg}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_pdeg = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_pdeg(b):
+        if help_panel_pdeg.layout.display == "none":
+            help_panel_pdeg.layout.display = "block"
+            help_btn_pdeg.button_style = "warning"
+        else:
+            help_panel_pdeg.layout.display = "none"
+            help_btn_pdeg.button_style = "info"
+
+    help_btn_pdeg.on_click(toggle_pdeg)
 
     w_mod_lineal = W.Checkbox(
         value=bool(habilitados_cfg.get("lineal", True)), description="lineal"
@@ -859,6 +1484,27 @@ def _build_corr_advanced(cfg: dict):
     w_mod_exp = W.Checkbox(
         value=bool(habilitados_cfg.get("exponencial", True)), description="exp"
     )
+    help_html_mods = HT.MODELOS["tipos_modelos"]
+    help_panel_mods = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_mods}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_mods = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_mods(b):
+        if help_panel_mods.layout.display == "none":
+            help_panel_mods.layout.display = "block"
+            help_btn_mods.button_style = "warning"
+        else:
+            help_panel_mods.layout.display = "none"
+            help_btn_mods.button_style = "info"
+
+    help_btn_mods.on_click(toggle_mods)
 
     w_mod_mape = W.BoundedFloatText(
         value=float(
@@ -867,18 +1513,85 @@ def _build_corr_advanced(cfg: dict):
         min=0.0,
         max=100.0,
         step=0.01,
-        layout=W.Layout(width="140px"),
+        layout=W.Layout(width="260px"),
     )
+    help_html_mape = HT.MODELOS["umbral_mape"]
+    help_panel_mape = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_mape}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_mape = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_mape(b):
+        if help_panel_mape.layout.display == "none":
+            help_panel_mape.layout.display = "block"
+            help_btn_mape.button_style = "warning"
+        else:
+            help_panel_mape.layout.display = "none"
+            help_btn_mape.button_style = "info"
+
+    help_btn_mape.on_click(toggle_mape)
+
     w_mod_loocv = W.Checkbox(
         value=bool(md.get("usar_loocv", modelos_base.get("usar_loocv", True))),
-        description="Usar LOOCV",
+        indent=False,
+        layout=W.Layout(width="260px"),
     )
+    help_html_loocv = HT.MODELOS["usar_loocv"]
+    help_panel_loocv = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_loocv}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_loocv = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_loocv(b):
+        if help_panel_loocv.layout.display == "none":
+            help_panel_loocv.layout.display = "block"
+            help_btn_loocv.button_style = "warning"
+        else:
+            help_panel_loocv.layout.display = "none"
+            help_btn_loocv.button_style = "info"
+
+    help_btn_loocv.on_click(toggle_loocv)
+
     w_mod_loocv_w = W.Checkbox(
         value=bool(
             md.get("loocv_usa_pesos", modelos_base.get("loocv_usa_pesos", False))
         ),
-        description="LOOCV usa pesos",
+        indent=False,
+        layout=W.Layout(width="260px"),
     )
+    help_html_loocv_w = HT.MODELOS["loocv_usa_pesos"]
+    help_panel_loocv_w = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_loocv_w}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_loocv_w = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_loocv_w(b):
+        if help_panel_loocv_w.layout.display == "none":
+            help_panel_loocv_w.layout.display = "block"
+            help_btn_loocv_w.button_style = "warning"
+        else:
+            help_panel_loocv_w.layout.display = "none"
+            help_btn_loocv_w.button_style = "info"
+
+    help_btn_loocv_w.on_click(toggle_loocv_w)
 
     pond_cfg = md.get(
         "ponderaciones_seleccion",
@@ -892,79 +1605,196 @@ def _build_corr_advanced(cfg: dict):
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="90px"),
+        layout=W.Layout(width="260px"),
     )
     w_mod_w_r2 = W.BoundedFloatText(
         value=float(pond_cfg.get("r2", 0.2)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="90px"),
+        layout=W.Layout(width="260px"),
     )
     w_mod_w_corr = W.BoundedFloatText(
         value=float(pond_cfg.get("corr", 0.2)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="90px"),
+        layout=W.Layout(width="260px"),
     )
     w_mod_w_conf = W.BoundedFloatText(
         value=float(pond_cfg.get("confianza", 0.1)),
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="90px"),
+        layout=W.Layout(width="260px"),
     )
+    help_html_pond = HT.MODELOS["ponderaciones_seleccion"]
+    help_panel_pond = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_pond}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_pond = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_pond(b):
+        if help_panel_pond.layout.display == "none":
+            help_panel_pond.layout.display = "block"
+            help_btn_pond.button_style = "warning"
+        else:
+            help_panel_pond.layout.display = "none"
+            help_btn_pond.button_style = "info"
+
+    help_btn_pond.on_click(toggle_pond)
 
     ui_modelos = W.VBox(
         [
-            W.HTML("<b>Modelos</b>"),
-            W.HBox(
-                [
-                    W.Label("Permitir 1D", layout=W.Layout(width="120px")),
-                    w_m1d,
-                    W.Label("Permitir 2D", layout=W.Layout(width="120px")),
-                    w_m2d,
-                    W.Label("Grado polinómico", layout=W.Layout(width="140px")),
-                    w_pdeg,
-                ]
+            W.HTML(
+                '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Dimensionalidad</div>'
             ),
-            W.HBox(
+            # Permitir 1D
+            W.VBox(
                 [
-                    W.Label("Habilitados:", layout=W.Layout(width="120px")),
-                    w_mod_lineal,
-                    w_mod_poly2,
-                    w_mod_log,
-                    w_mod_pot,
-                    w_mod_exp,
-                ]
-            ),
-            W.HBox(
-                [
-                    W.Label(
-                        "Umbral MAPE máx. (%)",
-                        layout=W.Layout(width="200px"),
+                    W.HBox(
+                        [
+                            W.Label(
+                                "Permitir modelos 1D", layout=W.Layout(width="200px")
+                            ),
+                            w_m1d,
+                            help_btn_m1d,
+                        ]
                     ),
-                    w_mod_mape,
+                    help_panel_m1d,
                 ]
             ),
-            W.HBox(
+            # Permitir 2D
+            W.VBox(
                 [
-                    w_mod_loocv,
-                    w_mod_loocv_w,
+                    W.HBox(
+                        [
+                            W.Label(
+                                "Permitir modelos 2D", layout=W.Layout(width="200px")
+                            ),
+                            w_m2d,
+                            help_btn_m2d,
+                        ]
+                    ),
+                    help_panel_m2d,
                 ]
             ),
-            W.HTML("<b>Ponderaciones de selección</b>"),
-            W.HBox(
+            # Grado polinómico
+            W.VBox(
                 [
-                    W.Label("MAPE", layout=W.Layout(width="60px")),
-                    w_mod_w_mape,
-                    W.Label("R²", layout=W.Layout(width="60px")),
-                    w_mod_w_r2,
-                    W.Label("Corr", layout=W.Layout(width="60px")),
-                    w_mod_w_corr,
-                    W.Label("Conf.", layout=W.Layout(width="60px")),
-                    w_mod_w_conf,
+                    W.HBox(
+                        [
+                            W.Label("Grado polinómico", layout=W.Layout(width="200px")),
+                            w_pdeg,
+                            help_btn_pdeg,
+                        ]
+                    ),
+                    help_panel_pdeg,
+                ]
+            ),
+            W.HTML(
+                '<div style="margin-top:16px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Tipos de modelos habilitados</div>'
+            ),
+            # Tipos de modelos - checkboxes verticales
+            W.VBox(
+                [
+                    W.HBox(
+                        [
+                            W.Label("Tipos activos", layout=W.Layout(width="200px")),
+                            help_btn_mods,
+                        ]
+                    ),
+                    help_panel_mods,
+                    W.VBox(
+                        [w_mod_lineal, w_mod_poly2, w_mod_log, w_mod_pot, w_mod_exp],
+                        layout=W.Layout(margin="0 0 0 220px"),
+                    ),
+                ]
+            ),
+            W.HTML(
+                '<div style="margin-top:16px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Calidad y validación</div>'
+            ),
+            # MAPE máximo
+            W.VBox(
+                [
+                    W.HBox(
+                        [
+                            W.Label("MAPE máximo (%)", layout=W.Layout(width="200px")),
+                            w_mod_mape,
+                            help_btn_mape,
+                        ]
+                    ),
+                    help_panel_mape,
+                ]
+            ),
+            # LOOCV usar
+            W.VBox(
+                [
+                    W.HBox(
+                        [
+                            W.Label("Usar LOOCV", layout=W.Layout(width="200px")),
+                            w_mod_loocv,
+                            help_btn_loocv,
+                        ]
+                    ),
+                    help_panel_loocv,
+                ]
+            ),
+            # LOOCV ponderado
+            W.VBox(
+                [
+                    W.HBox(
+                        [
+                            W.Label("LOOCV ponderado", layout=W.Layout(width="200px")),
+                            w_mod_loocv_w,
+                            help_btn_loocv_w,
+                        ]
+                    ),
+                    help_panel_loocv_w,
+                ]
+            ),
+            W.HTML(
+                '<div style="margin-top:16px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;">Ponderaciones de selección</div>'
+            ),
+            # Ponderaciones - cada peso en su fila
+            W.VBox(
+                [
+                    W.HBox(
+                        [
+                            W.Label(
+                                "Configuración pesos", layout=W.Layout(width="200px")
+                            ),
+                            help_btn_pond,
+                        ]
+                    ),
+                    help_panel_pond,
+                    W.HBox(
+                        [
+                            W.Label("Peso MAPE", layout=W.Layout(width="200px")),
+                            w_mod_w_mape,
+                        ]
+                    ),
+                    W.HBox(
+                        [W.Label("Peso R²", layout=W.Layout(width="200px")), w_mod_w_r2]
+                    ),
+                    W.HBox(
+                        [
+                            W.Label("Peso Correlación", layout=W.Layout(width="200px")),
+                            w_mod_w_corr,
+                        ]
+                    ),
+                    W.HBox(
+                        [
+                            W.Label("Peso Confianza", layout=W.Layout(width="200px")),
+                            w_mod_w_conf,
+                        ]
+                    ),
                 ]
             ),
         ]
@@ -972,21 +1802,64 @@ def _build_corr_advanced(cfg: dict):
 
     # ---- Confianza ----
     cf = c.get("confianza", {})
-    w_wr2 = _wf(cf.get("w_r2", 0.5))
-    w_wmp = _wf(cf.get("w_mape", 0.5))
-    w_div = _wf(cf.get("mape_divisor", 15.0))
+    w_wr2 = W.BoundedFloatText(
+        value=float(cf.get("w_r2", 0.5)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_wmp = W.BoundedFloatText(
+        value=float(cf.get("w_mape", 0.5)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_div = W.BoundedFloatText(
+        value=float(cf.get("mape_divisor", 15.0)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+
+    help_html_conf = HT.CONFIANZA["ponderaciones"]
+    help_panel_conf = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_conf}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_conf = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_conf(b):
+        if help_panel_conf.layout.display == "none":
+            help_panel_conf.layout.display = "block"
+            help_btn_conf.button_style = "warning"
+        else:
+            help_panel_conf.layout.display = "none"
+            help_btn_conf.button_style = "info"
+
+    help_btn_conf.on_click(toggle_conf)
+
     ui_conf = W.VBox(
         [
             W.HBox(
                 [
-                    W.Label("w_r2"),
-                    w_wr2,
-                    W.Label("w_mape"),
-                    w_wmp,
-                    W.Label("mape_divisor"),
-                    w_div,
+                    W.HTML(
+                        '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Ponderaciones básicas</div>'
+                    ),
+                    help_btn_conf,
                 ]
             ),
+            help_panel_conf,
+            W.HBox([W.Label("Peso R²", layout=W.Layout(width="200px")), w_wr2]),
+            W.HBox([W.Label("Peso MAPE", layout=W.Layout(width="200px")), w_wmp]),
+            W.HBox([W.Label("MAPE divisor", layout=W.Layout(width="200px")), w_div]),
         ]
     )
 
@@ -1016,22 +1889,57 @@ def _build_corr_advanced(cfg: dict):
         value=float(pk_corr.get("params", {}).get("a0", 0.024)),
         layout=W.Layout(width="120px"),
     )
+    help_html_pk = HT.CONFIANZA["penalizacion_k"]
+    help_panel_pk = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_pk}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_pk = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_pk(b):
+        if help_panel_pk.layout.display == "none":
+            help_panel_pk.layout.display = "block"
+            help_btn_pk.button_style = "warning"
+        else:
+            help_panel_pk.layout.display = "none"
+            help_btn_pk.button_style = "info"
+
+    help_btn_pk.on_click(toggle_pk)
+
     acc_pk = W.Accordion(
         children=[
-            W.HBox(
+            W.VBox(
                 [
-                    W.Label("a5"),
-                    _ka5,
-                    W.Label("a4"),
-                    _ka4,
-                    W.Label("a3"),
-                    _ka3,
-                    W.Label("a2"),
-                    _ka2,
-                    W.Label("a1"),
-                    _ka1,
-                    W.Label("a0"),
-                    _ka0,
+                    W.HBox(
+                        [
+                            W.HTML(
+                                '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Penalización por k (polinomio)</div>'
+                            ),
+                            help_btn_pk,
+                        ]
+                    ),
+                    help_panel_pk,
+                    W.HBox(
+                        [
+                            W.Label("a5"),
+                            _ka5,
+                            W.Label("a4"),
+                            _ka4,
+                            W.Label("a3"),
+                            _ka3,
+                            W.Label("a2"),
+                            _ka2,
+                            W.Label("a1"),
+                            _ka1,
+                            W.Label("a0"),
+                            _ka0,
+                        ]
+                    ),
                 ]
             )
         ]
@@ -1055,18 +1963,53 @@ def _build_corr_advanced(cfg: dict):
         value=float(pn.get("params", {}).get("b0", 0.10)),
         layout=W.Layout(width="120px"),
     )
+    help_html_pn = HT.CONFIANZA["penalizacion_n"]
+    help_panel_pn = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_pn}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_pn = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_pn(b):
+        if help_panel_pn.layout.display == "none":
+            help_panel_pn.layout.display = "block"
+            help_btn_pn.button_style = "warning"
+        else:
+            help_panel_pn.layout.display = "none"
+            help_btn_pn.button_style = "info"
+
+    help_btn_pn.on_click(toggle_pn)
+
     acc_pn = W.Accordion(
         children=[
-            W.HBox(
+            W.VBox(
                 [
-                    W.Label("b3"),
-                    _b3,
-                    W.Label("b2"),
-                    _b2,
-                    W.Label("b1"),
-                    _b1,
-                    W.Label("b0"),
-                    _b0,
+                    W.HBox(
+                        [
+                            W.HTML(
+                                '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Penalización por N (polinomio)</div>'
+                            ),
+                            help_btn_pn,
+                        ]
+                    ),
+                    help_panel_pn,
+                    W.HBox(
+                        [
+                            W.Label("b3"),
+                            _b3,
+                            W.Label("b2"),
+                            _b2,
+                            W.Label("b1"),
+                            _b1,
+                            W.Label("b0"),
+                            _b0,
+                        ]
+                    ),
                 ]
             )
         ]
@@ -1120,7 +2063,46 @@ def _build_corr_advanced(cfg: dict):
         row, uirow = _row_metric(nm, dflt)
         rows_metrics.append(row)
         ui_rows.append(uirow)
-    acc_pm = W.Accordion(children=[W.VBox(ui_rows)])
+    help_html_pm = HT.CONFIANZA["penalizaciones_metricas"]
+    help_panel_pm = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_pm}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_pm = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_pm(b):
+        if help_panel_pm.layout.display == "none":
+            help_panel_pm.layout.display = "block"
+            help_btn_pm.button_style = "warning"
+        else:
+            help_panel_pm.layout.display = "none"
+            help_btn_pm.button_style = "info"
+
+    help_btn_pm.on_click(toggle_pm)
+
+    acc_pm = W.Accordion(
+        children=[
+            W.VBox(
+                [
+                    W.HBox(
+                        [
+                            W.HTML(
+                                '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Penalizaciones por métricas 2D</div>'
+                            ),
+                            help_btn_pm,
+                        ]
+                    ),
+                    help_panel_pm,
+                    W.VBox(ui_rows),
+                ]
+            )
+        ]
+    )
     acc_pm.set_title(0, "Penalizaciones por métricas 2D")
 
     # ---- NUEVO: Aporte LOOCV a la confianza ----
@@ -1137,41 +2119,77 @@ def _build_corr_advanced(cfg: dict):
         min=0.0,
         max=1.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width="260px"),
     )
+
     w_lo_fr = W.BoundedFloatText(
         value=float(la.get("factor_por_clase", {}).get("robusto", 1.0)),
         min=0.0,
         max=2.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width="260px"),
     )
+
     w_lo_fnr = W.BoundedFloatText(
         value=float(la.get("factor_por_clase", {}).get("no_robusto", 0.85)),
         min=0.0,
         max=2.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width="260px"),
     )
+
     w_lo_fre = W.BoundedFloatText(
         value=float(la.get("factor_por_clase", {}).get("rechazado", 0.6)),
         min=0.0,
         max=2.0,
         step=0.01,
-        layout=W.Layout(width="120px"),
+        layout=W.Layout(width="260px"),
     )
+
+    help_html_loocv_aporte = HT.CONFIANZA["loocv_aporte"]
+    help_panel_loocv_aporte = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_loocv_aporte}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_loocv_aporte = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_loocv_aporte(b):
+        if help_panel_loocv_aporte.layout.display == "none":
+            help_panel_loocv_aporte.layout.display = "block"
+            help_btn_loocv_aporte.button_style = "warning"
+        else:
+            help_panel_loocv_aporte.layout.display = "none"
+            help_btn_loocv_aporte.button_style = "info"
+
+    help_btn_loocv_aporte.on_click(toggle_loocv_aporte)
+
     ui_loocv = W.VBox(
         [
-            W.HBox([W.Label("w (peso LOOCV)"), w_lo_w_aporte]),
             W.HBox(
                 [
-                    W.Label("factor ROBUSTO"),
-                    w_lo_fr,
-                    W.Label("NO ROBUSTO"),
-                    w_lo_fnr,
-                    W.Label("RECHAZADO"),
-                    w_lo_fre,
+                    W.HTML(
+                        '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Aporte LOOCV a la confianza</div>'
+                    ),
+                    help_btn_loocv_aporte,
                 ]
+            ),
+            help_panel_loocv_aporte,
+            W.HBox(
+                [W.Label("Peso LOOCV", layout=W.Layout(width="200px")), w_lo_w_aporte]
+            ),
+            W.HBox(
+                [W.Label("Factor ROBUSTO", layout=W.Layout(width="200px")), w_lo_fr]
+            ),
+            W.HBox(
+                [W.Label("Factor NO ROBUSTO", layout=W.Layout(width="200px")), w_lo_fnr]
+            ),
+            W.HBox(
+                [W.Label("Factor RECHAZADO", layout=W.Layout(width="200px")), w_lo_fre]
             ),
         ]
     )
@@ -1180,85 +2198,267 @@ def _build_corr_advanced(cfg: dict):
     sel = c.get("seleccion_modelos", {})
     tr = sel.get("train", {"mape_max": 7.5, "r2_min": 0.6})
     pf = sel.get("pre_filtro", {"mape_max": 18.0, "r2_min": 0.4})
-    w_tr_m = _wf(tr.get("mape_max", 7.5))
-    w_tr_r = _wf(tr.get("r2_min", 0.6))
-    w_pf_m = _wf(pf.get("mape_max", 18.0))
-    w_pf_r = _wf(pf.get("r2_min", 0.4))
+
+    w_tr_m = W.BoundedFloatText(
+        value=float(tr.get("mape_max", 7.5)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_tr_r = W.BoundedFloatText(
+        value=float(tr.get("r2_min", 0.6)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_pf_m = W.BoundedFloatText(
+        value=float(pf.get("mape_max", 18.0)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_pf_r = W.BoundedFloatText(
+        value=float(pf.get("r2_min", 0.4)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+
+    help_html_sel = HT.SELECCION["umbrales_train_prefiltro"]
+    help_panel_sel = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_sel}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_sel = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_sel(b):
+        if help_panel_sel.layout.display == "none":
+            help_panel_sel.layout.display = "block"
+            help_btn_sel.button_style = "warning"
+        else:
+            help_panel_sel.layout.display = "none"
+            help_btn_sel.button_style = "info"
+
+    help_btn_sel.on_click(toggle_sel)
 
     lo = c.get("loocv", {})
-    w_lo_use = _wb(lo.get("usar", True))
+    w_lo_use = W.Checkbox(
+        value=bool(lo.get("usar", True)), indent=False, layout=W.Layout(width="260px")
+    )
     # Renombrado para evitar colisión con peso LOOCV de arriba
-    w_lo_use_pesos = _wb(lo.get("usar_pesos_outliers", False))
+    w_lo_use_pesos = W.Checkbox(
+        value=bool(lo.get("usar_pesos_outliers", False)),
+        indent=False,
+        layout=W.Layout(width="260px"),
+    )
     cr = lo.get("criterios", {})
     rob = cr.get("robusto", {"mape_max": 7.5, "r2_min": 0.6})
     nrb = cr.get("no_robusto", {"mape_max": 12.5, "r2_min": 0.45})
-    w_rb_m = _wf(rob.get("mape_max", 7.5))
-    w_rb_r = _wf(rob.get("r2_min", 0.6))
-    w_nb_m = _wf(nrb.get("mape_max", 12.5))
-    w_nb_r = _wf(nrb.get("r2_min", 0.45))
-    w_ratio = _wf(lo.get("ratio_val_train_alerta", 5.0))
+
+    w_rb_m = W.BoundedFloatText(
+        value=float(rob.get("mape_max", 7.5)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_rb_r = W.BoundedFloatText(
+        value=float(rob.get("r2_min", 0.6)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_nb_m = W.BoundedFloatText(
+        value=float(nrb.get("mape_max", 12.5)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_nb_r = W.BoundedFloatText(
+        value=float(nrb.get("r2_min", 0.45)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_ratio = W.BoundedFloatText(
+        value=float(lo.get("ratio_val_train_alerta", 5.0)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+
+    help_html_loocv_crit = HT.SELECCION["criterios_loocv"]
+    help_panel_loocv_crit = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_loocv_crit}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_loocv_crit = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_loocv_crit(b):
+        if help_panel_loocv_crit.layout.display == "none":
+            help_panel_loocv_crit.layout.display = "block"
+            help_btn_loocv_crit.button_style = "warning"
+        else:
+            help_panel_loocv_crit.layout.display = "none"
+            help_btn_loocv_crit.button_style = "info"
+
+    help_btn_loocv_crit.on_click(toggle_loocv_crit)
 
     ui_sel = W.VBox(
         [
-            W.HTML("<b>Entrenamiento</b>"),
-            W.HBox(
-                [W.Label("train MAPE máx"), w_tr_m, W.Label("train R2 mín"), w_tr_r]
-            ),
             W.HBox(
                 [
-                    W.Label("pre-filtro MAPE máx"),
-                    w_pf_m,
-                    W.Label("pre-filtro R2 mín"),
-                    w_pf_r,
+                    W.HTML(
+                        '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Selección en entrenamiento</div>'
+                    ),
+                    help_btn_sel,
                 ]
             ),
-            W.HTML("<b>LOOCV</b>"),
+            help_panel_sel,
+            W.HBox([W.Label("MAPE máx train", layout=W.Layout(width="200px")), w_tr_m]),
+            W.HBox([W.Label("R² mín train", layout=W.Layout(width="200px")), w_tr_r]),
+            W.HBox(
+                [W.Label("MAPE máx prefiltro", layout=W.Layout(width="200px")), w_pf_m]
+            ),
+            W.HBox(
+                [W.Label("R² mín prefiltro", layout=W.Layout(width="200px")), w_pf_r]
+            ),
             W.HBox(
                 [
-                    W.Label("usar LOOCV"),
-                    w_lo_use,
-                    W.Label("LOOCV usa pesos outliers"),
+                    W.HTML(
+                        '<div style="margin-top:16px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Criterios LOOCV</div>'
+                    ),
+                    help_btn_loocv_crit,
+                ]
+            ),
+            help_panel_loocv_crit,
+            W.HBox([W.Label("Usar LOOCV", layout=W.Layout(width="200px")), w_lo_use]),
+            W.HBox(
+                [
+                    W.Label("Usar pesos outliers", layout=W.Layout(width="200px")),
                     w_lo_use_pesos,
                 ]
             ),
             W.HBox(
-                [W.Label("robusto MAPE máx"), w_rb_m, W.Label("robusto R2 mín"), w_rb_r]
+                [W.Label("MAPE máx robusto", layout=W.Layout(width="200px")), w_rb_m]
+            ),
+            W.HBox([W.Label("R² mín robusto", layout=W.Layout(width="200px")), w_rb_r]),
+            W.HBox(
+                [W.Label("MAPE máx no robusto", layout=W.Layout(width="200px")), w_nb_m]
+            ),
+            W.HBox(
+                [W.Label("R² mín no robusto", layout=W.Layout(width="200px")), w_nb_r]
             ),
             W.HBox(
                 [
-                    W.Label("no robusto MAPE máx"),
-                    w_nb_m,
-                    W.Label("no robusto R2 mín"),
-                    w_nb_r,
+                    W.Label("Ratio val/train alerta", layout=W.Layout(width="200px")),
+                    w_ratio,
                 ]
             ),
-            W.HBox([W.Label("ratio val/train alerta"), w_ratio]),
         ]
     )
 
     # ---- Outliers (subsección dentro de Correlación) ----
     o = cfg.get("correlacion_outliers", {})
-    w_om = _wb(o.get("manejar_outliers", True))
-    w_zs = _wf(o.get("umbral_z_suave", 3.0))
-    w_zd = _wf(o.get("umbral_z_duro", 6.0))
-    w_al = _wf(o.get("alpha_pesos", 0.5))
-    w_wm = _wf(o.get("w_min", 0.2))
-    w_rd = _wb(o.get("remover_duro", False))
+    w_om = W.Checkbox(
+        value=bool(o.get("manejar_outliers", True)),
+        indent=False,
+        layout=W.Layout(width="260px"),
+    )
+
+    w_zs = W.BoundedFloatText(
+        value=float(o.get("umbral_z_suave", 3.0)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_zd = W.BoundedFloatText(
+        value=float(o.get("umbral_z_duro", 6.0)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_al = W.BoundedFloatText(
+        value=float(o.get("alpha_pesos", 0.5)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_wm = W.BoundedFloatText(
+        value=float(o.get("w_min", 0.2)),
+        min=-1e9,
+        max=1e9,
+        step=0.01,
+        layout=W.Layout(width="260px"),
+    )
+    w_rd = W.Checkbox(
+        value=bool(o.get("remover_duro", False)),
+        indent=False,
+        layout=W.Layout(width="260px"),
+    )
+
+    help_html_out = HT.OUTLIERS["deteccion_pesos"]
+    help_panel_out = W.HTML(
+        value=f'<div style="background:#E3F2FD;padding:10px;border-left:4px solid #1976D2;margin:5px 0;font-size:13px;">{help_html_out}</div>',
+        layout=W.Layout(display="none", width="98%", margin="5px 0"),
+    )
+    help_btn_out = W.Button(
+        description="ℹ️",
+        button_style="info",
+        tooltip="Ayuda",
+        layout=W.Layout(width="40px", height="28px"),
+    )
+
+    def toggle_out(b):
+        if help_panel_out.layout.display == "none":
+            help_panel_out.layout.display = "block"
+            help_btn_out.button_style = "warning"
+        else:
+            help_panel_out.layout.display = "none"
+            help_btn_out.button_style = "info"
+
+    help_btn_out.on_click(toggle_out)
+
     ui_out = W.VBox(
         [
-            W.HBox([W.Label("Manejar outliers"), w_om, W.Label("remover_duro"), w_rd]),
             W.HBox(
                 [
-                    W.Label("z_suave"),
-                    w_zs,
-                    W.Label("z_duro"),
-                    w_zd,
-                    W.Label("alpha"),
-                    w_al,
-                    W.Label("w_min"),
-                    w_wm,
+                    W.HTML(
+                        '<div style="margin-top:8px;margin-bottom:8px;color:#666;font-size:12px;font-weight:600;width:200px;">Configuración de outliers</div>'
+                    ),
+                    help_btn_out,
                 ]
             ),
+            help_panel_out,
+            W.HBox([W.Label("Manejar outliers", layout=W.Layout(width="200px")), w_om]),
+            W.HBox(
+                [W.Label("Remover valores duros", layout=W.Layout(width="200px")), w_rd]
+            ),
+            W.HBox([W.Label("Umbral Z suave", layout=W.Layout(width="200px")), w_zs]),
+            W.HBox([W.Label("Umbral Z duro", layout=W.Layout(width="200px")), w_zd]),
+            W.HBox([W.Label("Alpha pesos", layout=W.Layout(width="200px")), w_al]),
+            W.HBox([W.Label("Peso mínimo", layout=W.Layout(width="200px")), w_wm]),
         ]
     )
 
@@ -1272,11 +2472,14 @@ def _build_corr_advanced(cfg: dict):
         # diversidad
         tipos_loc = tipos
         mu2, mm2 = {}, {}
-        # fila 0 son labels
-        for hbox in ui_div.children[1:]:
-            t = hbox.children[0].value
-            mu2[t] = int(hbox.children[1].value)
-            mm2[t] = int(hbox.children[2].value)
+        # fila 0 son labels, las filas de datos tienen VBox con: [HBox([tipo, unicos, muestras_por_coef, p_label, n_min_label, help_btn]), help_panel]
+        for vbox_item in ui_div.children[1:]:
+            # Cada vbox_item es W.VBox([control_row_div, help_panel_div])
+            # control_row_div es el HBox con los widgets
+            control_row = vbox_item.children[0]
+            t = control_row.children[0].value  # tipo (label)
+            mu2[t] = int(control_row.children[1].value)  # min_unicos
+            mm2[t] = float(control_row.children[2].value)  # muestras/coef (float)
         # retorno
         return {
             "checks_2d": c2["checks_2d"],
@@ -1432,13 +2635,9 @@ def _build_orq(cfg: dict):
     w_ruta = W.Text(
         value=str(ent.get("ruta_excel", "")), layout=W.Layout(width="600px")
     )
-    w_dir_salida = W.Text(
-        value=str(default_dir), layout=W.Layout(width="600px")
-    )
+    w_dir_salida = W.Text(value=str(default_dir), layout=W.Layout(width="600px"))
 
-    w_it = W.BoundedIntText(
-        value=int(orq.get("max_iteraciones", 5)), min=1, max=999
-    )
+    w_it = W.BoundedIntText(value=int(orq.get("max_iteraciones", 5)), min=1, max=999)
     w_sim = W.Checkbox(
         value=bool(orq.get("ejecutar_similitud", True)),
         description="Ejecutar similitud",
@@ -1458,12 +2657,8 @@ def _build_orq(cfg: dict):
         value=bool(orq.get("mostrar_consola", True)), description="Mostrar consola"
     )
 
-    w_rows = W.BoundedIntText(
-        value=int(ent.get("max_rows", 200)), min=10, max=9999
-    )
-    w_cols = W.BoundedIntText(
-        value=int(ent.get("max_columns", 120)), min=10, max=9999
-    )
+    w_rows = W.BoundedIntText(value=int(ent.get("max_rows", 200)), min=10, max=9999)
+    w_cols = W.BoundedIntText(value=int(ent.get("max_columns", 120)), min=10, max=9999)
 
     conf = orq.get("confirmaciones", {})
     w_conf_modo = W.Dropdown(
@@ -1733,7 +2928,9 @@ def _build_tabs(cfg: dict):
             )
             modelos_corr = cfg_new.get("correlacion", {}).get("modelos")
             if modelos_corr:
-                cfg_new["modelos"] = deepcopy(modelos_corr)  # compat con módulos que leen raíz
+                cfg_new["modelos"] = deepcopy(
+                    modelos_corr
+                )  # compat con módulos que leen raíz
             if "_outliers_embed" in corr_adv:
                 cfg_new.setdefault("correlacion_outliers", {}).update(
                     corr_adv["_outliers_embed"]
@@ -1796,7 +2993,9 @@ def _build_tabs(cfg: dict):
                 "• Se ejecutarán las etapas marcadas (Similitud/Correlación) con los valores del panel.<br>"
                 "• No se pedirá escribir nada por teclado durante el proceso.<br>"
             )
-            btn_ok = W.Button(description="Confirmar y ejecutar", button_style="success")
+            btn_ok = W.Button(
+                description="Confirmar y ejecutar", button_style="success"
+            )
             btn_no = W.Button(description="Cancelar", button_style="warning")
             out_resumen = W.Output()
             box.children = [W.HTML(resumen), W.HBox([btn_ok, btn_no]), out_resumen]
