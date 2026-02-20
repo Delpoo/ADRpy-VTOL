@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="globalFlow" name="Flujo global — Los 3 módulos integrados">
-        <mxGraphModel dx="3325" dy="3220" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4400" pageHeight="8800" math="0" shadow="0">
+        <mxGraphModel dx="11160" dy="8990" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4400" pageHeight="8800" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -217,6 +217,14 @@
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="iaKG8mmzl7mwGUY1kiRb" name="Page-2">
+        <mxGraphModel dx="1116" dy="899" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
             </root>
         </mxGraphModel>
     </diagram>

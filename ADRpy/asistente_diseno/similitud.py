@@ -883,18 +883,31 @@ def widget_filtrado_ranking(
     _COL_DV = [f"dv_{c}" for c in activos if f"dv_{c}" in df_ranked.columns]
     _COL_VIOL_BOOL = [f"viol_{c}" for c in activos if f"viol_{c}" in df_ranked.columns]
     _all_known = set(
-        _COL_ID + _COL_METRICS + _COL_PARAMS + _COL_DELTA
-        + _COL_VIOL_FLAG + _COL_DV + _COL_VIOL_BOOL
+        _COL_ID
+        + _COL_METRICS
+        + _COL_PARAMS
+        + _COL_DELTA
+        + _COL_VIOL_FLAG
+        + _COL_DV
+        + _COL_VIOL_BOOL
     )
     _COL_OTHER = [c for c in df_ranked.columns if c not in _all_known]
 
     _default_order: list[str] = (
-        _COL_ID + _COL_METRICS + _COL_PARAMS + _COL_DELTA
-        + _COL_VIOL_FLAG + _COL_DV + _COL_VIOL_BOOL + _COL_OTHER
+        _COL_ID
+        + _COL_METRICS
+        + _COL_PARAMS
+        + _COL_DELTA
+        + _COL_VIOL_FLAG
+        + _COL_DV
+        + _COL_VIOL_BOOL
+        + _COL_OTHER
     )
     # Ocultar por defecto: dv_, viol_ (internals) y Otras
     _default_hidden: set[str] = set(_COL_DV + _COL_VIOL_BOOL + _COL_OTHER)
-    _default_visible: list[str] = [c for c in _default_order if c not in _default_hidden]
+    _default_visible: list[str] = [
+        c for c in _default_order if c not in _default_hidden
+    ]
 
     # Estado mutable de visibilidad y orden
     _col_state: dict = {
@@ -987,7 +1000,7 @@ def widget_filtrado_ranking(
     ]
 
     # Para cada grupo: checkbox cabecera + checkboxes hijos en flow layout
-    _grp_cbs: list = []   # [(grp_checkbox, grp_cols), ...]
+    _grp_cbs: list = []  # [(grp_checkbox, grp_cols), ...]
     _group_sections: list = []
 
     for grp_label, grp_cols, grp_default in _GROUPS_DEF:
@@ -998,13 +1011,16 @@ def widget_filtrado_ranking(
             indent=False,
             layout=w.Layout(width="auto"),
         )
-        grp_header = w.HBox([
-            grp_cb,
-            w.HTML(
-                f"<b style='font-size:12px;'>{grp_label}</b>"
-                f" <span style='color:#888;font-size:11px;'>({len(grp_cols)})</span>"
-            ),
-        ], layout=w.Layout(margin="4px 0 0 0"))
+        grp_header = w.HBox(
+            [
+                grp_cb,
+                w.HTML(
+                    f"<b style='font-size:12px;'>{grp_label}</b>"
+                    f" <span style='color:#888;font-size:11px;'>({len(grp_cols)})</span>"
+                ),
+            ],
+            layout=w.Layout(margin="4px 0 0 0"),
+        )
 
         col_flow = w.HBox(
             [_col_cbs[c] for c in grp_cols if c in _col_cbs],
@@ -1019,15 +1035,18 @@ def widget_filtrado_ranking(
 
     # Botones globales
     btn_show_all = w.Button(
-        description="✓ Mostrar todo", button_style="success",
+        description="✓ Mostrar todo",
+        button_style="success",
         layout=w.Layout(width="auto"),
     )
     btn_hide_all = w.Button(
-        description="✗ Ocultar todo", button_style="danger",
+        description="✗ Ocultar todo",
+        button_style="danger",
         layout=w.Layout(width="auto"),
     )
     btn_col_reset = w.Button(
-        description="⟲ Restablecer", button_style="warning",
+        description="⟲ Restablecer",
+        button_style="warning",
         layout=w.Layout(width="auto"),
     )
 
@@ -1059,9 +1078,7 @@ def widget_filtrado_ranking(
         _updating["flag"] = True
         try:
             for grp_cb, grp_cols in _grp_cbs:
-                grp_cb.value = any(
-                    _col_cbs[c].value for c in grp_cols if c in _col_cbs
-                )
+                grp_cb.value = any(_col_cbs[c].value for c in grp_cols if c in _col_cbs)
         finally:
             _updating["flag"] = False
         _sync_visible()
@@ -1133,9 +1150,7 @@ def widget_filtrado_ranking(
                 "<div style='background:#fff3cd;border:1px solid #ffc107;"
                 "border-radius:4px;padding:6px 10px;margin:4px 0;font-size:12px;"
                 "line-height:1.4em;'>"
-                "<b>⚠ Alertas del objetivo:</b><br>"
-                + "<br>".join(parts)
-                + "</div>"
+                "<b>⚠ Alertas del objetivo:</b><br>" + "<br>".join(parts) + "</div>"
             )
         else:
             html_alert.value = ""
@@ -1407,8 +1422,14 @@ def widget_filtrado_ranking(
         "para redimensionar."
         "</div>"
     )
-    box = w.VBox([
-        help_html, controls1, controls2, acc_cols,
-        html_alert, out_container,
-    ])
+    box = w.VBox(
+        [
+            help_html,
+            controls1,
+            controls2,
+            acc_cols,
+            html_alert,
+            out_container,
+        ]
+    )
     return box
