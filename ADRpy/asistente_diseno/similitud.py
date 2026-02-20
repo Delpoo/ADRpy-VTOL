@@ -818,15 +818,18 @@ def widget_filtrado_ranking(
     max_height_px: int = 600,
 ):
     """
-    Widget (ipywidgets) para filtrar/ordenar el ranking sin recalcular:
-      - filtro por segmento (si existe)
-      - similitud mínima
-      - búsqueda por texto en 'aeronave'
-      - orden por 'similitud'/'distancia' o cualquier columna activa
+    Widget interactivo para explorar el ranking de similitud.
+
+    Usa ipydatagrid (DataGrid) para la tabla, lo que provee nativamente:
+      - sort por click en encabezados
+      - resize de columnas arrastrando bordes
+      - scroll suave horizontal/vertical
+
+    Controles ipywidgets arriba:
+      - filtro por segmento, similitud mínima, búsqueda texto
+      - orden por columna + dirección
       - top-N
-      - botón 'Limpiar'
-    (Arreglo: convierte 'segmento' a str para evitar TypeError en sorted/int vs str)
-    Además: salida con scroll vertical/horizontal para ver tablas grandes sin desbordes.
+      - panel colapsable para ocultar/reordenar columnas
     """
     try:
         import ipywidgets as w
@@ -834,11 +837,70 @@ def widget_filtrado_ranking(
     except Exception as e:
         raise RuntimeError("Este widget requiere 'ipywidgets' instalado.") from e
 
+    # Intentar importar ipydatagrid; si no está, fallback a tabla HTML
+    try:
+        from ipydatagrid import DataGrid, TextRenderer, BarRenderer, Expr
+
+        _HAS_DATAGRID = True
+    except ImportError:
+        _HAS_DATAGRID = False
+
     activos = [
         c
         for c, r in restricciones.items()
         if r.get("tipo", "ignorar") != "ignorar" and c in df_ranked.columns
     ]
+
+    # ── Enriquecer df_ranked con Δ_ y ⚠_ (misma lógica que vista_topn_detallada) ─
+    for c in activos:
+        delta_col = f"Δ_{c}"
+        flag_col = f"⚠_{c}"
+        viol_col = f"viol_{c}"
+        if delta_col not in df_ranked.columns:
+            df_ranked[delta_col] = [
+                _delta_parametro(float(x) if pd.notna(x) else None, restricciones[c])
+                for x in df_ranked[c].values
+            ]
+        if flag_col not in df_ranked.columns:
+            if viol_col in df_ranked.columns:
+                df_ranked[flag_col] = df_ranked[viol_col].map(
+                    lambda b: "⚠" if bool(b) else ""
+                )
+            else:
+                df_ranked[flag_col] = ""
+
+    # ── Clasificación de columnas por grupo ──────────────────────────────
+    _COL_ID = [c for c in ["aeronave", "segmento"] if c in df_ranked.columns]
+    _has_alerta = "alerta" in df_ranked.columns
+    _COL_METRICS = [
+        c
+        for c in ["distancia", "distancia_media", "similitud", "similitud_media"]
+        if c in df_ranked.columns
+    ]
+    _COL_PARAMS = [c for c in activos if c in df_ranked.columns]
+    _COL_DELTA = [f"Δ_{c}" for c in activos if f"Δ_{c}" in df_ranked.columns]
+    _COL_VIOL_FLAG = [f"⚠_{c}" for c in activos if f"⚠_{c}" in df_ranked.columns]
+    _COL_DV = [f"dv_{c}" for c in activos if f"dv_{c}" in df_ranked.columns]
+    _COL_VIOL_BOOL = [f"viol_{c}" for c in activos if f"viol_{c}" in df_ranked.columns]
+    _all_known = set(
+        _COL_ID + _COL_METRICS + _COL_PARAMS + _COL_DELTA
+        + _COL_VIOL_FLAG + _COL_DV + _COL_VIOL_BOOL
+    )
+    _COL_OTHER = [c for c in df_ranked.columns if c not in _all_known]
+
+    _default_order: list[str] = (
+        _COL_ID + _COL_METRICS + _COL_PARAMS + _COL_DELTA
+        + _COL_VIOL_FLAG + _COL_DV + _COL_VIOL_BOOL + _COL_OTHER
+    )
+    # Ocultar por defecto: dv_, viol_ (internals) y Otras
+    _default_hidden: set[str] = set(_COL_DV + _COL_VIOL_BOOL + _COL_OTHER)
+    _default_visible: list[str] = [c for c in _default_order if c not in _default_hidden]
+
+    # Estado mutable de visibilidad y orden
+    _col_state: dict = {
+        "visible": list(_default_visible),
+        "order": list(_default_order),
+    }
 
     # opciones de orden
     opciones_orden = [
@@ -858,6 +920,7 @@ def widget_filtrado_ranking(
     else:
         seg_values = ["Todos"]
 
+    # ── Controles de filtrado ────────────────────────────────────────────
     dd_seg = w.Dropdown(
         options=seg_values,
         description="Segmento:",
@@ -880,10 +943,9 @@ def widget_filtrado_ranking(
         description="Orden:",
         layout=w.Layout(width="35%"),
     )
-    # Selector de dirección de orden (Dropdown para coincidir con la UI del screenshot)
     dd_sort_dir = w.Dropdown(
         options=["Asc", "Desc"],
-        value="Desc",  # por defecto descendente (útil para 'similitud')
+        value="Desc",
         description="Dirección:",
         layout=w.Layout(width="25%"),
     )
@@ -898,8 +960,188 @@ def widget_filtrado_ranking(
     btn_clear = w.Button(
         description="Limpiar", button_style="warning", layout=w.Layout(width="15%")
     )
+
+    # ── Panel de control de columnas (checkboxes por columna) ──────────
+    _updating = {"flag": False}
+    _default_visible_set = set(_default_visible)
+
+    # Crear un checkbox por cada columna
+    _col_cbs: dict = {}  # col_name → Checkbox
+    for col in _default_order:
+        _col_cbs[col] = w.Checkbox(
+            value=(col in _default_visible_set),
+            description=col,
+            indent=False,
+            layout=w.Layout(width="auto", min_width="140px", max_width="300px"),
+        )
+
+    # Definición de grupos: (label, col_list, default_on)
+    _GROUPS_DEF = [
+        ("Métricas", _COL_METRICS, True),
+        ("Parámetros", _COL_PARAMS, True),
+        ("Δ Desvíos", _COL_DELTA, True),
+        ("⚠ Violaciones", _COL_VIOL_FLAG, True),
+        ("dv_ Aportes distancia", _COL_DV, False),
+        ("viol_ Booleanos", _COL_VIOL_BOOL, False),
+        ("Otras", _COL_OTHER, False),
+    ]
+
+    # Para cada grupo: checkbox cabecera + checkboxes hijos en flow layout
+    _grp_cbs: list = []   # [(grp_checkbox, grp_cols), ...]
+    _group_sections: list = []
+
+    for grp_label, grp_cols, grp_default in _GROUPS_DEF:
+        if not grp_cols:
+            continue
+        grp_cb = w.Checkbox(
+            value=grp_default,
+            indent=False,
+            layout=w.Layout(width="auto"),
+        )
+        grp_header = w.HBox([
+            grp_cb,
+            w.HTML(
+                f"<b style='font-size:12px;'>{grp_label}</b>"
+                f" <span style='color:#888;font-size:11px;'>({len(grp_cols)})</span>"
+            ),
+        ], layout=w.Layout(margin="4px 0 0 0"))
+
+        col_flow = w.HBox(
+            [_col_cbs[c] for c in grp_cols if c in _col_cbs],
+            layout=w.Layout(
+                flex_flow="row wrap",
+                padding="0 0 0 24px",
+            ),
+        )
+        section = w.VBox([grp_header, col_flow], layout=w.Layout(margin="0"))
+        _grp_cbs.append((grp_cb, grp_cols))
+        _group_sections.append(section)
+
+    # Botones globales
+    btn_show_all = w.Button(
+        description="✓ Mostrar todo", button_style="success",
+        layout=w.Layout(width="auto"),
+    )
+    btn_hide_all = w.Button(
+        description="✗ Ocultar todo", button_style="danger",
+        layout=w.Layout(width="auto"),
+    )
+    btn_col_reset = w.Button(
+        description="⟲ Restablecer", button_style="warning",
+        layout=w.Layout(width="auto"),
+    )
+
+    def _sync_visible():
+        """Recalcula _col_state['visible'] desde checkboxes y re-renderiza."""
+        vis = [c for c in _col_state["order"] if c in _col_cbs and _col_cbs[c].value]
+        # Forzar columnas ID siempre
+        for c in reversed(_COL_ID):
+            if c not in vis:
+                vis.insert(0, c)
+        _col_state["visible"] = vis
+        _render()
+
+    def _on_grp_toggle(change, grp_cols):
+        if _updating["flag"]:
+            return
+        _updating["flag"] = True
+        try:
+            for c in grp_cols:
+                if c in _col_cbs:
+                    _col_cbs[c].value = change["new"]
+        finally:
+            _updating["flag"] = False
+        _sync_visible()
+
+    def _on_col_toggle(change):
+        if _updating["flag"]:
+            return
+        _updating["flag"] = True
+        try:
+            for grp_cb, grp_cols in _grp_cbs:
+                grp_cb.value = any(
+                    _col_cbs[c].value for c in grp_cols if c in _col_cbs
+                )
+        finally:
+            _updating["flag"] = False
+        _sync_visible()
+
+    # Conectar eventos
+    for grp_cb, grp_cols in _grp_cbs:
+        grp_cb.observe(
+            lambda change, gc=grp_cols: _on_grp_toggle(change, gc), names="value"
+        )
+    for col, cb in _col_cbs.items():
+        cb.observe(_on_col_toggle, names="value")
+
+    def _on_show_all(_btn):
+        _updating["flag"] = True
+        try:
+            for cb in _col_cbs.values():
+                cb.value = True
+            for grp_cb, _ in _grp_cbs:
+                grp_cb.value = True
+        finally:
+            _updating["flag"] = False
+        _sync_visible()
+
+    def _on_hide_all(_btn):
+        _updating["flag"] = True
+        try:
+            for c, cb in _col_cbs.items():
+                cb.value = c in _COL_ID
+            for grp_cb, _ in _grp_cbs:
+                grp_cb.value = False
+        finally:
+            _updating["flag"] = False
+        _sync_visible()
+
+    def _on_col_reset(_btn):
+        _updating["flag"] = True
+        try:
+            _col_state["order"] = list(_default_order)
+            for c, cb in _col_cbs.items():
+                cb.value = c in _default_visible_set
+            for grp_cb, grp_cols in _grp_cbs:
+                grp_cb.value = any(c in _default_visible_set for c in grp_cols)
+        finally:
+            _updating["flag"] = False
+        _sync_visible()
+
+    btn_show_all.on_click(_on_show_all)
+    btn_hide_all.on_click(_on_hide_all)
+    btn_col_reset.on_click(_on_col_reset)
+
+    # ── Panel de alertas (extraído de columna 'alerta') ──────────────────
+    html_alert = w.HTML(value="", layout=w.Layout(width="100%"))
+
+    def _update_alert(dfv: pd.DataFrame):
+        if not _has_alerta or "alerta" not in dfv.columns:
+            html_alert.value = ""
+            return
+        parts: list[str] = []
+        for _, row in dfv.iterrows():
+            a = str(row.get("alerta", "") or "").strip()
+            if a:
+                name = str(row.get("aeronave", ""))
+                # Separar alertas individuales (delimitadas por |)
+                items = [x.strip() for x in a.split("|") if x.strip()]
+                for item in items:
+                    parts.append(f"• <b>{name}</b>: {item}")
+        if parts:
+            html_alert.value = (
+                "<div style='background:#fff3cd;border:1px solid #ffc107;"
+                "border-radius:4px;padding:6px 10px;margin:4px 0;font-size:12px;"
+                "line-height:1.4em;'>"
+                "<b>⚠ Alertas del objetivo:</b><br>"
+                + "<br>".join(parts)
+                + "</div>"
+            )
+        else:
+            html_alert.value = ""
+
+    # ── Contenedor de salida ─────────────────────────────────────────────
     out = w.Output(layout=w.Layout(width="100%"))
-    # Contenedor base (dejamos el scroll al HTML interno para sticky header estable)
     out_container = w.Box(
         [out],
         layout=w.Layout(
@@ -911,13 +1153,12 @@ def widget_filtrado_ranking(
         ),
     )
 
-    # Índice de la fila "fijada" (primer fila del ranking, p.ej., "Objetivo (usuario)")
+    # Índice de la fila "fijada"
     pinned_idx = df_ranked.index[0] if len(df_ranked.index) > 0 else None
 
     def _filtrar():
         dfv = df_ranked.copy()
         if tiene_seg and dd_seg.value != "Todos":
-            # forzar str en el DF para comparar contra el valor del dropdown (str)
             dfv = dfv[dfv["segmento"].astype(str) == dd_seg.value]
         if "similitud" in dfv.columns:
             dfv = dfv[dfv["similitud"] >= sl_sim.value]
@@ -926,14 +1167,12 @@ def widget_filtrado_ranking(
             dfv = dfv[
                 dfv["aeronave"].astype(str).str.lower().str.contains(cad, na=False)
             ]
-        # Ordenar respetando la primera fila "fijada" si está presente tras los filtros
         if dd_sort.value in dfv.columns:
             asc = dd_sort_dir.value == "Asc"
             if pinned_idx is not None and pinned_idx in dfv.index:
                 pinned_row = dfv.loc[[pinned_idx]]
                 resto = dfv.drop(index=pinned_idx)
                 resto_sorted = resto.sort_values(by=dd_sort.value, ascending=asc)
-                # Armar respetando Top-N
                 n = max(int(sl_top.value), 1)
                 take = max(n - 1, 0)
                 dfv = pd.concat([pinned_row, resto_sorted.head(take)])
@@ -944,108 +1183,185 @@ def widget_filtrado_ranking(
             dfv = dfv.head(sl_top.value)
         return dfv
 
+    def _render_datagrid(dfv: pd.DataFrame):
+        """Renderizar con ipydatagrid — columnas compactas."""
+        vis_cols = [c for c in _col_state["visible"] if c in dfv.columns]
+        if not vis_cols:
+            vis_cols = [c for c in _COL_ID if c in dfv.columns] or list(dfv.columns[:3])
+
+        # Excluir 'alerta' de la grilla (se muestra en el banner)
+        vis_cols = [c for c in vis_cols if c != "alerta"]
+
+        df_show = dfv[vis_cols].copy()
+
+        # Redondear numéricas
+        for c in df_show.columns:
+            if pd.api.types.is_numeric_dtype(df_show[c]):
+                df_show[c] = df_show[c].round(2)
+
+        # ── Renderers ────────────────────────────────────────────────────
+        renderers = {}
+        try:
+            for sim_col in ["similitud", "similitud_media"]:
+                if sim_col in vis_cols:
+                    renderers[sim_col] = BarRenderer(
+                        horizontal_alignment="center",
+                        bar_color=Expr(
+                            '"#28a745" if cell.value >= 0.7 '
+                            'else ("#ffc107" if cell.value >= 0.4 else "#dc3545")'
+                        ),
+                        bar_value=Expr("cell.value"),
+                        show_text=True,
+                        text_color="black",
+                        format=".2f",
+                    )
+            dist_renderer = TextRenderer(
+                text_color="black",
+                background_color=Expr(
+                    '"#f8d7da" if cell.value > 1.0 '
+                    'else ("#fff3cd" if cell.value > 0.3 else "#d4edda")'
+                ),
+                format=".2f",
+                horizontal_alignment="right",
+            )
+            for dc in ["distancia", "distancia_media"]:
+                if dc in vis_cols:
+                    renderers[dc] = dist_renderer
+
+            delta_renderer = TextRenderer(
+                text_color="black",
+                background_color=Expr(
+                    '"#f8d7da" if abs(cell.value) > 1.0 '
+                    'else ("#fff3cd" if abs(cell.value) > 0.3 else "#d4edda")'
+                ),
+                format=".2f",
+                horizontal_alignment="right",
+            )
+            for c in vis_cols:
+                if c.startswith("Δ_"):
+                    renderers[c] = delta_renderer
+
+            dv_renderer = TextRenderer(
+                text_color="#555",
+                background_color=Expr(
+                    '"#f8d7da" if cell.value > 0.5 '
+                    'else ("#fff3cd" if cell.value > 0.1 else "#f5f5f5")'
+                ),
+                format=".3f",
+                horizontal_alignment="right",
+            )
+            for c in vis_cols:
+                if c.startswith("dv_"):
+                    renderers[c] = dv_renderer
+
+            viol_bool_renderer = TextRenderer(
+                text_color=Expr('"#b00" if cell.value else "#888"'),
+                horizontal_alignment="center",
+            )
+            for c in vis_cols:
+                if c.startswith("viol_"):
+                    renderers[c] = viol_bool_renderer
+
+            viol_flag_renderer = TextRenderer(
+                text_color="#b00",
+                font=Expr(
+                    '"bold 12px sans-serif" if cell.value == "⚠" '
+                    'else "12px sans-serif"'
+                ),
+                horizontal_alignment="center",
+            )
+            for c in vis_cols:
+                if c.startswith("⚠_"):
+                    renderers[c] = viol_flag_renderer
+
+            num_renderer = TextRenderer(format=".2f", horizontal_alignment="right")
+            for c in vis_cols:
+                if c not in renderers and pd.api.types.is_numeric_dtype(df_show[c]):
+                    renderers[c] = num_renderer
+        except Exception:
+            renderers = {}
+
+        df_show = df_show.reset_index(drop=True)
+
+        # ── Tamaños de columna compactos ─────────────────────────────────
+        # auto_fit_columns=False → ancho uniforme salvo 'aeronave'
+        n_rows = len(df_show)
+        grid_h = min(max_height_px, max(200, 32 * (n_rows + 2)))
+
+        grid = DataGrid(
+            df_show,
+            editable=False,
+            selection_mode="row",
+            auto_fit_columns=False,
+            base_row_size=28,
+            base_column_size=90,
+            base_column_header_size=40,
+            header_visibility="all",
+            renderers=renderers,
+            layout={"height": f"{grid_h}px", "width": "100%"},
+            grid_style={
+                "header_background_color": "#f0f0f0",
+                "header_grid_line_color": "#ccc",
+            },
+        )
+        display(grid)
+
+    def _render_html_fallback(dfv: pd.DataFrame):
+        """Fallback a tabla HTML estática."""
+        vis_cols = [c for c in _col_state["visible"] if c in dfv.columns]
+        vis_cols = [c for c in vis_cols if c != "alerta"]
+        if not vis_cols:
+            vis_cols = [c for c in _COL_ID if c in dfv.columns] or list(dfv.columns[:3])
+
+        df_show = dfv[vis_cols].copy()
+        sty = vista_topn_detallada(df_show, restricciones, top_n=len(df_show))
+        try:
+            num_cols = [
+                c for c in df_show.columns if pd.api.types.is_numeric_dtype(df_show[c])
+            ]
+            if num_cols:
+                sty = sty.format("{:.2f}", subset=num_cols)
+        except Exception:
+            pass
+        try:
+            sty = sty.set_table_attributes('class="ranktbl"')
+            html_tbl = sty.to_html()
+            inner = (
+                "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                "<style>\n"
+                "html,body{margin:0;padding:8px;overflow:auto;"
+                "font-family:system-ui,sans-serif;font-size:12px;color:#111;}\n"
+                ".ranktbl{border-collapse:separate;border-spacing:0;"
+                "border:1px solid #ddd;width:max-content;min-width:100%;}\n"
+                ".ranktbl th,.ranktbl td{padding:6px 8px;"
+                "border-right:1px solid #eee;border-bottom:1px solid #eee;"
+                "white-space:nowrap;}\n"
+                ".ranktbl thead th{position:sticky;top:0;background:#fff;"
+                "z-index:3;font-weight:600;cursor:pointer;}\n"
+                ".ranktbl tbody tr:nth-child(odd) td{background:#fafafa;}\n"
+                ".ranktbl tbody tr:hover td{background:#f0f7ff;}\n"
+                ".ranktbl td:nth-child(n+2){text-align:right;}\n"
+                "</style></head><body>" + html_tbl + "</body></html>"
+            )
+            escaped = inner.replace("'", "&#39;")
+            iframe = (
+                f'<iframe style="width:100%;height:{int(max_height_px)}px;'
+                f'border:1px solid #eee;border-radius:4px;" '
+                f"srcdoc='{escaped}' loading=\"lazy\"></iframe>"
+            )
+            display(w.HTML(value=iframe))
+        except Exception:
+            display(sty)
+
     def _render(*args):
         with out:
             clear_output(wait=True)
             dfv = _filtrar()
-            sty = vista_topn_detallada(dfv, restricciones, top_n=len(dfv))
-            # Salvaguarda: reforzar .2f en TODAS las numéricas justo antes del render
-            try:
-                num_cols = [
-                    c for c in dfv.columns if pd.api.types.is_numeric_dtype(dfv[c])
-                ]
-                if num_cols:
-                    sty = sty.format("{:.2f}", subset=num_cols)
-            except Exception:
-                pass
-            # Render como HTML en iframe con cabecera sticky, primera columna fija, ordenamiento, y headers con clamp/hover
-            try:
-                sty = sty.set_table_attributes('class="ranktbl"')
-                html_tbl = sty.to_html()
-                inner = (
-                    "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                    "<style>\n"
-                    "html,body{margin:0;padding:8px;overflow:auto;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;font-size:12px;color:#111;}\n"
-                    ".ranktbl{table-layout:auto;width:max-content !important;min-width:100%;max-width:100%;border-collapse:separate;border-spacing:0;border:1px solid #ddd;}\n"
-                    ".ranktbl th, .ranktbl td{min-width:12ch;}\n"
-                    ".ranktbl td{white-space:nowrap;padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
-                    ".ranktbl th{padding:6px 8px;border-right:1px solid #eee;border-bottom:1px solid #eee;}\n"
-                    ".ranktbl thead th{position:sticky;top:0;background:#fff;z-index:3;box-shadow:0 1px 0 rgba(0,0,0,0.08);font-weight:600;}\n"
-                    ".ranktbl tbody tr:nth-child(odd) td{background:#fafafa;}\n"
-                    ".ranktbl tbody tr:hover td{background:#f0f7ff;}\n"
-                    ".ranktbl th:first-child, .ranktbl td:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:1px 0 0 rgba(0,0,0,0.08);}\n"
-                    ".ranktbl td:nth-child(n+2){text-align:right;}\n"
-                    ".ranktbl .hdr{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;word-break:break-word;}\n"
-                    ".ranktbl thead th:hover .hdr{-webkit-line-clamp:unset;max-height:none;}\n"
-                    "</style></head><body>"
-                    "<div id='tbl-wrap'>"
-                    f"{html_tbl}"
-                    "</div>"
-                    "<script>\n"
-                    "(function(){\n"
-                    " var tbl=document.querySelector('.ranktbl'); if(!tbl) return;\n"
-                    " // Envolver headers para clamp/tooltip\n"
-                    " tbl.querySelectorAll('thead th').forEach(function(th){\n"
-                    "   var txt=(th.textContent||'').trim(); th.setAttribute('title', txt);\n"
-                    "   var span=document.createElement('span'); span.className='hdr'; span.textContent=txt;\n"
-                    "   while(th.firstChild){ th.removeChild(th.firstChild);} th.appendChild(span);\n"
-                    " });\n"
-                    " // Tooltips específicos\n"
-                    " tbl.querySelectorAll('thead th').forEach(function(th){\n"
-                    "   var t=(th.textContent||'').trim();\n"
-                    "   if(t.indexOf('dv_')===0) th.title='Aporte a la distancia total para ese parámetro (normalizado y ponderado).';\n"
-                    "   else if(t.indexOf('viol_')===0) th.title='True si la fila viola la restricción definida para el parámetro.';\n"
-                    "   if(t.indexOf('Δ_')===0) th.title='Desvío respecto al objetivo (con signo).';\n"
-                    "   else if(t.indexOf('⚠_')===0) th.title='Violación de la restricción para el parámetro.';\n"
-                    "   else if(t==='distancia') th.title='Distancia total agregada (menor es mejor).';\n"
-                    "   else if(t==='similitud') th.title='Similitud = exp(-α·distancia) en [0,1] (mayor es mejor).';\n"
-                    "   else if(t==='alerta') th.title='Objetivo fuera de LOW/HIGH(IQR) por parámetro.';\n"
-                    " });\n"
-                    " // Ordenamiento simple + formateo a 2 decimales\n"
-                    " function parseVal(s){ var x=parseFloat(String(s).replace(',','.')); return isNaN(x)? null : x; }\n"
-                    " function fmt2(x){ return (Math.round(x*100)/100).toFixed(2); }\n"
-                    " function formatNumericCells(tbl){\n"
-                    "   var rows=tbl.tBodies[0]? Array.prototype.slice.call(tbl.tBodies[0].rows):[];\n"
-                    "   rows.forEach(function(r){ for(var i=1;i<r.cells.length;i++){ var t=(r.cells[i].innerText||'').trim(); var v=parseVal(t); if(v!==null){ r.cells[i].innerText = fmt2(v); r.cells[i].style.textAlign='right'; } } });\n"
-                    " }\n"
-                    " function sortTable(tbl,col,asc){\n"
-                    "   var tb=tbl.tBodies[0]; if(!tb) return;\n"
-                    "   var rows=Array.prototype.slice.call(tb.querySelectorAll('tr'));\n"
-                    "   rows.sort(function(a,b){\n"
-                    "     var ta=(a.cells[col]&&a.cells[col].innerText||'').trim();\n"
-                    "     var tbv=(b.cells[col]&&b.cells[col].innerText||'').trim();\n"
-                    "     var na=parseVal(ta), nb=parseVal(tbv);\n"
-                    "     var cmp=0;\n"
-                    "     if(na!==null && nb!==null){ cmp = na-nb; } else { cmp = ta.localeCompare(tbv); }\n"
-                    "     return asc? cmp : -cmp;\n"
-                    "   });\n"
-                    "   rows.forEach(function(r){ tb.appendChild(r); });\n"
-                    "   formatNumericCells(tbl);\n"
-                    " }\n"
-                    " tbl.querySelectorAll('thead th').forEach(function(th,idx){\n"
-                    "   th.style.cursor='pointer';\n"
-                    "   th.addEventListener('click', function(){\n"
-                    "     var asc = th.getAttribute('data-asc') !== 'true';\n"
-                    "     sortTable(tbl, idx, asc);\n"
-                    "     tbl.querySelectorAll('thead th').forEach(function(t){ t.removeAttribute('data-asc'); });\n"
-                    "     th.setAttribute('data-asc', asc?'true':'false');\n"
-                    "   });\n"
-                    " });\n"
-                    " // Aplicar formateo inicial a 2 decimales\n"
-                    " formatNumericCells(tbl);\n"
-                    "})();\n"
-                    "</script>"
-                    "</body></html>"
-                )
-                escaped = inner.replace("'", "&#39;")
-                iframe = (
-                    f'<iframe style="width:100%;height:{int(max_height_px)}px;border:1px solid #eee;border-radius:4px;" '
-                    f"srcdoc='{escaped}' loading=\"lazy\"></iframe>"
-                )
-                display(w.HTML(value=iframe))
-            except Exception:
-                # Fallback simple
-                display(sty)
+            _update_alert(dfv)
+            if _HAS_DATAGRID:
+                _render_datagrid(dfv)
+            else:
+                _render_html_fallback(dfv)
 
     def _clear(_):
         dd_seg.value = "Todos"
@@ -1055,21 +1371,44 @@ def widget_filtrado_ranking(
         sl_top.value = top_n_default
         dd_sort_dir.value = "Desc"
 
-    # eventos
+    # ── Eventos de filtrado ──────────────────────────────────────────────
     for wdg in [dd_seg, sl_sim, txt_busca, dd_sort, dd_sort_dir, sl_top]:
         wdg.observe(_render, names="value")
     btn_clear.on_click(_clear)
 
-    # primera render
+    # Primera render
     _render()
 
+    # ── Layout final ─────────────────────────────────────────────────────
     controls1 = w.HBox([dd_seg, sl_sim])
     controls2 = w.HBox([txt_busca, dd_sort, dd_sort_dir, sl_top, btn_clear])
+
+    btn_row = w.HBox(
+        [btn_show_all, btn_hide_all, btn_col_reset],
+        layout=w.Layout(margin="4px 0"),
+    )
+    col_panel_inner = w.VBox(
+        [btn_row] + _group_sections,
+        layout=w.Layout(
+            max_height="320px",
+            overflow_y="auto",
+            padding="4px",
+        ),
+    )
+    acc_cols = w.Accordion(children=[col_panel_inner])
+    acc_cols.set_title(0, "⚙ Personalizar columnas")
+    acc_cols.selected_index = None  # colapsado
+
     help_html = w.HTML(
         "<div style='font-size:12px;line-height:1.35em;margin:4px 0 6px 0;'>"
-        "<b>Similitud (ranking)</b>: ordena todas las aeronaves por cercanía al objetivo (no filtra). "
-        "<b>Top-K (vecinos)</b>: trabaja sólo con los K más cercanos para sugerencias locales y análisis detallado."
+        "<b>Similitud (ranking)</b>: ordena aeronaves por cercanía al objetivo. "
+        "<b>Top-K</b>: vecinos más cercanos para sugerencias locales. "
+        "Click en encabezados para ordenar · arrastrá bordes de columna "
+        "para redimensionar."
         "</div>"
     )
-    box = w.VBox([help_html, controls1, controls2, out_container])
+    box = w.VBox([
+        help_html, controls1, controls2, acc_cols,
+        html_alert, out_container,
+    ])
     return box

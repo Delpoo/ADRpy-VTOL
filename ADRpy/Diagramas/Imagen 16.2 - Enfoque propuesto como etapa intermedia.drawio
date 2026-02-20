@@ -1,0 +1,78 @@
+<mxfile host="65bd71144e">
+    <diagram id="fig162" name="Imagen 16.2">
+        <mxGraphModel dx="1906" dy="2569" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="2" pageWidth="1600" pageHeight="3400" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="&lt;b&gt;Imagen 16.2&lt;/b&gt; &amp;mdash; Ubicaci&amp;oacute;n del enfoque propuesto entre m&amp;eacute;todos cl&amp;aacute;sicos y m&amp;eacute;todos de IA" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=34;fontColor=#263238;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="30" width="1400" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="A_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=5;arcSize=6;fontSize=39;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="150" width="1400" height="620" as="geometry"/>
+                </mxCell>
+                <mxCell id="A_title" value="&lt;b&gt;A — Relaciones empíricas clásicas&lt;/b&gt;&lt;br&gt;(Raymer + análisis dimensional)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;fontColor=#FFFFFF;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="175" width="1200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="A1" value="Curvas / relaciones empíricas&lt;br&gt;(ej. fracción de peso vacío vs MTOW)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="310" width="1200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="A2" value="Reglas de dimensionamiento" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="440" width="1200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="A3" value="Teorema π de Buckingham&lt;br&gt;(grupos adimensionales)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="560" width="1200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow_AB" value="Limitaciones con datos no convencionales" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=5;strokeColor=#37474F;fontSize=39;fontColor=#37474F;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=blockThin;endFill=1;endSize=14;" parent="1" source="A_bg" target="B_bg" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="B_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;strokeWidth=5;arcSize=6;fontSize=39;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="890" width="1400" height="780" as="geometry"/>
+                </mxCell>
+                <mxCell id="B_title" value="&lt;b&gt;B — Enfoque del presente trabajo&lt;/b&gt;&lt;br&gt;(etapa intermedia)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E65100;strokeColor=#BF360C;fontColor=#FFFFFF;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="915" width="1200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="B1" value="Dataset de drones incompleto / heterogéneo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#BF360C;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="1050" width="1200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="B2" value="Regresiones simples (lineal, polinómica, multivariable)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#BF360C;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="1170" width="1200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="B3" value="Filtros estadísticos y criterios de calidad" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#BF360C;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="1290" width="1200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="B4" value="Panel de análisis / visualización interactiva" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#BF360C;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="1410" width="1200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="B_badge" value="&lt;i&gt;Prioriza transparencia e interpretabilidad&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontColor=#6D4C00;strokeWidth=2;fontSize=39;align=center;verticalAlign=middle;arcSize=18;dashed=1;dashPattern=8 4;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="1550" width="1000" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Paso previo razonable antes de pedir a la IA descubrir leyes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFDE7;strokeColor=#F9A825;fontColor=#5D4037;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=14;dashed=1;dashPattern=8 4;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="1720" width="500" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow_B_note" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#F9A825;dashed=1;dashPattern=8 4;exitX=0.15;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=open;endFill=0;endSize=10;fontSize=39;" parent="1" source="B_bg" target="note" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="arrow_BC" value="Base ordenada para métodos avanzados" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=5;strokeColor=#37474F;fontSize=39;fontColor=#37474F;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=blockThin;endFill=1;endSize=14;" parent="1" source="B_bg" target="C_bg" edge="1">
+                    <mxGeometry x="-0.1304" y="150" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="C_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;strokeWidth=5;arcSize=6;fontSize=39;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="1900" width="1400" height="600" as="geometry"/>
+                </mxCell>
+                <mxCell id="C_title" value="&lt;b&gt;C — Métodos avanzados basados en IA&lt;/b&gt;&lt;br&gt;(descubrimiento de leyes)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#1B5E20;fontColor=#FFFFFF;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="1925" width="1200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="C1" value="Redes neuronales + mecanismos de interpretación" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="2060" width="1200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="C2" value="Regresión simbólica" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="2190" width="1200" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="C3" value="Descubrimiento automático de fórmulas / leyes desde datos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontColor=#1B5E20;strokeWidth=3;fontSize=39;align=center;verticalAlign=middle;arcSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="2310" width="1200" height="110" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

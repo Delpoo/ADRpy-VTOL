@@ -168,6 +168,8 @@ class ParamRow:
     # Commit C: vista compacta + toggler por fila
     btn_toggle: Optional[w.Button] = None
     expanded: bool = False
+    # Hard filter: si está activo, este parámetro FILTRA (elimina) aeronaves que no cumplen
+    ch_hard_filter: Optional[w.Checkbox] = None
 
 
 class ParamPanel(w.VBox):
@@ -461,7 +463,18 @@ class ParamPanel(w.VBox):
                 tooltip="Mostrar/ocultar detalle",
                 layout=w.Layout(width="36px"),
             )
-            row = w.HBox([ch, dd, ft, ft_min, ft_max, sl, btn, btn_toggle])
+            # Hard filter checkbox: cuando está activo, este parámetro elimina
+            # del ranking las aeronaves que no cumplen la restricción
+            ch_hf = w.Checkbox(
+                value=False,
+                description="HF",
+                indent=False,
+                layout=w.Layout(width="50px"),
+                tooltip="Hard Filter: si está activo, elimina del ranking las aeronaves que no cumplen esta restricción",
+                style={"description_width": "0px"},
+            )
+            ch_hf.layout.display = "none"  # oculto si modo es 'ignorar'
+            row = w.HBox([ch, dd, ft, ft_min, ft_max, sl, ch_hf, btn, btn_toggle])
             row.layout = w.Layout(align_items="center")
             pr = ParamRow(
                 col=c,
@@ -475,6 +488,7 @@ class ParamPanel(w.VBox):
                 btn_info=btn,
                 box=row,
                 btn_toggle=btn_toggle,
+                ch_hard_filter=ch_hf,
             )
             self.rows.append(pr)
             items.append(row)
@@ -497,6 +511,12 @@ class ParamPanel(w.VBox):
                 )
                 pr.ft_min.layout.display = "" if (wants_range and detailed) else "none"
                 pr.ft_max.layout.display = "" if (wants_range and detailed) else "none"
+                # Mostrar/ocultar hard filter checkbox según modo
+                if pr.ch_hard_filter is not None:
+                    has_constraint = mode != "ignorar"
+                    pr.ch_hard_filter.layout.display = (
+                        "" if (has_constraint and detailed) else "none"
+                    )
                 # Si cambió a 'rango', pre-cargar min/max desde stats si están vacíos
                 if wants_range:
                     self._prefill_range_from_stats(pr)
@@ -525,6 +545,12 @@ class ParamPanel(w.VBox):
             pr.ft_value.layout.display = "" if (wants_value and show_detail) else "none"
             pr.ft_min.layout.display = "" if (wants_range and show_detail) else "none"
             pr.ft_max.layout.display = "" if (wants_range and show_detail) else "none"
+            # hard filter checkbox: visible si hay restricción y vista detallada/expandida
+            if pr.ch_hard_filter is not None:
+                has_constraint = mode != "ignorar"
+                pr.ch_hard_filter.layout.display = (
+                    "" if (has_constraint and show_detail) else "none"
+                )
             # el botón de toggle solo tiene sentido en compacta
             if pr.btn_toggle is not None:
                 pr.btn_toggle.layout.display = "" if is_compact else "none"
@@ -755,6 +781,64 @@ class ParamPanel(w.VBox):
                 peso = float(r.sl_weight.value)
             except Exception:
                 peso = 0.0
+            d: dict[str, Any] = {"tipo": mode, "peso": peso}
+            if mode in {"minimo", "maximo", "fijo"}:
+                try:
+                    if r.ft_value.value in (None, ""):
+                        continue
+                    d["valor"] = float(r.ft_value.value)
+                except Exception:
+                    continue
+            elif mode == "objetivo":
+                try:
+                    if r.ft_value.value in (None, ""):
+                        continue
+                    d["valor"] = float(r.ft_value.value)
+                    d["tol"] = (
+                        float(r.ft_min.value)
+                        if r.ft_min.value not in (None, "")
+                        else float(0.0)
+                    )
+                except Exception:
+                    continue
+            elif mode == "rango":
+                try:
+                    lo = None if r.ft_min.value in (None, "") else float(r.ft_min.value)
+                except Exception:
+                    lo = None
+                try:
+                    hi = None if r.ft_max.value in (None, "") else float(r.ft_max.value)
+                except Exception:
+                    hi = None
+                if lo is None and hi is None:
+                    continue
+                if lo is not None:
+                    d["min"] = lo
+                if hi is not None:
+                    d["max"] = hi
+            restr[r.col] = d
+        return restr
+
+    def collect_hard_filter_restricciones(self) -> dict:
+        """Devuelve restricciones SOLO de parámetros activos con Hard Filter habilitado.
+
+        Estas restricciones se usan para eliminar del ranking las aeronaves
+        que no cumplen la condición (filtrado duro previo al cálculo de similitud).
+        """
+        restr: dict[str, dict] = {}
+        for r in self.rows:
+            # Solo incluir si: activo + no ignorar + HF checked
+            if not bool(r.ch_active.value):
+                continue
+            mode = str(r.dd_mode.value)
+            if mode == "ignorar":
+                continue
+            if r.ch_hard_filter is None or not bool(r.ch_hard_filter.value):
+                continue
+            try:
+                peso = float(r.sl_weight.value)
+            except Exception:
+                peso = 1.0
             d: dict[str, Any] = {"tipo": mode, "peso": peso}
             if mode in {"minimo", "maximo", "fijo"}:
                 try:
@@ -1307,8 +1391,19 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
             params_dyn = param_panel.collect_params()
             restricciones = param_panel.collect_restricciones()
             restricciones_filtrado = param_panel.collect_restricciones_filtrado()
+            restricciones_hard = param_panel.collect_hard_filter_restricciones()
             df_filtrado_pre = _filter_df_by_restricciones(df, restricciones_filtrado)
             df_filtrado_state["df"] = df_filtrado_pre
+
+            # Hard filter: eliminar aeronaves que no cumplen las restricciones marcadas como HF
+            df_para_rank = df
+            n_hard = 0
+            if restricciones_hard:
+                df_hard = _filter_df_by_restricciones(df, restricciones_hard)
+                n_hard = len(df) - len(df_hard)
+                if len(df_hard) > 0:
+                    df_para_rank = df_hard
+                # Si el hard filter elimina todo, usamos df completo (fallback)
 
             with out_rank:
                 clear_output(wait=True)
@@ -1330,7 +1425,7 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                     seg_val = str(val_ui)
 
                 df_rank = rank(
-                    df,
+                    df_para_rank,
                     restricciones=restricciones,
                     params=None,
                     metodo_escala="IQR",
@@ -1358,7 +1453,9 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                                 pass
                         if mask_ok.any():
                             idx_ok = df_rank.index[mask_ok]
-                            df_filtrado_post = df.loc[idx_ok.intersection(df.index)]
+                            df_filtrado_post = df_para_rank.loc[
+                                idx_ok.intersection(df_para_rank.index)
+                            ]
                 except Exception:
                     df_filtrado_post = None
 
@@ -1374,9 +1471,9 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                     except Exception:
                         pass
                 # Asegurar que la tabla muestre etiquetas legibles aunque no segmentemos por SEGMENT_COL
-                if (SEGMENT_COL in df.columns) and SEGMENT_LABELS:
+                if (SEGMENT_COL in df_para_rank.columns) and SEGMENT_LABELS:
                     seg_map = {str(k): v for k, v in SEGMENT_LABELS.items()}
-                    seg_raw = df.loc[df_rank.index, SEGMENT_COL].astype(str)
+                    seg_raw = df_para_rank.loc[df_rank.index, SEGMENT_COL].astype(str)
                     df_rank["segmento"] = seg_raw.map(seg_map).fillna(seg_raw)
                 df_rank_obj = insertar_objetivo_en_ranking(
                     df_rank,
@@ -1461,6 +1558,25 @@ def build_ui(df: pd.DataFrame, params: list[str] | None = None) -> w.VBox:
                     top_n_default=15,
                 )
                 display(w.HTML("<h4>Ranking por similitud</h4>"))
+                # Mensaje informativo sobre hard filter
+                if n_hard > 0:
+                    if df_para_rank is df:
+                        # Fallback: hard filter eliminó todo
+                        display(
+                            w.HTML(
+                                f"<div style='background:#fff3cd;border:1px solid #ffc107;padding:6px 10px;border-radius:4px;font-size:12px;margin-bottom:6px;'>"
+                                f"<b>⚠ Hard Filter:</b> las restricciones marcadas como HF eliminaron <b>todas</b> las aeronaves. "
+                                f"Se muestra el ranking completo sin filtrar (fallback).</div>"
+                            )
+                        )
+                    else:
+                        display(
+                            w.HTML(
+                                f"<div style='background:#d4edda;border:1px solid #28a745;padding:6px 10px;border-radius:4px;font-size:12px;margin-bottom:6px;'>"
+                                f"<b>Hard Filter activo:</b> {n_hard} aeronave(s) eliminada(s) por no cumplir las restricciones HF. "
+                                f"Ranking sobre {len(df_para_rank)} aeronaves restantes.</div>"
+                            )
+                        )
                 display(ui_rank)
 
             with out_sug:
