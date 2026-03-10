@@ -978,58 +978,140 @@ def widget_filtrado_ranking(
     _updating = {"flag": False}
     _default_visible_set = set(_default_visible)
 
-    # Crear un checkbox por cada columna
+    # ── Crear un checkbox + label HTML por cada columna ─────────────────
+    # Usamos checkbox sin description + HTML label para evitar truncamiento
     _col_cbs: dict = {}  # col_name → Checkbox
-    for col in _default_order:
-        _col_cbs[col] = w.Checkbox(
-            value=(col in _default_visible_set),
-            description=col,
-            indent=False,
-            layout=w.Layout(width="auto", min_width="140px", max_width="300px"),
-        )
+    _col_items: dict = {}  # col_name → HBox(checkbox, label)
 
-    # Definición de grupos: (label, col_list, default_on)
+    def _make_col_item(col_name: str, checked: bool):
+        """Crea un par (checkbox vacío, label HTML) para una columna."""
+        import html as _html
+
+        cb = w.Checkbox(
+            value=checked,
+            description="",
+            indent=False,
+            layout=w.Layout(width="20px", height="20px", margin="0 4px 0 0"),
+        )
+        cb.style.description_width = "0px"
+        safe = _html.escape(col_name)
+        lbl = w.HTML(
+            f"<span title='{safe}' style='"
+            f"font-size:12px;line-height:20px;cursor:default;"
+            f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+            f"display:inline-block;max-width:280px;"
+            f"'>{safe}</span>"
+        )
+        item = w.HBox(
+            [cb, lbl],
+            layout=w.Layout(
+                align_items="center",
+                margin="1px 0",
+                overflow="hidden",
+            ),
+        )
+        return cb, item
+
+    for col in _default_order:
+        cb, item = _make_col_item(col, col in _default_visible_set)
+        _col_cbs[col] = cb
+        _col_items[col] = item
+
+    # Definición de grupos: (label, col_list, default_on, color)
     _GROUPS_DEF = [
-        ("Métricas", _COL_METRICS, True),
-        ("Parámetros", _COL_PARAMS, True),
-        ("Δ Desvíos", _COL_DELTA, True),
-        ("⚠ Violaciones", _COL_VIOL_FLAG, True),
-        ("dv_ Aportes distancia", _COL_DV, False),
-        ("viol_ Booleanos", _COL_VIOL_BOOL, False),
-        ("Otras", _COL_OTHER, False),
+        ("Métricas", _COL_METRICS, True, "#2196F3"),
+        ("Parámetros", _COL_PARAMS, True, "#4CAF50"),
+        ("Δ Desvíos", _COL_DELTA, True, "#FF9800"),
+        ("⚠ Violaciones", _COL_VIOL_FLAG, True, "#f44336"),
+        ("dv_ Aportes distancia", _COL_DV, False, "#9E9E9E"),
+        ("viol_ Booleanos", _COL_VIOL_BOOL, False, "#9E9E9E"),
+        ("Otras", _COL_OTHER, False, "#607D8B"),
     ]
 
-    # Para cada grupo: checkbox cabecera + checkboxes hijos en flow layout
+    # Para cada grupo: checkbox cabecera colapsable + items hijos en grid
     _grp_cbs: list = []  # [(grp_checkbox, grp_cols), ...]
     _group_sections: list = []
 
-    for grp_label, grp_cols, grp_default in _GROUPS_DEF:
+    for grp_label, grp_cols, grp_default, grp_color in _GROUPS_DEF:
         if not grp_cols:
             continue
         grp_cb = w.Checkbox(
             value=grp_default,
+            description="",
             indent=False,
-            layout=w.Layout(width="auto"),
+            layout=w.Layout(width="20px", height="20px", margin="0 4px 0 0"),
         )
-        grp_header = w.HBox(
-            [
-                grp_cb,
-                w.HTML(
-                    f"<b style='font-size:12px;'>{grp_label}</b>"
-                    f" <span style='color:#888;font-size:11px;'>({len(grp_cols)})</span>"
-                ),
-            ],
-            layout=w.Layout(margin="4px 0 0 0"),
+        grp_cb.style.description_width = "0px"
+
+        # Botón de colapsar/expandir el contenido del grupo
+        _collapsed_init = len(grp_cols) > 6  # grupos grandes arrancan colapsados
+        btn_toggle = w.Button(
+            description="▶" if _collapsed_init else "▼",
+            layout=w.Layout(width="22px", height="20px", padding="0", margin="0 2px 0 0"),
+        )
+        btn_toggle.style.button_color = "transparent"
+        btn_toggle.style.font_size = "10px"
+
+        n_on = sum(1 for c in grp_cols if c in _col_cbs and _col_cbs[c].value)
+        badge_html = w.HTML(
+            f"<span style='"
+            f"display:inline-block;width:10px;height:10px;"
+            f"border-radius:2px;background:{grp_color};"
+            f"margin-right:6px;vertical-align:middle;'></span>"
+            f"<b style='font-size:12.5px;vertical-align:middle;'>"
+            f"{grp_label}</b>"
+            f" <span style='color:#888;font-size:11px;"
+            f"vertical-align:middle;'>({n_on}/{len(grp_cols)} activas)</span>"
         )
 
-        col_flow = w.HBox(
-            [_col_cbs[c] for c in grp_cols if c in _col_cbs],
+        grp_header = w.HBox(
+            [btn_toggle, grp_cb, badge_html],
             layout=w.Layout(
-                flex_flow="row wrap",
-                padding="0 0 0 24px",
+                margin="4px 0 2px 0",
+                align_items="center",
+                cursor="pointer",
             ),
         )
-        section = w.VBox([grp_header, col_flow], layout=w.Layout(margin="0"))
+
+        # Grilla fija de 3 columnas
+        items = [_col_items[c] for c in grp_cols if c in _col_items]
+        col_grid = w.GridBox(
+            items,
+            layout=w.Layout(
+                grid_template_columns="repeat(3, 1fr)",
+                grid_gap="1px 12px",
+                padding="2px 0 4px 28px",
+                width="100%",
+                display="none" if _collapsed_init else "",
+            ),
+        )
+        separator = w.HTML(
+            "<hr style='margin:2px 0 0 0;border:none;"
+            "border-top:1px solid #eee;'>"
+        )
+
+        # Callback de colapsar/expandir
+        def _make_toggle_cb(btn, grid):
+            def _toggle(_):
+                if grid.layout.display == "none":
+                    grid.layout.display = ""
+                    btn.description = "▼"
+                else:
+                    grid.layout.display = "none"
+                    btn.description = "▶"
+            return _toggle
+
+        btn_toggle.on_click(_make_toggle_cb(btn_toggle, col_grid))
+
+        section = w.VBox(
+            [grp_header, col_grid, separator],
+            layout=w.Layout(margin="0"),
+        )
+        # Guardar refs para actualizar badge después
+        section._badge_html = badge_html  # type: ignore[attr-defined]
+        section._grp_cols = grp_cols  # type: ignore[attr-defined]
+        section._grp_color = grp_color  # type: ignore[attr-defined]
+        section._grp_label = grp_label  # type: ignore[attr-defined]
         _grp_cbs.append((grp_cb, grp_cols))
         _group_sections.append(section)
 
@@ -1037,18 +1119,44 @@ def widget_filtrado_ranking(
     btn_show_all = w.Button(
         description="✓ Mostrar todo",
         button_style="success",
-        layout=w.Layout(width="auto"),
+        layout=w.Layout(width="auto", height="28px"),
     )
+    btn_show_all.style.font_size = "12px"
     btn_hide_all = w.Button(
         description="✗ Ocultar todo",
         button_style="danger",
-        layout=w.Layout(width="auto"),
+        layout=w.Layout(width="auto", height="28px"),
     )
+    btn_hide_all.style.font_size = "12px"
     btn_col_reset = w.Button(
         description="⟲ Restablecer",
         button_style="warning",
-        layout=w.Layout(width="auto"),
+        layout=w.Layout(width="auto", height="28px"),
     )
+    btn_col_reset.style.font_size = "12px"
+
+    def _update_group_badges():
+        """Actualiza el contador (n_on/total) en cada cabecera de grupo."""
+        import html as _html
+
+        for sec in _group_sections:
+            badge = getattr(sec, "_badge_html", None)
+            cols = getattr(sec, "_grp_cols", [])
+            color = getattr(sec, "_grp_color", "#888")
+            label = getattr(sec, "_grp_label", "")
+            if badge is None:
+                continue
+            n_on = sum(1 for c in cols if c in _col_cbs and _col_cbs[c].value)
+            badge.value = (
+                f"<span style='"
+                f"display:inline-block;width:10px;height:10px;"
+                f"border-radius:2px;background:{color};"
+                f"margin-right:6px;vertical-align:middle;'></span>"
+                f"<b style='font-size:12.5px;vertical-align:middle;'>"
+                f"{_html.escape(label)}</b>"
+                f" <span style='color:#888;font-size:11px;"
+                f"vertical-align:middle;'>({n_on}/{len(cols)} activas)</span>"
+            )
 
     def _sync_visible():
         """Recalcula _col_state['visible'] desde checkboxes y re-renderiza."""
@@ -1058,6 +1166,7 @@ def widget_filtrado_ranking(
             if c not in vis:
                 vis.insert(0, c)
         _col_state["visible"] = vis
+        _update_group_badges()
         _render()
 
     def _on_grp_toggle(change, grp_cols):
@@ -1400,14 +1509,33 @@ def widget_filtrado_ranking(
 
     btn_row = w.HBox(
         [btn_show_all, btn_hide_all, btn_col_reset],
-        layout=w.Layout(margin="4px 0"),
+        layout=w.Layout(margin="4px 0 6px 0", gap="6px"),
     )
+
+    # Buscador de columnas por nombre
+    _txt_col_filter = w.Text(
+        value="",
+        placeholder="🔍 Filtrar columnas por nombre…",
+        layout=w.Layout(width="100%", margin="0 0 6px 0"),
+    )
+
+    def _on_col_filter(change):
+        query = (change.get("new") or "").strip().lower()
+        for col_name, item_box in _col_items.items():
+            if not query or query in col_name.lower():
+                item_box.layout.display = ""
+            else:
+                item_box.layout.display = "none"
+
+    _txt_col_filter.observe(_on_col_filter, names="value")
+
     col_panel_inner = w.VBox(
-        [btn_row] + _group_sections,
+        [btn_row, _txt_col_filter] + _group_sections,
         layout=w.Layout(
-            max_height="320px",
             overflow_y="auto",
-            padding="4px",
+            padding="6px 8px",
+            border="1px solid #e0e0e0",
+            border_radius="4px",
         ),
     )
     acc_cols = w.Accordion(children=[col_panel_inner])

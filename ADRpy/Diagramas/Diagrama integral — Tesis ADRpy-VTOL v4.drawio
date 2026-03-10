@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
-    <diagram id="tesis_integral_v3" name="Diagrama integral — Tesis ADRpy-VTOL v3">
-        <mxGraphModel dx="534" dy="1119" grid="0" gridSize="10" guides="0" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2400" pageHeight="3200" math="0" shadow="0">
+    <diagram id="tesis_integral_v4" name="Diagrama integral — Tesis ADRpy-VTOL v4">
+        <mxGraphModel dx="485" dy="604" grid="0" gridSize="10" guides="0" tooltips="0" connect="0" arrows="0" fold="1" page="0" pageScale="1" pageWidth="2400" pageHeight="3200" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -13,7 +13,7 @@
                 <mxCell id="A_label" value="&lt;b style=&quot;color: rgb(13, 71, 161);&quot;&gt;A — TESIS: CONTEXTO Y MOTIVACIÓN&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=15;" parent="1" vertex="1">
                     <mxGeometry x="60" y="-100" width="450" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="A1" value="&lt;font style=&quot;&quot;&gt;&lt;b style=&quot;color: light-dark(rgb(13, 71, 161), rgb(205, 205, 255));&quot;&gt;Motivación&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(13, 71, 161);&quot;&gt;• Diseñar y maquetar un dron VTOL ala fija&lt;/font&gt;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(13, 71, 161);&quot;&gt;•&amp;nbsp;Automatizar proceso de diseño ADRpy&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;color: light-dark(rgb(13, 71, 161), rgb(205, 205, 255));&quot;&gt;• ADRpy requería ingresar parámetros de aeronaves sin un análisis/validación previa, lo que podía derivar en valores dísicamente incoherentes.&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=2;fontSize=12.5;align=center;verticalAlign=middle;labelBorderColor=none;" parent="1" vertex="1">
+                <mxCell id="A1" value="&lt;font style=&quot;&quot;&gt;&lt;b style=&quot;color: light-dark(rgb(13, 71, 161), rgb(205, 205, 255));&quot;&gt;Motivación&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;color: rgb(13, 71, 161);&quot;&gt;• Diseñar y maquetar un dron VTOL ala fija&lt;/font&gt;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(13, 71, 161);&quot;&gt;•&amp;nbsp;Automatizar proceso de diseño ADRpy&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;color: light-dark(rgb(13, 71, 161), rgb(205, 205, 255));&quot;&gt;• ADRpy requería ingresar parámetros de aeronaves sin un análisis/validación previa, lo que podía derivar en valores físicamente incoherentes.&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=2;fontSize=12.5;align=center;verticalAlign=middle;labelBorderColor=none;" parent="1" vertex="1">
                     <mxGeometry x="55" y="-55" width="255" height="120" as="geometry"/>
                 </mxCell>
                 <mxCell id="A2" value="&lt;font&gt;&lt;b style=&quot;&quot;&gt;&lt;font style=&quot;color: rgb(198, 40, 40);&quot;&gt;Problema inicial&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;/font&gt;&lt;font&gt;&lt;font style=&quot;color: rgb(198, 40, 40);&quot;&gt;• Dataset UAV incompleto (~60% NaN)&lt;br&gt;&lt;/font&gt;&lt;font style=&quot;color: rgb(198, 40, 40);&quot;&gt;• Datos heterogéneos&lt;br&gt;&lt;/font&gt;&lt;font style=&quot;color: rgb(198, 40, 40);&quot;&gt;• Definiciones no comparables&lt;/font&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontColor=#B71C1C;strokeWidth=2;fontSize=12.5;align=center;verticalAlign=middle;" parent="1" vertex="1">
@@ -144,22 +144,22 @@
                     <mxGeometry x="140" y="900" width="690" height="520" as="geometry"/>
                 </mxCell>
                 <mxCell id="MA_label" value="&lt;b style=&quot;color: rgb(0, 77, 64);&quot;&gt;Método A: Similitud (vecinos)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=15;" parent="1" vertex="1">
-                    <mxGeometry x="190" y="920" width="280" height="18" as="geometry"/>
+                    <mxGeometry x="189" y="915" width="280" height="18" as="geometry"/>
                 </mxCell>
-                <mxCell id="MA1" value="&lt;b&gt;Calcular distancia robusta&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Métrica: distancia IQR/MAD normalizada&lt;br&gt;• Entre aeronave objetivo y todas las demás&lt;br&gt;• Solo variables compartidas (no-NaN en ambas)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="325" y="970" width="278" height="72" as="geometry"/>
+                <mxCell id="MA1" value="&lt;b&gt;Calcular distancia robusta&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Métrica: distancia IQR (Interquartile Range)/MAD (Median absolute deviation) normalizada, entre aeronave objetivo y todas las demás&lt;br&gt;• Solo variables compartidas (con datos en objetivo y predictor)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="325" y="943" width="278" height="116" as="geometry"/>
                 </mxCell>
-                <mxCell id="MA2" value="&lt;b&gt;Filtrar umbral + Top-K&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Descartar vecinos con d &amp;gt; umbral&lt;br&gt;• Retener los K más cercanos (K=10)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="325" y="1054.5" width="278" height="65" as="geometry"/>
+                <mxCell id="MA2" value="&lt;b&gt;Filtrar umbral + Top-K&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Descartar vecinos con distancia &amp;gt; umbral&lt;br&gt;• Retener los K más cercanos (K=10)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="323" y="1081" width="278" height="65" as="geometry"/>
                 </mxCell>
-                <mxCell id="MA3" value="&lt;b&gt;Promedio ponderado&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Peso = 1/distancia (inversa)&lt;br&gt;• Mediana ponderada robusta&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="325" y="1135" width="278" height="52" as="geometry"/>
+                <mxCell id="MA3" value="&lt;b&gt;Promedio ponderado&lt;/b&gt;&lt;br&gt;&lt;font&gt;• En base a distancia&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="325" y="1167" width="278" height="52" as="geometry"/>
                 </mxCell>
-                <mxCell id="MA4" value="&lt;b&gt;Calcular C_sim&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Basada en: CV vecinos, n vecinos, dispersión&lt;br&gt;• Penalizaciones: pocos vecinos, alta varianza&lt;br&gt;• C_sim ∈ [0, 1]&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B2DFDB;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="325" y="1201" width="278" height="62" as="geometry"/>
+                <mxCell id="MA4" value="&lt;b&gt;Calcular C_sim&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Basada en Coeficiente de Variación de vecinos y n vecinos&lt;br&gt;• Penalizaciones de pocos vecinos, alta varianza&lt;br&gt;• C_sim ∈ [0, 1]&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B2DFDB;strokeColor=#00695C;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="325" y="1241" width="278" height="94" as="geometry"/>
                 </mxCell>
-                <mxCell id="MA_OUT" value="&lt;b&gt;Valor_sim + C_sim&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#80CBC4;strokeColor=#004D40;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
-                    <mxGeometry x="359" y="1278" width="210" height="30" as="geometry"/>
+                <mxCell id="MA_OUT" value="&lt;b&gt;Valor + Confianza&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#80CBC4;strokeColor=#004D40;fontColor=#004D40;strokeWidth=2;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="359" y="1356" width="210" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="ma_e1" style="rounded=1;html=1;strokeWidth=2;strokeColor=#00897B;fontSize=12.5;" parent="1" source="MA1" target="MA2" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -174,13 +174,13 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="DEC_VEC" value="¿Suficientes&lt;br&gt;vecinos?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontColor=#E65100;strokeWidth=2;fontSize=12.5;" parent="1" vertex="1">
-                    <mxGeometry x="647" y="1051" width="108" height="72" as="geometry"/>
+                    <mxGeometry x="647" y="1077" width="108" height="72" as="geometry"/>
                 </mxCell>
                 <mxCell id="ma_dec" style="rounded=1;html=1;strokeWidth=1;strokeColor=#00897B;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontSize=12.5;" parent="1" source="MA2" target="DEC_VEC" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="DEC_VEC_NO" value="&lt;font&gt;Penalizar C_sim&lt;br&gt;o descartar&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#E53935;fontColor=#B71C1C;strokeWidth=1;fontSize=12.5;" parent="1" vertex="1">
-                    <mxGeometry x="643.5" y="1168" width="115" height="30" as="geometry"/>
+                    <mxGeometry x="643" y="1276" width="115" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="dec_vec_no" value="No" style="rounded=1;html=1;strokeWidth=1;strokeColor=#E53935;fontColor=#E53935;fontSize=12.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" parent="1" source="DEC_VEC" target="DEC_VEC_NO" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -191,23 +191,20 @@
                 <mxCell id="MB_label" value="&lt;b style=&quot;color: rgb(74, 20, 140);&quot;&gt;Método B: Correlación (regresión supervisada)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=15;" parent="1" vertex="1">
                     <mxGeometry x="910" y="920" width="380" height="18" as="geometry"/>
                 </mxCell>
-                <mxCell id="MB1" value="&lt;b&gt;Seleccionar 1–2 predictores (1D y 2D)&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Máxima correlación con el parámetro objetivo&lt;br&gt;• Mayor cobertura (menos NaN)&lt;br&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="1075" y="961" width="258" height="74" as="geometry"/>
+                <mxCell id="MB1" value="&lt;b&gt;Seleccionar predictores (1D y 2D)&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Filtrado por familia y cobertura (menos NaN)&lt;br&gt;• Combinaciones de 1 y 2 variables&lt;br&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1073" y="961" width="258" height="74" as="geometry"/>
                 </mxCell>
-                <mxCell id="MB2" value="&lt;b&gt;Ajustar tendencias simples&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Lineal, log, exponencial, potencia, poly(≤2)&lt;/font&gt;&lt;div&gt;&lt;font&gt;&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;• Selección en base a MAPE&lt;/span&gt;&lt;br&gt;• Se prioriza complejidad baja para evitar sobreajuste frente a MAPE similar&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="1075" y="1049" width="258" height="79" as="geometry"/>
+                <mxCell id="MB2" value="&lt;b&gt;Entrenar múltiples modelos&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Lineal, log, exponencial, potencia, poly(≤2)&lt;br&gt;• Filtro: MAPE ≤ 7.5% y R² ≥ 0.6&lt;br&gt;• Top 2 por tipo según Confianza&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1073" y="1062" width="258" height="79" as="geometry"/>
                 </mxCell>
-                <mxCell id="MB3" value="&lt;b&gt;Validación LOOCV (Leave-one-out)&lt;/b&gt;&lt;br&gt;&lt;font&gt;• MAE, MAPE, R²&lt;br&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="1075" y="1142" width="258" height="62" as="geometry"/>
+                <mxCell id="MB3" value="&lt;b&gt;Validación LOOCV (Leave-one-out)&lt;/b&gt;&lt;br&gt;&lt;font&gt;• MAE, MAPE, R²&lt;br&gt;• Clasificar: robusto / no robusto / rechazado&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1073" y="1168" width="258" height="72" as="geometry"/>
                 </mxCell>
-                <mxCell id="MB4" value="&lt;b&gt;Penalizaciones&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Por complejidad · Por n pequeño&lt;br&gt;• Por sobreajuste (R²_train ≫ R²_cv)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="1075" y="1218" width="258" height="62" as="geometry"/>
+                <mxCell id="MB4" value="&lt;b&gt;Seleccionar mejor modelo&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Mayor Confianza_promedio&lt;br&gt;(mezcla confianza entrenamiento + LOOCV)&lt;br&gt;• Robustos priorizados sobre no robustos&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1C4E9;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1073" y="1267" width="258" height="62" as="geometry"/>
                 </mxCell>
-                <mxCell id="MB5" value="&lt;b&gt;Calcular C_corr&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Base: R²·(1−MAPE/100) − penalizaciones&lt;br&gt;• C_corr ∈ [0, 1]&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1C4E9;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="1075" y="1294" width="258" height="58" as="geometry"/>
-                </mxCell>
-                <mxCell id="MB_OUT" value="&lt;b&gt;Valor_corr + C_corr&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B39DDB;strokeColor=#311B92;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
-                    <mxGeometry x="1108" y="1366" width="200" height="30" as="geometry"/>
+                <mxCell id="MB_OUT" value="&lt;b&gt;Valor + Confianza&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B39DDB;strokeColor=#311B92;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
+                    <mxGeometry x="1102" y="1356" width="200" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="mb_e1" style="rounded=1;html=1;strokeWidth=2;strokeColor=#7E57C2;fontSize=12.5;" parent="1" source="MB1" target="MB2" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -218,14 +215,11 @@
                 <mxCell id="mb_e3" style="rounded=1;html=1;strokeWidth=2;strokeColor=#7E57C2;fontSize=12.5;" parent="1" source="MB3" target="MB4" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="mb_e4" style="rounded=1;html=1;strokeWidth=2;strokeColor=#7E57C2;fontSize=12.5;" parent="1" source="MB4" target="MB5" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="mb_e5" style="rounded=1;html=1;strokeWidth=2;strokeColor=#7E57C2;fontSize=12.5;" parent="1" source="MB5" target="MB_OUT" edge="1">
+                <mxCell id="mb_e4" style="rounded=1;html=1;strokeWidth=2;strokeColor=#7E57C2;fontSize=12.5;" parent="1" source="MB4" target="MB_OUT" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="MB_2D" value="&lt;b&gt;Chequeos 2D&lt;/b&gt;&lt;br&gt;&lt;font&gt;• VIF (multicolinealidad)&lt;br&gt;• Número de condición · Cobertura&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1C4E9;strokeColor=#4527A0;fontColor=#311B92;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
-                    <mxGeometry x="1362" y="968" width="215" height="65" as="geometry"/>
+                    <mxGeometry x="1362" y="965.5" width="215" height="65" as="geometry"/>
                 </mxCell>
                 <mxCell id="mb_2d_link" style="rounded=1;html=1;strokeWidth=1;strokeColor=#7E57C2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontSize=12.5;" parent="1" source="MB1" target="MB_2D" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -242,12 +236,12 @@
                 <mxCell id="dec_2d_no" value="No" style="rounded=1;html=1;strokeWidth=1;strokeColor=#E53935;fontColor=#E53935;fontSize=12.5;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="DEC_2D" target="DEC_2D_NO" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="27" style="edgeStyle=elbowEdgeStyle;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;strokeColor=#7E57C2;elbow=horizontal;" edge="1" parent="1" source="DEC_EXT" target="MB2">
+                <mxCell id="27" style="edgeStyle=elbowEdgeStyle;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;strokeColor=#7E57C2;elbow=horizontal;" parent="1" source="DEC_EXT" target="MB2" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="28" value="&lt;font style=&quot;color: rgb(126, 87, 194);&quot;&gt;No&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;" vertex="1" connectable="0" parent="27">
+                <mxCell id="28" value="&lt;font style=&quot;color: rgb(126, 87, 194);&quot;&gt;No&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;" parent="27" vertex="1" connectable="0">
                     <mxGeometry x="0.293" y="1" relative="1" as="geometry">
-                        <mxPoint as="offset"/>
+                        <mxPoint y="22" as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="DEC_EXT" value="¿Extrapolación&lt;br&gt;extrema?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontColor=#E65100;strokeWidth=2;fontSize=12.5;" parent="1" vertex="1">
@@ -274,7 +268,7 @@
                 <mxCell id="fork_b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=3;strokeColor=#7E57C2;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12.5;" parent="1" source="FORK" target="MB1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1204" y="869"/>
+                            <mxPoint x="1202" y="869"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
@@ -354,10 +348,10 @@
                 <mxCell id="M2_A" value="&lt;b&gt;Carga del JSON&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Indexación automática de modelos por celda&lt;br&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="376" y="1978" width="258" height="58" as="geometry"/>
                 </mxCell>
-                <mxCell id="M2_B" value="&lt;b&gt;Validación de ecuaciones&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Consistencia dimensional&lt;br&gt;• Coeficientes extremos → advertencias&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                <mxCell id="M2_B" value="&lt;b&gt;Validación de ecuaciones&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Consistencia dimensional&lt;br&gt;• Coeficientes extremos + advertencias&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="376" y="2048" width="258" height="58" as="geometry"/>
                 </mxCell>
-                <mxCell id="M2_C" value="&lt;b&gt;Visualización interactiva&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Curvas 2D con intervalos · Superficies 3D&lt;br&gt;• Comparación por tipo / configuración&lt;br&gt;• Filtros: tipo / predictor / método&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                <mxCell id="M2_C" value="&lt;b&gt;Visualización interactiva&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Curvas 2D con intervalos · Superficies 3D&lt;br&gt;• Comparación por tipo&lt;br&gt;• Filtros: tipo de función / predictor / método&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="376" y="2118" width="258" height="68" as="geometry"/>
                 </mxCell>
                 <mxCell id="M2_D" value="&lt;b&gt;Métricas y cobertura&lt;/b&gt;&lt;br&gt;&lt;font&gt;• KPIs globales (% imputado, MAPE medio)&lt;br&gt;• Distribución errores · Mapa celdas&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#E65100;fontColor=#333;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
@@ -367,7 +361,7 @@
                     <mxGeometry x="446" y="2270" width="118" height="68" as="geometry"/>
                 </mxCell>
                 <mxCell id="M2_CLAS" value="&lt;b&gt;Clasificación por celda&lt;/b&gt;&lt;br&gt;&lt;font&gt;✅ Aceptable &amp;nbsp;|&amp;nbsp; ⚠️ Revisar &amp;nbsp;|&amp;nbsp; ❌ Rechazar&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontColor=#BF360C;strokeWidth=2;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
-                    <mxGeometry x="355" y="2388" width="300" height="38" as="geometry"/>
+                    <mxGeometry x="356" y="2379" width="300" height="38" as="geometry"/>
                 </mxCell>
                 <mxCell id="OUT_DASH" value="&lt;b&gt;📋 Dashboard auditoría&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Trazabilidad por celda · Advertencias&lt;br&gt;• Clasificación A/R/X exportable&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontColor=#0D47A1;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="355" y="2443" width="300" height="68" as="geometry"/>
@@ -417,8 +411,8 @@
                 <mxCell id="xl_m3" value="&lt;b&gt;Excel imputado&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=3;strokeColor=#1565C0;fontColor=#1565C0;exitX=0.5;exitY=1;fontSize=12.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="OUT_XL" target="M3_BRIEF" edge="1">
                     <mxGeometry x="-0.0511" relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1005" y="1838"/>
-                            <mxPoint x="1205" y="1838"/>
+                            <mxPoint x="1005" y="1856"/>
+                            <mxPoint x="1205" y="1856"/>
                         </Array>
                         <mxPoint x="1005" y="1748" as="sourcePoint"/>
                         <mxPoint x="1260" y="1938" as="targetPoint"/>
@@ -428,29 +422,28 @@
                 <mxCell id="cross" value="&lt;i&gt;Confianza&lt;br&gt;validada&lt;/i&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=1;dashed=1;dashPattern=8 6;strokeColor=#546E7A;fontColor=#546E7A;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontSize=12.5;labelBackgroundColor=none;" parent="1" source="M2_CLAS" target="M3_VEC" edge="1">
                     <mxGeometry x="0.0251" y="50" relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="655" y="2408"/>
-                            <mxPoint x="840" y="2408"/>
+                            <mxPoint x="840" y="2398"/>
                             <mxPoint x="840" y="2290"/>
                         </Array>
                         <mxPoint as="offset"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="M3_BRIEF" value="&lt;b&gt;Bloque 1: Brief&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Requisitos de misión (payload, autonomía, altitud)&lt;br&gt;• Parámetros objetivo con pesos de importancia&lt;br&gt;• Restricciones &quot;fijo / mín / máx / rango&quot;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#4A148C;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
-                    <mxGeometry x="1045" y="1956" width="320" height="62" as="geometry"/>
+                    <mxGeometry x="1045" y="1948" width="320" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="M3_SIM" value="&lt;b&gt;Ranking por similitud&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Distancia robusta ponderada · S = exp(−α·d) ∈ [0,1]&lt;br&gt;• Top-K aeronaves más similares&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#4A148C;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                <mxCell id="M3_SIM" value="&lt;b&gt;Ranking por similitud&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Distancia robusta ponderada · Similitud ∈ [0,1]&lt;br&gt;• Top-K aeronaves más similares&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#4A148C;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="1045" y="2032" width="320" height="58" as="geometry"/>
                 </mxCell>
                 <mxCell id="M3_SUG" value="&lt;b&gt;Sugerencias Top-K&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Mediana ponderada por similitud&lt;br&gt;• Alertas IQR · Histogramas y tendencias&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#4A148C;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="1045" y="2104" width="320" height="58" as="geometry"/>
                 </mxCell>
-                <mxCell id="M3_VER" value="&lt;b&gt;Outliers + Verificación física&lt;/b&gt;&lt;br&gt;&lt;font&gt;• IQR dual: global vs Top-K · Chequeo MTOW, AR, TAS&lt;br&gt;• Alertas de inconsistencia física&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#4A148C;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
+                <mxCell id="M3_VER" value="&lt;b&gt;Outliers + Verificación física&lt;/b&gt;&lt;br&gt;&lt;font&gt;• IQR dual: global vs Top-K&amp;nbsp;&lt;br&gt;&lt;/font&gt;&lt;div&gt;&lt;font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;•&lt;/span&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;&amp;nbsp;&lt;/span&gt;Chequeo congruencia física de parámetros&lt;br&gt;&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#4A148C;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="1045" y="2176" width="320" height="58" as="geometry"/>
                 </mxCell>
-                <mxCell id="M3_VEC" value="&lt;b&gt;Vector ADRpy-ready&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Bloques: brief / design / performance&lt;br&gt;• Origen: directo / derivado / imputado / supuesto&lt;br&gt;• Confianza heredada de M1 + M2&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CE93D8;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=3;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
+                <mxCell id="M3_VEC" value="&lt;b&gt;Vector ADRpy-ready&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Bloques: brief / design / performance&lt;br&gt;• Origen: directo / derivado / imputado / supuesto&lt;br&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#CE93D8;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=3;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
                     <mxGeometry x="1015" y="2256" width="380" height="68" as="geometry"/>
                 </mxCell>
-                <mxCell id="M3_ADRPY" value="&lt;b&gt;Ejecución ADRpy&lt;/b&gt;&lt;br&gt;&lt;font&gt;• constraintanalysis.py (Sobester)&lt;br&gt;• T/W vs W/S para cada restricción · Punto factible&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=3;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
+                <mxCell id="M3_ADRPY" value="&lt;b&gt;Ejecución ADRpy&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Diagrama de restricciones&amp;nbsp;&lt;br&gt;&lt;/font&gt;&lt;div&gt;&lt;font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;•&lt;/span&gt;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;&amp;nbsp;&lt;/span&gt;Zona factible&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;fontColor=#4A148C;strokeWidth=3;fontSize=12.5;align=center;shadow=1;" parent="1" vertex="1">
                     <mxGeometry x="1045" y="2346" width="320" height="58" as="geometry"/>
                 </mxCell>
                 <mxCell id="M3_GUIAS" value="&lt;font style=&quot;color: rgb(106, 27, 154);&quot;&gt;&lt;i&gt;Guías contextuales + tooltips&lt;br&gt;&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#CE93D8;fontColor=#6A1B9A;strokeWidth=1;fontSize=12.5;align=center;dashed=1;dashPattern=6 4;" parent="1" vertex="1">
@@ -460,7 +453,7 @@
                     <mxGeometry relative="1" as="geometry">
                         <mxPoint x="930" y="2080" as="sourcePoint"/>
                         <Array as="points">
-                            <mxPoint x="1470" y="1970"/>
+                            <mxPoint x="1460" y="1966"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
@@ -494,8 +487,8 @@
                 <mxCell id="fb_m3" value="&lt;i&gt;Ajustar diseño&lt;br&gt;y recalcular&lt;/i&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;dashed=1;dashPattern=10 6;strokeColor=#7B1FA2;fontColor=#7B1FA2;exitX=1;exitY=0.5;entryX=1;entryY=0.5;labelBackgroundColor=none;fontSize=12.5;" parent="1" source="OUT_TW" target="M3_BRIEF" edge="1">
                     <mxGeometry x="0.0358" y="-55" relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1455" y="2452"/>
-                            <mxPoint x="1455" y="1987"/>
+                            <mxPoint x="1457" y="2452"/>
+                            <mxPoint x="1457" y="1983"/>
                         </Array>
                         <mxPoint as="offset"/>
                     </mxGeometry>
@@ -585,7 +578,7 @@
                 <mxCell id="D1" value="&lt;b&gt;Ampliar / estandarizar&lt;br&gt;dataset&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Más aeronaves y fuentes&lt;br&gt;• Normalización global&lt;br&gt;• Web-scraping automático&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
                     <mxGeometry x="55" y="2973" width="205" height="88" as="geometry"/>
                 </mxCell>
-                <mxCell id="26" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7B1FA2;" edge="1" parent="1" source="D3" target="D5">
+                <mxCell id="26" style="edgeStyle=none;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7B1FA2;" parent="1" source="D3" target="D5" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="D3" value="&lt;b&gt;Segmentación&lt;br&gt;por familias&lt;/b&gt;&lt;br&gt;&lt;font&gt;• Modelos por tipo (multirotor,&lt;br&gt;tilt, lift+cruise) · Clustering&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontColor=#4A148C;strokeWidth=2;fontSize=12.5;align=center;" parent="1" vertex="1">
@@ -725,20 +718,176 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="21" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" vertex="1" parent="1">
+                <mxCell id="21" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" parent="1" vertex="1">
                     <mxGeometry x="556" y="480" width="60" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="22" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" vertex="1" parent="1">
+                <mxCell id="22" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" parent="1" vertex="1">
                     <mxGeometry x="792" y="1698" width="60" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="23" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" vertex="1" parent="1">
-                    <mxGeometry x="1590" y="976" width="60" height="60" as="geometry"/>
+                <mxCell id="23" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" parent="1" vertex="1">
+                    <mxGeometry x="1587" y="968" width="60" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="24" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" vertex="1" parent="1">
+                <mxCell id="24" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" parent="1" vertex="1">
                     <mxGeometry x="284" y="2447" width="60" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="25" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" vertex="1" parent="1">
+                <mxCell id="25" value="" style="shape=switch;whiteSpace=wrap;html=1;fillColor=#00CCCC;strokeColor=#006666;" parent="1" vertex="1">
                     <mxGeometry x="970" y="2513" width="60" height="60" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="wOx7xpxHhQf6B0R2N8oZ" name="Alcance y Complejidad">
+        <mxGraphModel dx="3042" dy="1534" grid="1" gridSize="10" guides="0" tooltips="0" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-1" value="Alcance y complejidad del desarrollo de software" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1A237E;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=center;verticalAlign=middle;strokeColor=#1A237E;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="20" width="1620" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EAF6;strokeColor=#C5CAE9;strokeWidth=1;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="95" width="1620" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-3" value="Visión general" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#283593;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=left;verticalAlign=middle;strokeColor=none;spacingLeft=12;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="95" width="1620" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-4" value="El presente trabajo no se limitó al análisis teórico: se diseñó, implementó y validó un &lt;b&gt;sistema de software completo&lt;/b&gt; capaz de transformar una base de datos aeronáuticos con celdas faltantes en un dataset confiable, trazable y listo para diseño conceptual.&lt;br&gt;&lt;br&gt;Se compone de &lt;b&gt;tres módulos interdependientes&lt;/b&gt; que cubren desde la predicción estadística hasta la asistencia al ingeniero en la toma de decisiones. Para dimensionar el esfuerzo, se contabilizaron las líneas de código (LOC) excluyendo todo código de terceros." style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=18;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+                    <mxGeometry x="45" y="130" width="1610" height="125" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-5" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#A5D6A7;strokeWidth=1;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="285" width="1620" height="260" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-6" value="¿Cuánto código se escribió?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#283593;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=left;verticalAlign=middle;strokeColor=none;spacingLeft=12;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="285" width="1620" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-7" value="&lt;font color=&quot;#1B5E20&quot;&gt;&lt;b&gt;27,347&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=39;" vertex="1" parent="1">
+                    <mxGeometry x="650" y="317" width="400" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-8" value="líneas de código propio  ·  más de 55 archivos Python" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontColor=#424242;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="550" y="365" width="600" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-9" value="&lt;b&gt;Módulo 1&lt;/b&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;10,244&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#E0E0E0&quot;&gt;Pipeline de imputación&lt;br&gt;(correlación + similitud)&lt;/font&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;37.3 %&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#43A047;fontColor=#FFFFFF;fontSize=18;align=center;verticalAlign=middle;strokeColor=#2E7D32;strokeWidth=1;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="93" y="395" width="285" height="122" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-10" value="&lt;b&gt;Módulo 2&lt;/b&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;5,694&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#E0E0E0&quot;&gt;Análisis y visualización&lt;br&gt;(aplicación Dash)&lt;/font&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;20.7 %&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1E88E5;fontColor=#FFFFFF;fontSize=18;align=center;verticalAlign=middle;strokeColor=#1565C0;strokeWidth=1;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="400" y="395" width="285" height="122" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-11" value="&lt;b&gt;Módulo 3&lt;/b&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;10,242&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#E0E0E0&quot;&gt;Asistente de diseño&lt;br&gt;preliminar&lt;/font&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;37.3 %&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#7B1FA2;fontColor=#FFFFFF;fontSize=18;align=center;verticalAlign=middle;strokeColor=#6A1B9A;strokeWidth=1;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="707" y="395" width="285" height="122" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-12" value="&lt;b&gt;Notebooks&lt;/b&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;557&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#E0E0E0&quot;&gt;Interfaces interactivas&lt;br&gt;de usuario&lt;/font&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;2.0 %&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E65100;fontColor=#FFFFFF;fontSize=18;align=center;verticalAlign=middle;strokeColor=#BF360C;strokeWidth=1;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="1014" y="395" width="285" height="122" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-13" value="&lt;b&gt;Scripts&lt;/b&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;610&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#E0E0E0&quot;&gt;Orquestación, helpers&lt;br&gt;y utilidades&lt;/font&gt;&lt;br&gt;&lt;font&gt;&lt;b&gt;2.2 %&lt;/b&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#546E7A;fontColor=#FFFFFF;fontSize=18;align=center;verticalAlign=middle;strokeColor=#37474F;strokeWidth=1;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="1321" y="395" width="285" height="122" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-14" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FFE0B2;strokeWidth=1;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="565" width="1620" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-15" value="¿Cuánto esfuerzo representa?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#283593;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=left;verticalAlign=middle;strokeColor=none;spacingLeft=12;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="565" width="1620" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-16" value="&lt;font&gt;&lt;b&gt;27,347&lt;/b&gt;&lt;/font&gt;&lt;br&gt;líneas de código" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=2;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="155" y="615" width="240" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-17" value="&lt;font&gt;&lt;b&gt;912&lt;/b&gt;&lt;/font&gt;&lt;br&gt;días-persona" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;strokeWidth=2;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="580" y="615" width="240" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-18" value="&lt;font color=&quot;#B71C1C&quot;&gt;&lt;b&gt;≈ 4.1&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;b&gt;años-persona&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#B71C1C;strokeWidth=2;fontSize=23;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="1090" y="615" width="290" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-19" value="÷ 30 LOC/día" style="rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontSize=18;fontStyle=2;strokeWidth=2;strokeColor=#E65100;labelBackgroundColor=none;" edge="1" parent="1" source="XSMqS0Mc4mALd_emjHrq-16" target="XSMqS0Mc4mALd_emjHrq-17">
+                    <mxGeometry x="-0.0811" y="19" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-20" value="÷ 220 días/año" style="rounded=1;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fontSize=18;fontStyle=2;strokeWidth=2;strokeColor=#B71C1C;labelBackgroundColor=none;" edge="1" parent="1" source="XSMqS0Mc4mALd_emjHrq-17" target="XSMqS0Mc4mALd_emjHrq-18">
+                    <mxGeometry x="-0.037" y="19" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-21" value="&lt;font&gt;Rango: &lt;b&gt;3.1 años&lt;/b&gt; (40 LOC/d)  —  &lt;b&gt;6.2 años&lt;/b&gt; (20 LOC/d)&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="550" y="698" width="600" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-22" value="&lt;font&gt;&lt;i&gt;Ref: COCOMO II (Boehm, 2000); Code Complete (McConnell, 2004)&lt;/i&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#757575;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="550" y="720" width="600" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-23" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#F8BBD0;strokeWidth=1;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="775" width="1620" height="550" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-24" value="La &quot;explosión combinatoria&quot;: ¿cuántos modelos se entrenan?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#283593;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=left;verticalAlign=middle;strokeColor=none;spacingLeft=12;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="775" width="1620" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-25" value="&lt;i&gt;Para completar un único archivo Excel con ~100 celdas vacías...&lt;/i&gt;" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fillColor=none;strokeColor=none;fontColor=#880E4F;" vertex="1" parent="1">
+                    <mxGeometry x="550" y="810" width="600" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-26" value="&lt;b&gt;Paso 1:&lt;/b&gt; 30 parámetros numéricos disponibles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#F48FB1;strokeWidth=1;fontSize=18;fontColor=#212121;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="660" y="837" width="380" height="48" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-27" value="&lt;b&gt;Paso 2:&lt;/b&gt; 465 combinaciones de predictores&lt;br&gt;&lt;font&gt;(30 individuales + 435 pares)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8BBD0;strokeColor=#F06292;strokeWidth=1;fontSize=18;fontColor=#212121;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="630" y="907" width="440" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-28" value="&lt;b&gt;Paso 3:&lt;/b&gt; 2,325 modelos candidatos / celda&lt;br&gt;&lt;font&gt;(465 × 5 funciones: lineal, log, exp, potencia, polinomial)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F48FB1;strokeColor=#EC407A;strokeWidth=1;fontSize=18;fontColor=#212121;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="595" y="984" width="510" height="58" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-29" value="&lt;b&gt;Paso 4:&lt;/b&gt; 186,000 ajustes / celda&lt;br&gt;&lt;font&gt;(2,325 modelos × 80 entrenamientos LOOCV)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F06292;strokeColor=#E91E63;strokeWidth=2;fontSize=18;fontColor=#FFFFFF;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="565" y="1064" width="570" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-30" value="&lt;b&gt;Paso 5:&lt;/b&gt; 18,600,000 ajustes de regresión&lt;br&gt;&lt;font&gt;(186,000 × 100 celdas faltantes)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E91E63;strokeColor=#C62828;strokeWidth=2;fontSize=18;fontColor=#FFFFFF;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="530" y="1141" width="640" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-31" value="&lt;b&gt;Resultado:&lt;/b&gt; ≈ 20,000,000 operaciones&lt;br&gt;&lt;font&gt;(+ verif.: VIF, PCA, cond. number, R², MAPE)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C62828;strokeColor=#B71C1C;strokeWidth=3;fontSize=18;fontColor=#FFFFFF;align=center;verticalAlign=middle;shadow=1;" vertex="1" parent="1">
+                    <mxGeometry x="495" y="1218" width="710" height="68" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-32" value="C(30,1) + C(30,2)" style="rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=18;fontStyle=2;strokeWidth=1;strokeColor=#C62828;fontColor=#880E4F;labelBackgroundColor=none;" edge="1" parent="1" source="XSMqS0Mc4mALd_emjHrq-26" target="XSMqS0Mc4mALd_emjHrq-27">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-33" value="× 5 funciones" style="rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=18;fontStyle=2;strokeWidth=1;strokeColor=#C62828;fontColor=#880E4F;labelBackgroundColor=none;" edge="1" parent="1" source="XSMqS0Mc4mALd_emjHrq-27" target="XSMqS0Mc4mALd_emjHrq-28">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-34" value="× 80 LOOCV" style="rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=18;fontStyle=2;strokeWidth=1;strokeColor=#C62828;fontColor=#880E4F;labelBackgroundColor=none;" edge="1" parent="1" source="XSMqS0Mc4mALd_emjHrq-28" target="XSMqS0Mc4mALd_emjHrq-29">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-35" value="× 100 celdas" style="rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=18;fontStyle=2;strokeWidth=1;strokeColor=#C62828;fontColor=#880E4F;labelBackgroundColor=none;" edge="1" parent="1" source="XSMqS0Mc4mALd_emjHrq-29" target="XSMqS0Mc4mALd_emjHrq-30">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-36" value="+ verificaciones" style="rounded=1;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=18;fontStyle=2;strokeWidth=1;strokeColor=#C62828;fontColor=#880E4F;labelBackgroundColor=none;" edge="1" parent="1" source="XSMqS0Mc4mALd_emjHrq-30" target="XSMqS0Mc4mALd_emjHrq-31">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-37" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#CE93D8;strokeWidth=1;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="1345" width="1620" height="235" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-38" value="Otros indicadores de complejidad" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#283593;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=left;verticalAlign=middle;strokeColor=none;spacingLeft=12;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="1345" width="1620" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-39" value="&lt;b&gt;55+&lt;/b&gt; archivos Python&lt;br&gt;desarrollados" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#9575CD;strokeWidth=1;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="1387" width="490" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-40" value="&lt;b&gt;3&lt;/b&gt; módulos interdependientes&lt;br&gt;+ &lt;b&gt;4&lt;/b&gt; bucles de retroalimentación" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#9575CD;strokeWidth=1;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="605" y="1387" width="490" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-41" value="&lt;b&gt;5&lt;/b&gt; familias de funciones estadísticas&lt;br&gt;(lineal, log, exp, potencia, polinomial)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#9575CD;strokeWidth=1;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="1120" y="1387" width="490" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-42" value="&lt;b&gt;6&lt;/b&gt; métricas de calidad / modelo&lt;br&gt;(R², MAPE, VIF, PC2, cond. number, rank)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#9575CD;strokeWidth=1;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="1477" width="490" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-43" value="&lt;b&gt;2&lt;/b&gt; métodos de detección de outliers&lt;br&gt;(IQR + MAD con pesos adaptativos)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#9575CD;strokeWidth=1;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="605" y="1477" width="490" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-44" value="&lt;b&gt;3&lt;/b&gt; formatos de salida&lt;br&gt;(Excel anotado, JSON trazable, app Dash)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#9575CD;strokeWidth=1;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="1120" y="1477" width="490" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-45" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#80CBC4;strokeWidth=1;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="1600" width="1620" height="135" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-46" value="En perspectiva" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#283593;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=left;verticalAlign=middle;strokeColor=none;spacingLeft=12;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="1600" width="1620" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-47" value="El volumen y la complejidad de este desarrollo son comparables a los de &lt;b&gt;herramientas de software científico de uso profesional&lt;/b&gt;. No se trata de un script aislado que «rellena huecos», sino de un &lt;b&gt;ecosistema de herramientas&lt;/b&gt; que automatiza el ciclo completo de imputación, validación, visualización y asistencia al diseño, con trazabilidad en cada paso y múltiples capas de control de calidad estadístico." style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontSize=18;align=left;verticalAlign=top;spacingLeft=8;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+                    <mxGeometry x="45" y="1634" width="1610" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="XSMqS0Mc4mALd_emjHrq-48" value="&lt;font color=&quot;#9E9E9E&quot;&gt;&lt;i&gt;Referencias: Boehm, B.W. (2000) Software Cost Estimation with COCOMO II. Prentice Hall.  ·  McConnell, S. (2004) Code Complete, 2nd Ed. Microsoft Press.&lt;/i&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=top;fillColor=none;strokeColor=none;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="1750" width="1620" height="30" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

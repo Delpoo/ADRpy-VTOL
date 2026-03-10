@@ -1,0 +1,336 @@
+{
+  "globals": {
+    "alpha": 1.0,
+    "top_k": 10,
+    "iqr_on": true,
+    "iqr_factor": 1.5,
+    "penalizar_nan": true,
+    "penalidad_nan": 1.0,
+    "segmentar_por": null,
+    "segmentar_modo": "off",
+    "segmentar_valor": null,
+    "prefer_factor": 1.3
+  },
+  "params": [
+    {
+      "col": "Peso máximo al despegue (MTOW)",
+      "label": "Peso máximo al despegue (MTOW)",
+      "active": true,
+      "mode": "maximo",
+      "value": 30.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Payload",
+      "label": "Payload",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Velocidad a la que se realiza el crucero (m/s TAS)",
+      "label": "Velocidad a la que se realiza el crucero (m/s TAS)",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Autonomía de la aeronave (h)",
+      "label": "Autonomía de la aeronave (h)",
+      "active": true,
+      "mode": "rango",
+      "value": 20.0,
+      "min": 8.0,
+      "max": 16.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Alcance de la aeronave (km)",
+      "label": "Alcance de la aeronave (km)",
+      "active": false,
+      "mode": "fijo",
+      "value": 500.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Ancho del fuselaje",
+      "label": "Ancho del fuselaje",
+      "active": false,
+      "mode": "fijo",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Cantidad de motores propulsión horizontal",
+      "label": "Cantidad de motores propulsión horizontal",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Cantidad de motores propulsión vertical",
+      "label": "Cantidad de motores propulsión vertical",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Capacidad combustible",
+      "label": "Capacidad combustible",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Clase",
+      "label": "Clase",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Consumo",
+      "label": "Consumo",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Cuerda",
+      "label": "Cuerda",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Despegue",
+      "label": "Despegue",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Envergadura",
+      "label": "Envergadura",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Longitud del fuselaje",
+      "label": "Longitud del fuselaje",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Maximum Crosswind (sostenido)",
+      "label": "Maximum Crosswind (sostenido)",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Peso frame",
+      "label": "Peso frame",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Peso Vacio (MTOW - payload)",
+      "label": "Peso Vacio (MTOW - payload)",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Peso vacio - fuel y battery",
+      "label": "Peso vacio - fuel y battery",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Potencia HP",
+      "label": "Potencia HP",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Potencia Watts",
+      "label": "Potencia Watts",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Precio",
+      "label": "Precio",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Propulsión horizontal",
+      "label": "Propulsión horizontal",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Propulsión vertical",
+      "label": "Propulsión vertical",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Rango de comunicación",
+      "label": "Rango de comunicación",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Relación de aspecto del ala",
+      "label": "Relación de aspecto del ala",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Techo de servicio máximo",
+      "label": "Techo de servicio máximo",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Velocidad crucero (m/s IAS)",
+      "label": "Velocidad crucero (m/s IAS)",
+      "active": true,
+      "mode": "rango",
+      "value": 0.0,
+      "min": 18.0,
+      "max": 25.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Velocidad de pérdida (m/s CAS)",
+      "label": "Velocidad de pérdida (m/s CAS)",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Velocidad de pérdida limpia (m/s CAS)",
+      "label": "Velocidad de pérdida limpia (m/s CAS)",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Velocidad máxima (m/s IAS)",
+      "label": "Velocidad máxima (m/s IAS)",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    },
+    {
+      "col": "Área del ala",
+      "label": "Área del ala",
+      "active": false,
+      "mode": "ignorar",
+      "value": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "weight": 1.0
+    }
+  ]
+}
