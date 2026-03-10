@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "ADRpy"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"jupyter.askForKernelRestart": false,
+		"powershell.cwd": "ADRpy-VTOL"
+	}
+}
