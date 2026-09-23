@@ -39,11 +39,11 @@ docs/_build
 # Cookiecutter
 output/
 
-# MacOS
+# Operating-system metadata
 .DS_Store
 .DS_Store?
-docs/.DS_Store
-docs/source/.DS_Store
+[Dd]esktop.ini
+Thumbs.db
 
 
 # Notebooks

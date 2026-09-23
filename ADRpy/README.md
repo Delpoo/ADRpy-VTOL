@@ -1,30 +1,16 @@
-# Asistente de Diseño (ADRpy) — Módulo de verificación, similitud y tendencias
+# ADRpy package and final-degree project additions
 
-Este módulo NO modifica el dataset. Brinda:
-- Verificaciones físicas básicas con umbrales (Δrel <2% OK; 2–10% ajuste sugerido; >10% no confiable).
-- Ranking por similitud (vecinos) que respeta restricciones del usuario (exacto, objetivo±tol, max, min).
-- Sugerencias robustas (min, max, mediana, media) con opción de excluir atípicos (IQR) y ponderar por confianza.
-- Tendencias X–Y (nube + recta global y por Misión) con métricas (n, MAPE, R²) y semáforo de calidad.
-- Insights por correlación (Spearman) para orientar, no para predecir.
+This directory contains the original **ADRpy framework by Andras Sobester and contributors**, alongside **Ezequiel Delpino's ADRpy-VTOL final-degree project additions**.
 
-**Datos de entrada**  
-Ruta por defecto (configurable en `asistente_diseno/config.py`):  
-`C:\Users\delpi\OneDrive\Tesis\ADRpy-VTOL\ADRpy\analisis\Results\Datos_imputados.xlsx`  
-Se usa la **primera hoja** (sheet_name=0).
+Start with the [project overview](../README.md) or the [technical guide](analisis/README.md).
 
-## Puesta en marcha (usando tu entorno ADRpy)
-1. Activa tu entorno ADRpy (conda/venv).
-   - Conda: `conda activate ADRpy`
-   - venv: abre terminal con el entorno ADRpy activo
-2. Instala dependencias en ese entorno:
-   ```powershell
-   python -m pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
-3. (Opcional) Registra/actualiza el kernel Jupyter para este Python:
-   ```powershell
-   python -m ipykernel install --user --name "ADRpy" --display-name "Python (ADRpy)"
-   ```
-4. En VS Code:
-   - “Python: Select Interpreter” → elige el intérprete de tu entorno ADRpy.
-   - En notebooks, selecciona el kernel **Python (ADRpy)** si lo registraste.
+| Area | Purpose |
+| --- | --- |
+| [`analisis/`](analisis/) | UAV data preparation, predictor / imputation engine, and model-analysis dashboard. |
+| [`asistente_diseno/`](asistente_diseno/) | Interactive conceptual design assistance: constraints, aircraft ranking, trends, suggestions and reports. |
+| [`notebooks/`](notebooks/) | Notebook entry points for the three project modules. |
+| [`constraintanalysis.py`](constraintanalysis.py), [`atmospheres.py`](atmospheres.py) and other original library modules | ADRpy conceptual-design and performance-analysis framework. |
+
+The assistant supports parameter selection for subsequent ADRpy use. It does not automatically launch ADRpy or certify the physical validity of suggested values. Standalone verification utilities are separate from the integrated assistant interface.
+
+For the original framework, see the [upstream repository](https://github.com/sobester/ADRpy), [ADRpy documentation](https://adrpy.readthedocs.io/en/latest/), [preserved original README](../docs/upstream/README-ADRpy.md) and unchanged [license](../LICENSE.md).

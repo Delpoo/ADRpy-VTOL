@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="portfolio-overview" name="Portfolio overview">
+    <mxGraphModel dx="1200" dy="625" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1200" pageHeight="625" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="boundary" parent="1" vertex="1" value="" style="rounded=1;arcSize=8;fillColor=#f4faf8;strokeColor=#88bdb2;">
+          <mxGeometry x="300" y="85" width="865" height="430" as="geometry" />
+        </mxCell>
+        <mxCell id="market" parent="1" vertex="1" value="&lt;span style=&quot;font-size:12px;color:#475569&quot;&gt;&lt;b&gt;INPUT&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:18px&quot;&gt;UAV market data&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;color:#475569&quot;&gt;Incomplete specifications&lt;br&gt;Excel workbook&lt;/span&gt;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#cbd5e1;strokeWidth=1.5;fontColor=#142c43;fontFamily=Arial;align=left;spacingLeft=15;">
+          <mxGeometry x="35" y="167" width="220" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="prep" parent="1" vertex="1" value="&lt;span style=&quot;font-size:12px;color:#475569&quot;&gt;&lt;b&gt;DATA PREPARATION&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:18px&quot;&gt;Load and prepare&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;color:#475569&quot;&gt;Columns, available values&lt;br&gt;and derived parameters&lt;/span&gt;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;fontColor=#142c43;fontFamily=Arial;align=left;spacingLeft=15;">
+          <mxGeometry x="335" y="167" width="220" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="engine" parent="1" vertex="1" value="&lt;span style=&quot;font-size:12px;color:#475569&quot;&gt;&lt;b&gt;1 / PREDICTOR&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:18px&quot;&gt;Estimate missing values&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;color:#475569&quot;&gt;Similarity + regression&lt;br&gt;Excel + model JSON&lt;/span&gt;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#149080;strokeWidth=1.5;fontColor=#142c43;fontFamily=Arial;align=left;spacingLeft=15;">
+          <mxGeometry x="605" y="167" width="240" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="inspect" parent="1" vertex="1" value="&lt;span style=&quot;font-size:12px;color:#475569&quot;&gt;&lt;b&gt;2 / MODEL INSPECTION&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:18px&quot;&gt;Inspect fitted models&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;color:#475569&quot;&gt;Interactive plots, metrics&lt;br&gt;and warnings&lt;/span&gt;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#149080;strokeWidth=1.5;fontColor=#142c43;fontFamily=Arial;align=left;spacingLeft=15;">
+          <mxGeometry x="895" y="167" width="235" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="assistant" parent="1" vertex="1" value="&lt;span style=&quot;font-size:12px;color:#475569&quot;&gt;&lt;b&gt;3 / DESIGN ASSISTANT&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:18px&quot;&gt;Explore design choices&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;color:#475569&quot;&gt;Reads Excel; ranks aircraft&lt;br&gt;and suggests parameters&lt;/span&gt;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#149080;strokeWidth=1.5;fontColor=#142c43;fontFamily=Arial;align=left;spacingLeft=15;">
+          <mxGeometry x="895" y="365" width="235" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="params" parent="1" vertex="1" value="&lt;span style=&quot;font-size:12px;color:#475569&quot;&gt;&lt;b&gt;INITIAL PARAMETERS&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:18px&quot;&gt;Define an initial aircraft&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;color:#475569&quot;&gt;User-selected values&lt;br&gt;and constraints&lt;/span&gt;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#e2f3ef;strokeColor=#149080;strokeWidth=1.5;fontColor=#142c43;fontFamily=Arial;align=left;spacingLeft=15;">
+          <mxGeometry x="605" y="365" width="240" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="adrpy" parent="1" vertex="1" value="&lt;span style=&quot;font-size:12px;color:#475569&quot;&gt;&lt;b&gt;SEPARATE TOOL / ADRpy&lt;/b&gt;&lt;/span&gt;&lt;br&gt;&lt;br&gt;&lt;b style=&quot;font-size:18px&quot;&gt;Conceptual analysis&lt;/b&gt;&lt;br&gt;&lt;span style=&quot;font-size:14px;color:#475569&quot;&gt;Manually defined inputs&lt;br&gt;Separate case-study notebook&lt;/span&gt;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#fff5e8;strokeColor=#c28836;strokeWidth=1.5;fontColor=#142c43;fontFamily=Arial;align=left;spacingLeft=15;">
+          <mxGeometry x="35" y="365" width="220" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="label0" parent="1" vertex="1" value="ADRpy-VTOL | From incomplete data to initial design parameters" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=26;fontColor=#142c43;fontStyle=1;spacing=0;">
+          <mxGeometry x="35" y="14" width="1100" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="label1" parent="1" vertex="1" value="ADRpy-VTOL / PROJECT SOFTWARE" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=17;fontColor=#12695f;fontStyle=1;spacing=0;">
+          <mxGeometry x="335" y="104" width="830" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="label2" parent="1" vertex="1" value="Three separate modules with user review and file selection" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=14;fontColor=#475569;fontStyle=0;spacing=0;">
+          <mxGeometry x="335" y="129" width="830" height="23" as="geometry" />
+        </mxCell>
+        <mxCell id="label3" parent="1" vertex="1" value="User review" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=13;fontColor=#475569;fontStyle=0;spacing=0;">
+          <mxGeometry x="1030" y="310" width="135" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="label4" parent="1" vertex="1" value="User transfer to ADRpy" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=15;fontColor=#925e1e;fontStyle=1;spacing=0;">
+          <mxGeometry x="321" y="385" width="844" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="label5" parent="1" vertex="1" value="Map inputs, check units and supply assumptions" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=13;fontColor=#475569;fontStyle=0;spacing=0;">
+          <mxGeometry x="321" y="434" width="844" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="label6" parent="1" vertex="1" value="Workflow overview: arrows indicate the working process, not automatic end-to-end execution." style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=15;fontColor=#334155;fontStyle=0;spacing=0;">
+          <mxGeometry x="35" y="531" width="1100" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="label7" parent="1" vertex="1" value="Model inspection informs user decisions; the design assistant reads the Excel dataset." style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=15;fontColor=#334155;fontStyle=0;spacing=0;">
+          <mxGeometry x="35" y="558" width="1100" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="label8" parent="1" vertex="1" value="ADRpy: original framework by Andras Sobester and contributors." style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontFamily=Arial;fontSize=13;fontColor=#64748b;fontStyle=0;spacing=0;">
+          <mxGeometry x="35" y="586" width="1100" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="edge0" parent="1" edge="1" source="market" target="prep" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=open;endFill=0;strokeWidth=2;strokeColor=#64748b;dashed=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge1" parent="1" edge="1" source="prep" target="engine" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=open;endFill=0;strokeWidth=2;strokeColor=#64748b;dashed=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge2" parent="1" edge="1" source="engine" target="inspect" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=open;endFill=0;strokeWidth=2;strokeColor=#64748b;dashed=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge3" parent="1" edge="1" source="inspect" target="assistant" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=open;endFill=0;strokeWidth=2;strokeColor=#64748b;dashed=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge4" parent="1" edge="1" source="assistant" target="params" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=open;endFill=0;strokeWidth=2;strokeColor=#64748b;dashed=0;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge5" parent="1" edge="1" source="params" target="adrpy" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=open;endFill=0;strokeWidth=2;strokeColor=#64748b;dashed=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
